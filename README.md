@@ -14,5 +14,8 @@ It will have a clickable dialog box at side with a small button with logout logi
 Create button same to same as trello implement ai features.
 personalised background designs
 
+
+Group based task
+
 3} Optional
 
