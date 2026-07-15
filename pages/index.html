@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NexusWeave | Calm workspace</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../styles/global.css" />
+  <link rel="stylesheet" href="../styles/auth.css" />
+</head>
+<body>
+  <div class="site-shell">
+    <header class="site-header">
+      <nav class="navbar">
+        <a class="brand" href="index.html">
+          <span class="brand-mark"></span>
+          <span>NexusWeave</span>
+        </a>
+        <div class="nav-links">
+          <a href="features.html">Features</a>
+          <a href="about.html">About</a>
+          <a href="#auth">Sign In</a>
+          <button class="theme-toggle-btn" type="button" data-theme-toggle aria-label="Toggle dark mode">
+            <span class="toggle-icon"></span>
+            <span>Theme</span>
+          </button>
+        </div>
+      </nav>
+    </header>
+
+    <main class="landing-shell">
+      <aside class="feature-sidebar">
+        <div class="sidebar-card">
+          <p class="eyebrow">Start here</p>
+          <h2>Explore the experience before you sign in.</h2>
+          <p class="sidebar-copy">Browse the core features, plan your workflow, and see how NexusWeave keeps work calm and organized.</p>
+          <div class="feature-list">
+            <a class="feature-item" href="#feature-productivity">
+              <strong>Calm planning</strong>
+              <span>Track milestones and keep work visible.</span>
+            </a>
+            <a class="feature-item" href="#feature-collab">
+              <strong>Focused collaboration</strong>
+              <span>Keep teams aligned without noisy meetings.</span>
+            </a>
+            <a class="feature-item" href="#feature-automation">
+              <strong>Smart automation</strong>
+              <span>Generate task suggestions instantly.</span>
+            </a>
+            <a class="feature-item" href="#feature-security">
+              <strong>Secure sessions</strong>
+              <span>Sign in with Google and keep a JWT-style session.</span>
+            </a>
+          </div>
+        </div>
+        <div class="sidebar-card sidebar-highlight">
+          <h3>Why it feels premium</h3>
+          <ul>
+            <li>Clean multi-panel layout</li>
+            <li>Dark mode that stays readable</li>
+            <li>Google-style sign-in flow</li>
+          </ul>
+        </div>
+      </aside>
+
+      <section class="content-stack">
+        <section class="hero-copy">
+          <p class="eyebrow">Future of work, designed for calm focus</p>
+          <h1>Turn ambitious plans into a beautifully managed workflow.</h1>
+          <p class="subtitle">Bring your ideas, tasks, and deadlines into a workspace that feels calm, clear, and ready to ship.</p>
+          <div class="hero-actions">
+            <a class="primary-link" href="#auth">Start for free</a>
+            <a class="secondary-link" href="features.html">Explore features</a>
+          </div>
+          <div class="hero-highlights"></div>
+        </section>
+
+        <section class="auth-panel" id="auth">
+          <div class="panel-card">
+            <h2 id="panelTitle">Welcome back</h2>
+            <p id="authSubtitle">Log into your workspace</p>
+            <div id="formErrors" class="form-errors" aria-live="polite"></div>
+            <form id="loginForm">
+              <label class="field">
+                <span>Email</span>
+                <input type="email" id="email" placeholder="you@example.com" />
+              </label>
+              <label class="field">
+                <span>Password</span>
+                <input type="password" id="password" placeholder="••••••••" />
+              </label>
+              <button class="login-btn" type="submit">Login</button>
+              <button class="google-btn" type="button" id="googleLoginBtn">Continue with Google</button>
+            </form>
+            <div class="switch-row">
+              <span id="switchText">Don’t have an account?</span>
+              <a href="#" id="toggleMode">Sign up</a>
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <section class="info-section">
+      <article class="info-card" id="feature-productivity">
+        <h3>Smart planning</h3>
+        <p>Auto-suggest tasks and keep every milestone visible in a calm kanban board.</p>
+      </article>
+      <article class="info-card" id="feature-collab">
+        <h3>Focused collaboration</h3>
+        <p>Organize projects, assign priorities, and keep due dates in sight without clutter.</p>
+      </article>
+      <article class="info-card" id="feature-automation">
+        <h3>Fast onboarding</h3>
+        <p>Jump in with email or Google and get moving in minutes.</p>
+      </article>
+      <article class="info-card" id="feature-security">
+        <h3>Protected access</h3>
+        <p>Every sign-in creates a JWT-style session so the dashboard stays secure.</p>
+      </article>
+    </section>
+  </div>
+
+  <script src="../scripts/app-helpers.js"></script>
+  <script src="../scripts/theme.js"></script>
+  <script src="../scripts/auth.js"></script>
+</body>
+</html>

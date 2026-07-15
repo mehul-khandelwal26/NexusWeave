@@ -1,0 +1,133 @@
+.dashboard-shell {
+  padding-bottom: 3rem;
+}
+
+.dashboard-header, .welcome-card, .panel-head, .board-head, .header-actions, .filters, .panel-actions {
+  display: flex;
+  align-items: center;
+}
+
+.dashboard-header, .welcome-card, .panel-head, .board-head {
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.dashboard-header {
+  padding: 1.5rem 0 1rem;
+}
+
+.dashboard-header h1 { font-family: var(--display); font-size: 2rem; }
+
+.header-actions { gap: 0.75rem; }
+
+.welcome-card, .card, .panel, .project, .task-column, .task-card, .alert-box {
+  background: var(--paper-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 18px 40px var(--shadow);
+}
+
+.welcome-card { padding: 1.2rem 1.4rem; margin-bottom: 1rem; }
+.welcome-card h2 { font-family: var(--display); margin-bottom: 0.25rem; }
+.welcome-card p { color: var(--ink-soft); margin-top: 0.3rem; }
+
+.stats-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1rem 0 1.2rem; }
+.card { padding: 1.2rem; }
+.card h3 { font-size: 1.7rem; font-family: var(--display); margin-bottom: 0.25rem; }
+.card p { color: var(--ink-soft); }
+
+.panel { padding: 1.2rem; margin-top: 1rem; }
+.panel-head, .board-head { margin-bottom: 1rem; flex-wrap: wrap; }
+.panel-actions, .filters { gap: 0.7rem; flex-wrap: wrap; }
+.filters input, .filters select {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.7rem 0.8rem;
+  background: transparent;
+  color: inherit;
+}
+
+.project-list { display: grid; gap: 0.75rem; }
+.project { padding: 1rem 1.1rem; cursor: pointer; }
+.project strong { display: block; margin-bottom: 0.2rem; }
+.project .meta { color: var(--ink-soft); }
+
+.task-board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+.task-column { padding: 1rem; min-height: 280px; }
+.task-column h3 { margin-bottom: 0.7rem; font-family: var(--display); }
+.task-card { padding: 0.9rem; margin-bottom: 0.7rem; }
+.task-card .top { display: flex; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.45rem; }
+.badge { display: inline-block; padding: 0.25rem 0.55rem; border-radius: 999px; font-size: 0.78rem; background: rgba(47,191,159,0.12); color: var(--accent-strong); }
+.task-card p { color: var(--ink-soft); margin: 0.3rem 0; }
+.task-card .actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.6rem; }
+.inline-btn { border-radius: 999px; padding: 0.55rem 0.8rem; background: var(--paper-raised); color: var(--ink); border: 1px solid var(--border); }
+.alert-box { padding: 0.9rem 1rem; color: #cc4d4d; max-width: 320px; }
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(7, 17, 31, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 2000;
+}
+
+.modal-card {
+  width: min(100%, 620px);
+  background: var(--paper-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 20px 45px var(--shadow);
+  padding: 1.2rem;
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.modal-head h3 { font-family: var(--display); font-size: 1.2rem; }
+
+.task-form { display: grid; gap: 0.9rem; }
+
+#projectForm .modal-actions { justify-content: flex-end; }
+
+.project-actions { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 0.6rem; }
+
+.project-card-actions .inline-btn { margin-left: 0.4rem; }
+.field-row {
+  display: grid;
+  gap: 0.35rem;
+}
+.field-row span {
+  font-weight: 600;
+}
+.field-row input,
+.field-row textarea,
+.field-row select {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 0.8rem 0.9rem;
+  background: transparent;
+  color: inherit;
+}
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.3rem;
+}
+
+@media (max-width: 900px) {
+  .stats-grid, .task-board, .field-grid { grid-template-columns: 1fr; }
+}
