@@ -8,124 +8,180 @@
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="../styles/global.css" />
   <link rel="stylesheet" href="../styles/dashboard.css" />
+  <link rel="stylesheet" href="../styles/sidebar.css" />
 </head>
-<body>
-  <div class="dashboard-shell">
-    <header class="dashboard-header">
-      <div>
-        <p class="eyebrow">Productivity workspace</p>
-        <h1>NexusWeave</h1>
-      </div>
-      <div class="header-actions">
-        <button class="theme-toggle-btn" type="button" data-theme-toggle aria-label="Toggle dark mode">
-          <span class="toggle-icon"></span>
-          <span>Theme</span>
-        </button>
-        <button id="logout" class="ghost-btn">Logout</button>
-      </div>
-    </header>
-
-    <section class="welcome-card">
-      <div>
-        <h2 id="welcomeText">Welcome</h2>
-        <p>Track your momentum, organize work, and stay ahead of deadlines.</p>
-      </div>
-      <div id="alertBox" class="alert-box hidden"></div>
-    </section>
-
-    <section class="stats-grid">
-      <article class="card">
-        <h3 id="projectCount">0</h3>
-        <p>Projects</p>
-      </article>
-      <article class="card">
-        <h3 id="taskCount">0</h3>
-        <p>Tasks</p>
-      </article>
-      <article class="card">
-        <h3 id="doneCount">0</h3>
-        <p>Completed</p>
-      </article>
-    </section>
-
-    <section class="panel">
-      <div class="panel-head">
-        <h2>Projects</h2>
-        <div class="panel-actions">
-          <button id="newProject" class="primary-btn">+ New Project</button>
-          <button id="autoSuggestTasks" class="ghost-btn">Auto-Suggest Tasks</button>
-        </div>
-      </div>
-      <div id="projects" class="project-list"></div>
-    </section>
-
-    <div id="projectModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="projectModalTitle">
-      <div class="modal-card">
-        <div class="modal-head">
-          <div>
-            <p class="eyebrow">Workspace setup</p>
-            <h3 id="projectModalTitle">Create project</h3>
-          </div>
-          <button type="button" id="closeProjectModal" class="ghost-btn">×</button>
-        </div>
-        <form id="projectForm" class="task-form">
-          <input type="hidden" id="projectId" />
-          <label class="field-row">
-            <span>Project name</span>
-            <input id="projectName" type="text" required placeholder="Example: Launch Sprint" />
-          </label>
-          <label class="field-row">
-            <span>Description</span>
-            <textarea id="projectDescription" rows="3" placeholder="What is this workspace for?"></textarea>
-          </label>
-          <div class="field-grid">
-            <label class="field-row">
-              <span>Deadline</span>
-              <input id="projectDeadline" type="date" />
-            </label>
-            <label class="field-row">
-              <span>Timeline</span>
-              <select id="projectTimeline">
-                <option value="Planning">Planning</option>
-                <option value="Execution">Execution</option>
-                <option value="Review">Review</option>
-                <option value="Done">Done</option>
-              </select>
-            </label>
-          </div>
-          <div class="modal-actions">
-            <button type="button" id="cancelProjectModal" class="ghost-btn">Cancel</button>
-            <button type="submit" id="projectSubmitBtn" class="primary-btn">Create project</button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <section class="panel board-panel">
-      <div class="board-head">
+<body class="app-body">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-mark"></div>
         <div>
-          <h2>Today’s focus</h2>
-          <p>Use the board to move work forward and keep the flow calm.</p>
-        </div>
-        <div class="filters">
-          <button id="addTask" class="primary-btn">+ Add Task</button>
-          <input id="taskSearch" type="search" placeholder="Search tasks" />
-          <select id="priorityFilter">
-            <option value="All">All priorities</option>
-            <option value="High">High</option>
-            <option value="Medium">Medium</option>
-            <option value="Low">Low</option>
-          </select>
-          <select id="dueFilter">
-            <option value="All">All dates</option>
-            <option value="Upcoming">Upcoming</option>
-            <option value="This Week">This Week</option>
-            <option value="Overdue">Overdue</option>
-          </select>
+          <p class="eyebrow">Productivity suite</p>
+          <h2>NexusWeave</h2>
         </div>
       </div>
-      <div id="taskBoard" class="task-board"></div>
-    </section>
+
+      <nav class="sidebar-nav" aria-label="Primary navigation">
+        <a class="nav-item active" href="dashboard.html">
+          <span class="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          </span>
+          <span>Dashboard</span>
+        </a>
+        <a class="nav-item" href="create.html">
+          <span class="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v8"></path><path d="M8 12h8"></path></svg>
+          </span>
+          <span>Create</span>
+        </a>
+        <a class="nav-item" href="tasks.html">
+          <span class="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+          </span>
+          <span>Tasks</span>
+        </a>
+        <a class="nav-item" href="board.html">
+          <span class="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M8 7v10"></path><path d="M12 7v6"></path><path d="M16 7v4"></path></svg>
+          </span>
+          <span>Board</span>
+        </a>
+        <a class="nav-item" href="reports.html">
+          <span class="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M7 14l3-3 2 2 5-6"></path></svg>
+          </span>
+          <span>Reports</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="sidebar-footer-card">
+          <p>Reserved for future workspace tools and preferences.</p>
+        </div>
+      </div>
+    </aside>
+
+    <div class="content-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Productivity workspace</p>
+          <h1>Dashboard</h1>
+        </div>
+        <div class="header-actions">
+          <button class="theme-toggle-btn" type="button" data-theme-toggle aria-label="Toggle dark mode">
+            <span class="toggle-icon"></span>
+            <span>Theme</span>
+          </button>
+          <button id="logout" class="ghost-btn">Logout</button>
+        </div>
+      </header>
+
+      <main class="page-main">
+        <div class="dashboard-shell">
+          <section class="welcome-card">
+            <div>
+              <h2 id="welcomeText">Welcome</h2>
+              <p>Track your momentum, organize work, and stay ahead of deadlines.</p>
+            </div>
+            <div id="alertBox" class="alert-box hidden"></div>
+          </section>
+
+          <section class="stats-grid">
+            <article class="card">
+              <h3 id="projectCount">0</h3>
+              <p>Projects</p>
+            </article>
+            <article class="card">
+              <h3 id="taskCount">0</h3>
+              <p>Tasks</p>
+            </article>
+            <article class="card">
+              <h3 id="doneCount">0</h3>
+              <p>Completed</p>
+            </article>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <h2>Projects</h2>
+              <div class="panel-actions">
+                <button id="newProject" class="primary-btn">+ New Project</button>
+                <button id="autoSuggestTasks" class="ghost-btn">Auto-Suggest Tasks</button>
+              </div>
+            </div>
+            <div id="projects" class="project-list"></div>
+          </section>
+
+          <div id="projectModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="projectModalTitle">
+            <div class="modal-card">
+              <div class="modal-head">
+                <div>
+                  <p class="eyebrow">Workspace setup</p>
+                  <h3 id="projectModalTitle">Create project</h3>
+                </div>
+                <button type="button" id="closeProjectModal" class="ghost-btn">×</button>
+              </div>
+              <form id="projectForm" class="task-form">
+                <input type="hidden" id="projectId" />
+                <label class="field-row">
+                  <span>Project name</span>
+                  <input id="projectName" type="text" required placeholder="Example: Launch Sprint" />
+                </label>
+                <label class="field-row">
+                  <span>Description</span>
+                  <textarea id="projectDescription" rows="3" placeholder="What is this workspace for?"></textarea>
+                </label>
+                <div class="field-grid">
+                  <label class="field-row">
+                    <span>Deadline</span>
+                    <input id="projectDeadline" type="date" />
+                  </label>
+                  <label class="field-row">
+                    <span>Timeline</span>
+                    <select id="projectTimeline">
+                      <option value="Planning">Planning</option>
+                      <option value="Execution">Execution</option>
+                      <option value="Review">Review</option>
+                      <option value="Done">Done</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="modal-actions">
+                  <button type="button" id="cancelProjectModal" class="ghost-btn">Cancel</button>
+                  <button type="submit" id="projectSubmitBtn" class="primary-btn">Create project</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <section class="panel board-panel">
+            <div class="board-head">
+              <div>
+                <h2>Today’s focus</h2>
+                <p>Use the board to move work forward and keep the flow calm.</p>
+              </div>
+              <div class="filters">
+                <button id="addTask" class="primary-btn">+ Add Task</button>
+                <input id="taskSearch" type="search" placeholder="Search tasks" />
+                <select id="priorityFilter">
+                  <option value="All">All priorities</option>
+                  <option value="High">High</option>
+                  <option value="Medium">Medium</option>
+                  <option value="Low">Low</option>
+                </select>
+                <select id="dueFilter">
+                  <option value="All">All dates</option>
+                  <option value="Upcoming">Upcoming</option>
+                  <option value="This Week">This Week</option>
+                  <option value="Overdue">Overdue</option>
+                </select>
+              </div>
+            </div>
+            <div id="taskBoard" class="task-board"></div>
+          </section>
+        </div>
+      </main>
+    </div>
   </div>
 
   <div id="taskModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="taskModalTitle">
@@ -181,8 +237,8 @@
     </div>
   </div>
 
-  <script src="../scripts/app-helpers.js"></script>
-  <script src="../scripts/theme.js"></script>
-  <script src="../scripts/dashboard.js"></script>
+  <script src="../scripts/shared/app-helpers.js"></script>
+  <script src="../scripts/shared/theme.js"></script>
+  <script src="../scripts/dashboard/dashboard.js"></script>
 </body>
 </html>
