@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Create | NexusWeave</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../styles/global.css" />
+  <link rel="stylesheet" href="../styles/sidebar.css" />
+  <link rel="stylesheet" href="../styles/create.css" />
+</head>
+<body class="app-body">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-mark"></div>
+        <div>
+          <p class="eyebrow">Productivity suite</p>
+          <h2>NexusWeave</h2>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav" aria-label="Primary navigation">
+        <a class="nav-item" href="dashboard.html">
+          <span class="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          </span>
+          <span>Dashboard</span>
+        </a>
+        <a class="nav-item active" href="create.html">
+          <span class="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v8"></path><path d="M8 12h8"></path></svg>
+          </span>
+          <span>Create</span>
+        </a>
+        <a class="nav-item" href="tasks.html">
+          <span class="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+          </span>
+          <span>Tasks</span>
+        </a>
+        <a class="nav-item" href="board.html">
+          <span class="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M8 7v10"></path><path d="M12 7v6"></path><path d="M16 7v4"></path></svg>
+          </span>
+          <span>Board</span>
+        </a>
+        <a class="nav-item" href="reports.html">
+          <span class="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M7 14l3-3 2 2 5-6"></path></svg>
+          </span>
+          <span>Reports</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="sidebar-footer-card">
+          <p>Reserved for future workspace tools and preferences.</p>
+        </div>
+      </div>
+    </aside>
+
+    <div class="content-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Productivity workspace</p>
+          <h1>Create</h1>
+        </div>
+        <div class="header-actions">
+          <button class="theme-toggle-btn" type="button" data-theme-toggle aria-label="Toggle dark mode">
+            <span class="toggle-icon"></span>
+            <span>Theme</span>
+          </button>
+        </div>
+      </header>
+
+      <main class="page-main">
+        <section class="create-page" aria-label="Create workspace">
+          <div class="create-hero">
+            <div class="entity-switcher" role="tablist" aria-label="Create type switcher">
+              <button class="is-active" type="button" data-entity-toggle data-target="task" aria-pressed="true">Task</button>
+              <button type="button" data-entity-toggle data-target="project" aria-pressed="false">Project</button>
+            </div>
+            <div class="hero-copy">
+              <p class="eyebrow">Workspace foundation</p>
+              <h2>Create tasks and projects</h2>
+            </div>
+          </div>
+
+          <div class="create-form-stack">
+            <form class="entity-form is-active" data-entity-form="task" aria-label="Create task form">
+              <div class="form-card">
+                <div class="form-card-header">
+                  <div>
+                    <h3>Task details</h3>
+                    <p>Capture the essentials for a new task.</p>
+                  </div>
+                  <span class="object-chip">Task</span>
+                </div>
+                <div class="form-grid">
+                  <div class="field">
+                    <label for="task-name">Task Name *</label>
+                    <input id="task-name" name="task-name" type="text" placeholder="Example: Design Landing Page" />
+                  </div>
+                  <div class="field">
+                    <label for="task-project">Project</label>
+                    <select id="task-project" name="task-project">
+                      <option value="">None</option>
+                      <option value="site-redesign">Site Redesign</option>
+                      <option value="mobile-app">Mobile App</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="task-description">Description</label>
+                    <textarea id="task-description" name="task-description" placeholder="Describe the task..."></textarea>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-card">
+                <div class="form-card-header">
+                  <div>
+                    <h3>Properties</h3>
+                    <p>Define priority, status, timing, and reminders.</p>
+                  </div>
+                </div>
+                <div class="form-grid two-up">
+                  <div class="field">
+                    <label for="task-priority">Priority</label>
+                    <select id="task-priority" name="task-priority">
+                      <option value="none">No Priority</option>
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="task-status">Status</label>
+                    <select id="task-status" name="task-status">
+                      <option value="todo">Todo</option>
+                      <option value="in-progress">In Progress</option>
+                      <option value="done">Done</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="task-deadline-date">Deadline</label>
+                    <div class="form-grid">
+                      <input id="task-deadline-date" name="task-deadline-date" type="date" data-date-input />
+                      <input id="task-deadline-time" name="task-deadline-time" type="time" data-time-input />
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label for="task-reminder-date">Reminder</label>
+                    <div class="form-grid">
+                      <input id="task-reminder-date" name="task-reminder-date" type="date" data-date-input />
+                      <input id="task-reminder-time" name="task-reminder-time" type="time" data-time-input />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-card">
+                <div class="form-card-header">
+                  <div>
+                    <h3>Organization</h3>
+                    <p>Add context without overloading the task itself.</p>
+                  </div>
+                </div>
+                <div class="form-grid">
+                  <div class="field">
+                    <span class="field-label">Labels</span>
+                    <button class="upload-pill" type="button" data-open-label-modal aria-label="Add label">
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+                      <span>Add Label</span>
+                    </button>
+                    <div class="selected-labels" data-label-chips></div>
+                  </div>
+                  <div class="field">
+                    <span class="field-label">Attachment</span>
+                    <button class="upload-pill" type="button" data-open-attachments aria-label="Upload attachment">
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4"></path><path d="M7 7l5-5 5 5"></path><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"></path></svg>
+                      <span>Upload file</span>
+                    </button>
+                    <input type="file" data-attachment-input multiple hidden />
+                    <div class="attachment-list" data-attachment-list></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-message" data-task-feedback aria-live="polite"></div>
+              <div class="action-row">
+                <button class="ghost-btn" type="button" data-reset-task-form>Cancel</button>
+                <button class="primary-btn" type="submit" data-create-task>Create Task</button>
+              </div>
+            </form>
+
+            <form class="entity-form" data-entity-form="project" aria-label="Create project form">
+              <div class="form-card">
+                <div class="form-card-header">
+                  <div>
+                    <h3>Project details</h3>
+                    <p>Create the foundation for a reusable project object.</p>
+                  </div>
+                  <span class="object-chip">Project</span>
+                </div>
+                <div class="form-grid">
+                  <div class="field">
+                    <label for="project-name">Project Name *</label>
+                    <input id="project-name" name="project-name" type="text" placeholder="Example: Product Launch" />
+                  </div>
+                  <div class="field">
+                    <label for="project-description">Description</label>
+                    <textarea id="project-description" name="project-description" placeholder="Describe the project..."></textarea>
+                  </div>
+                  <div class="field">
+                    <label for="project-deadline">Deadline</label>
+                    <input id="project-deadline" name="project-deadline" type="date" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-card">
+                <div class="form-card-header">
+                  <div>
+                    <h3>Organization</h3>
+                    <p>Attach labeling and supporting files for later filtering.</p>
+                  </div>
+                </div>
+                <div class="form-grid">
+                  <div class="field">
+                    <span class="field-label">Labels</span>
+                    <div class="upload-pill" role="button" aria-label="Add label">
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+                      <span>Add Label</span>
+                    </div>
+                  </div>
+                  <div class="field">
+                    <span class="field-label">Attachments</span>
+                    <div class="upload-pill" role="button" aria-label="Upload attachment">
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4"></path><path d="M7 7l5-5 5 5"></path><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"></path></svg>
+                      <span>Upload file</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-card">
+                <div class="form-card-header">
+                  <div>
+                    <h3>Project tasks</h3>
+                    <p>Add existing work to this project later as needed.</p>
+                  </div>
+                </div>
+                <div class="placeholder-state">
+                  <p>No tasks selected</p>
+                </div>
+                <div class="action-row" style="justify-content: flex-start; padding-top: 0.9rem;">
+                  <button class="ghost-btn" type="button" data-open-modal>Add Existing Tasks</button>
+                </div>
+              </div>
+
+              <div class="form-message" data-project-feedback aria-live="polite"></div>
+              <div class="action-row">
+                <button class="ghost-btn" type="button">Cancel</button>
+                <button class="primary-btn" type="submit">Create Project</button>
+              </div>
+            </form>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" data-create-modal aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal-card-header">
+        <div>
+          <p class="eyebrow">Select tasks</p>
+          <h3 id="modal-title">Add existing tasks</h3>
+        </div>
+        <button class="ghost-btn" type="button" data-close-modal>Close</button>
+      </div>
+      <div class="modal-search field">
+        <input type="text" placeholder="Search tasks" />
+      </div>
+      <div class="modal-section">
+        <h4>Unassigned Tasks</h4>
+        <div class="task-selection-list">
+          <label class="task-selection-item">
+            <input type="checkbox" />
+            <span>Refine onboarding checklist</span>
+          </label>
+          <label class="task-selection-item">
+            <input type="checkbox" />
+            <span>Outline launch timeline</span>
+          </label>
+        </div>
+      </div>
+      <div class="modal-section">
+        <h4>Tasks Already In Projects</h4>
+        <div class="task-selection-list">
+          <label class="task-selection-item">
+            <input type="checkbox" />
+            <span>Prepare investor update</span>
+          </label>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="ghost-btn" type="button" data-close-modal>Cancel</button>
+        <button class="primary-btn" type="button" data-close-modal>Add Selected</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" data-label-modal aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="label-modal-title">
+      <div class="modal-card-header">
+        <div>
+          <p class="eyebrow">Manage labels</p>
+          <h3 id="label-modal-title">Choose labels</h3>
+        </div>
+        <button class="ghost-btn" type="button" data-close-label-modal>Close</button>
+      </div>
+      <div class="field">
+        <input type="text" placeholder="Search labels" data-label-search />
+      </div>
+      <div class="label-options" data-label-options></div>
+      <div class="field">
+        <label for="new-label-name">Create a new label</label>
+        <div class="inline-create">
+          <input id="new-label-name" type="text" placeholder="New label name" data-new-label-input />
+          <button class="primary-btn" type="button" data-create-label>Add</button>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="ghost-btn" type="button" data-close-label-modal>Done</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" data-task-toast role="status" aria-live="polite"></div>
+
+  <script src="../scripts/shared/theme.js"></script>
+  <script src="../scripts/create/create.js"></script>
+</body>
+</html>
