@@ -110,7 +110,6 @@
 
   function persistUser() {
     if (!sessionEmail) return;
-    refreshCurrentUserFromStorage();
     const safeUser = normalizeUser(state.currentUser, sessionEmail);
     state.currentUser = safeUser;
     database[sessionEmail] = safeUser;
