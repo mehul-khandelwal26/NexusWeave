@@ -1,6 +1,8 @@
 (function () {
   const SESSION_KEY = 'session';
   const DB_KEY = 'users';
+  const TIMER_STATE_KEY = 'nexus-focus-timer-state';
+  
   const timerDisplay = document.getElementById('timerDisplay');
   const timerStatus = document.getElementById('timerStatus');
   const startButton = document.getElementById('startTimer');
@@ -25,6 +27,26 @@
   let timerId = null;
   let isRunning = false;
 
+  function saveTimerState() {
+    if (isRunning) {
+      localStorage.setItem(TIMER_STATE_KEY, JSON.stringify({
+        isRunning: true,
+        totalSeconds: totalSeconds,
+        endTime: Date.now() + remainingSeconds * 1000
+      }));
+    } else {
+      localStorage.setItem(TIMER_STATE_KEY, JSON.stringify({
+        isRunning: false,
+        totalSeconds: totalSeconds,
+        pausedRemainingSeconds: remainingSeconds
+      }));
+    }
+  }
+
+  function clearTimerState() {
+    localStorage.removeItem(TIMER_STATE_KEY);
+  }
+
   function renderTimer() {
     const minutes = String(Math.floor(remainingSeconds / 60)).padStart(2, '0');
     const seconds = String(remainingSeconds % 60).padStart(2, '0');
@@ -41,10 +63,12 @@
       if (customMinutesInput) {
         customMinutesInput.disabled = false;
       }
+      clearTimerState();
       return;
     }
 
     remainingSeconds -= 1;
+    saveTimerState();
     renderTimer();
   }
 
@@ -54,6 +78,7 @@
       customMinutesInput.disabled = true;
     }
     isRunning = true;
+    saveTimerState();
     timerId = setInterval(tick, 1000);
     renderTimer();
   }
@@ -64,12 +89,14 @@
     if (customMinutesInput) {
       customMinutesInput.disabled = false;
     }
+    saveTimerState();
     renderTimer();
   }
 
   function resetTimer() {
     isRunning = false;
     clearInterval(timerId);
+    clearTimerState();
     if (customMinutesInput) {
       customMinutesInput.disabled = false;
       const mins = Math.max(1, parseInt(customMinutesInput.value, 10) || 25);
@@ -77,6 +104,39 @@
     }
     remainingSeconds = totalSeconds;
     renderTimer();
+  }
+
+  function loadTimerState() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(TIMER_STATE_KEY));
+      if (!saved) return;
+      
+      totalSeconds = saved.totalSeconds || 25 * 60;
+      if (customMinutesInput) {
+        customMinutesInput.value = totalSeconds / 60;
+      }
+      
+      if (saved.isRunning) {
+        const remaining = Math.round((saved.endTime - Date.now()) / 1000);
+        if (remaining > 0) {
+          remainingSeconds = remaining;
+          isRunning = true;
+          if (customMinutesInput) {
+            customMinutesInput.disabled = true;
+          }
+          timerId = setInterval(tick, 1000);
+        } else {
+          remainingSeconds = 0;
+          isRunning = false;
+          timerStatus.textContent = 'Session complete';
+          clearTimerState();
+        }
+      } else {
+        remainingSeconds = saved.pausedRemainingSeconds || totalSeconds;
+      }
+    } catch (e) {
+      console.error('Failed to load timer state:', e);
+    }
   }
 
   customMinutesInput?.addEventListener('change', () => {
@@ -92,5 +152,6 @@
   pauseButton?.addEventListener('click', pauseTimer);
   resetButton?.addEventListener('click', resetTimer);
 
+  loadTimerState();
   renderTimer();
 })();

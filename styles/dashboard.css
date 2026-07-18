@@ -305,54 +305,7 @@
 .drawer-details { display: grid; gap: 0.7rem; }
 .drawer-details div { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; border: 1px solid var(--border); border-radius: 12px; padding: 0.7rem 0.8rem; }
 .modal-card-small { width: min(100%, 420px); }
-.profile-menu-wrapper { position: relative; }
-.profile-trigger {
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-  padding: 0.6rem 0.8rem;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface);
-  color: inherit;
-  box-shadow: 0 12px 30px var(--shadow);
-}
-.profile-avatar {
-  width: 2.2rem;
-  height: 2.2rem;
-  display: grid;
-  place-items: center;
-  border-radius: 999px;
-  background: var(--primary-soft);
-  color: var(--primary);
-  font-weight: 700;
-}
-.profile-meta { display: grid; text-align: left; }
-.profile-meta small { color: var(--text-soft); }
-.profile-menu {
-  position: absolute;
-  top: calc(100% + 0.4rem);
-  right: 0;
-  display: none;
-  min-width: 180px;
-  padding: 0.5rem;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: var(--surface);
-  box-shadow: 0 16px 36px var(--shadow);
-  z-index: 2200;
-}
-.profile-menu.is-open { display: grid; gap: 0.35rem; }
-.profile-menu-item {
-  border: 0;
-  background: transparent;
-  border-radius: 12px;
-  padding: 0.65rem 0.7rem;
-  text-align: left;
-  color: inherit;
-}
-.profile-menu-item:hover { background: var(--surface-muted); }
-.profile-menu-item.danger { color: var(--danger); }
+
 .dashboard-toolbar {
   display: flex;
   align-items: center;
