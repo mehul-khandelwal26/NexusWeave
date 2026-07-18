@@ -532,12 +532,38 @@
     render();
   }
 
+  function applyBoardBackground() {
+    const boardColumns = document.getElementById('boardColumns');
+    if (!boardColumns) return;
+    const bg = state.currentUser.boardBg || 'none';
+    
+    const options = document.querySelectorAll('.bg-option');
+    options.forEach(opt => {
+      if (opt.dataset.bgValue === bg) {
+        opt.classList.add('active');
+      } else {
+        opt.classList.remove('active');
+      }
+    });
+
+    if (bg === 'none') {
+      boardColumns.style.backgroundImage = '';
+      boardColumns.classList.remove('has-bg');
+    } else {
+      boardColumns.style.backgroundImage = bg;
+      boardColumns.classList.add('has-bg');
+    }
+  }
+
   function render() {
     refreshCurrentUserFromStorage();
     renderFilterOptions();
     renderFilterChips();
     if (taskGroupsEl) renderTasksPage();
-    if (boardColumnsEl) renderBoardPage();
+    if (boardColumnsEl) {
+      renderBoardPage();
+      applyBoardBackground();
+    }
   }
 
   function bindEvents() {
@@ -563,11 +589,33 @@
       if (event.target === drawerEl) closeDrawer();
     });
 
+    const changeBoardBgBtn = document.getElementById('changeBoardBgBtn');
+    const boardBgModal = document.getElementById('boardBgModal');
+    const closeBoardBgModal = document.getElementById('closeBoardBgModal');
+
+    changeBoardBgBtn?.addEventListener('click', () => {
+      boardBgModal?.classList.remove('hidden');
+    });
+    closeBoardBgModal?.addEventListener('click', () => {
+      boardBgModal?.classList.add('hidden');
+    });
+    boardBgModal?.addEventListener('click', (e) => {
+      if (e.target === boardBgModal) boardBgModal.classList.add('hidden');
+    });
+    boardBgModal?.addEventListener('click', (e) => {
+      const option = e.target.closest('.bg-option');
+      if (!option) return;
+      state.currentUser.boardBg = option.dataset.bgValue;
+      persistUser();
+      applyBoardBackground();
+    });
+
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') {
         closeTaskModal();
         closeDeleteModal();
         closeDrawer();
+        boardBgModal?.classList.add('hidden');
       }
     });
 
@@ -601,6 +649,7 @@
     if (projectFilter) projectFilter.value = state.filters.project;
     if (labelFilter) labelFilter.value = state.filters.label;
     if (dueFilter) dueFilter.value = state.filters.dueRange;
+    state.selectedProjectId = state.filters.project === 'All' ? null : state.filters.project;
     window.addEventListener('storage', (event) => {
       if (!event.key || event.key === DB_KEY || event.key === SESSION_KEY || event.key === VIEW_STATE_KEY) {
         syncFromExternalChanges();

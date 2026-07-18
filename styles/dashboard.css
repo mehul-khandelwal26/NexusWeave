@@ -253,7 +253,28 @@
 .icon-btn.danger { color: var(--danger); }
 .filter-chip { border: 1px solid var(--border); background: var(--surface-muted); border-radius: 999px; padding: 0.35rem 0.7rem; }
 .empty-inline { color: var(--text-soft); padding: 0.7rem 0; }
-.board-columns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+.board-columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  transition: background 0.3s ease, border-color 0.3s ease, padding 0.3s ease;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  border-radius: 20px;
+}
+.board-columns.has-bg {
+  padding: 1.2rem;
+  border: 1px solid var(--border);
+  min-height: 520px;
+}
+.bg-option:hover {
+  transform: scale(1.04);
+}
+.bg-option.active {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.36);
+}
 .board-column { background: var(--surface-muted); border: 1px solid var(--border); border-radius: 18px; padding: 0.85rem; }
 .board-column.is-drop-target { border-color: var(--primary); }
 .board-card { padding: 0.8rem; border-radius: 14px; background: var(--surface); border: 1px solid var(--border); display: grid; gap: 0.5rem; }
@@ -347,15 +368,15 @@
   background: var(--surface-muted);
 }
 .heatmap-cell.level-0 { background: var(--surface-muted); }
-.heatmap-cell.level-1 { background: #dbeafe; }
-.heatmap-cell.level-2 { background: #93c5fd; }
-.heatmap-cell.level-3 { background: #3b82f6; }
-.heatmap-cell.level-4 { background: #1d4ed8; }
+.heatmap-cell.level-1 { background: #ede9fe; }
+.heatmap-cell.level-2 { background: #ddd6fe; }
+.heatmap-cell.level-3 { background: #c084fc; }
+.heatmap-cell.level-4 { background: #7c3aed; }
 
-:root[data-theme='dark'] .heatmap-cell.level-1 { background: rgba(96, 165, 250, 0.15); }
-:root[data-theme='dark'] .heatmap-cell.level-2 { background: rgba(96, 165, 250, 0.4); }
-:root[data-theme='dark'] .heatmap-cell.level-3 { background: rgba(96, 165, 250, 0.7); }
-:root[data-theme='dark'] .heatmap-cell.level-4 { background: rgba(96, 165, 250, 1); }
+:root[data-theme='dark'] .heatmap-cell.level-1 { background: rgba(167, 139, 250, 0.15); }
+:root[data-theme='dark'] .heatmap-cell.level-2 { background: rgba(167, 139, 250, 0.4); }
+:root[data-theme='dark'] .heatmap-cell.level-3 { background: rgba(167, 139, 250, 0.7); }
+:root[data-theme='dark'] .heatmap-cell.level-4 { background: rgba(167, 139, 250, 1); }
 
 @media (max-width: 1100px) {
   .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }

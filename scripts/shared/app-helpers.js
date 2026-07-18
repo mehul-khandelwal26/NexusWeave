@@ -123,7 +123,7 @@
       const matchesPriority = !filters.priority || filters.priority === 'All' || normalizedTask.priority === filters.priority;
       const matchesStatus = !filters.status || filters.status === 'All' || normalizedTask.status === filters.status;
       const matchesProject = !filters.project || filters.project === 'All' || normalizedTask.projectId === filters.project;
-      const matchesLabel = !filters.label || !filters.label.trim() || (normalizedTask.labels || []).includes(filters.label.trim());
+      const matchesLabel = !filters.label || filters.label === 'All' || !filters.label.trim() || (normalizedTask.labels || []).includes(filters.label.trim());
 
       let matchesDue = true;
       if (filters.dueRange && filters.dueRange !== 'All') {
