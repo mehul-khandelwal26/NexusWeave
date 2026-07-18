@@ -423,6 +423,7 @@ function handleTaskSubmit(event) {
       renderBoard();
       renderStats();
       renderActivity();
+      renderHeatmap();
       pushActivity(`Updated task ${task.title}.`);
       showAlert(`Task “${task.title}” updated.`);
     }
@@ -444,6 +445,7 @@ function handleTaskSubmit(event) {
     renderBoard();
     renderStats();
     renderActivity();
+    renderHeatmap();
     pushActivity(`Created task ${task.title}.`);
     showAlert(`Task “${task.title}” added.`);
   }
@@ -451,16 +453,29 @@ function handleTaskSubmit(event) {
   closeTaskModal();
 }
 
+function getLocalDateString(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 function buildContributionGrid(tasks) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const totalCells = 371; // 53 weeks * 7 days
+  const totalCells = 31; // Last 31 days
   return Array.from({ length: totalCells }, (_, index) => {
     const date = new Date(today);
     date.setDate(today.getDate() - (totalCells - 1 - index));
-    const key = date.toISOString().slice(0, 10);
-    const value = tasks.filter((task) => task.status === 'Done' && task.completedAt && task.completedAt.slice(0, 10) === key).length;
+    const key = getLocalDateString(date);
+    
+    const value = tasks.filter((task) => {
+      if (task.status !== 'Done' || !task.completedAt) return false;
+      const completedDate = new Date(task.completedAt);
+      return getLocalDateString(completedDate) === key;
+    }).length;
+
     const intensity = value === 0 ? 0 : value <= 1 ? 1 : value <= 2 ? 2 : value <= 3 ? 3 : 4;
     return { key, value, intensity, label: date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) };
   });
@@ -543,6 +558,7 @@ function renderBoard() {
         renderBoard();
         renderStats();
         renderActivity();
+        renderHeatmap();
       }
     });
     taskBoard.appendChild(column);
@@ -551,10 +567,17 @@ function renderBoard() {
 
 function renderActivity() {
   refreshCurrentUserFromStorage();
-  const feed = state.currentUser.activity.length ? state.currentUser.activity : [
-    { id: 'default-1', message: 'Create your first project to begin.', createdAt: new Date().toISOString() }
-  ];
-  activityFeed.innerHTML = feed.map((entry) => `<div class="activity-item">${entry.message}</div>`).join('');
+  const feed = state.currentUser.activity;
+  if (!feed.length) {
+    activityFeed.innerHTML = '<div class="empty-inline">No recent activity.</div>';
+    return;
+  }
+  activityFeed.innerHTML = feed.map((entry) => `
+    <div class="activity-item" style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
+      <span>${entry.message}</span>
+      <button type="button" class="close-activity-btn" data-activity-id="${entry.id}" style="border: 0; background: transparent; font-size: 1.15rem; cursor: pointer; color: var(--text-soft); padding: 0 0.2rem; line-height: 1;">&times;</button>
+    </div>
+  `).join('');
 }
 
 function renderHeatmap() {
@@ -576,6 +599,7 @@ function removeTask(taskId) {
   renderBoard();
   renderStats();
   renderActivity();
+  renderHeatmap();
   showAlert('Task removed.');
 }
 
@@ -695,6 +719,25 @@ function bindEvents() {
       renderStats();
       renderActivity();
     }
+  });
+
+  // Clear activity feed
+  document.getElementById('clearActivity')?.addEventListener('click', () => {
+    if (!window.confirm('Clear all recent activity?')) return;
+    state.currentUser.activity = [];
+    saveUser();
+    renderActivity();
+    showAlert('Activity log cleared.');
+  });
+
+  // Delete individual activity item
+  activityFeed?.addEventListener('click', (event) => {
+    const deleteBtn = event.target.closest('.close-activity-btn');
+    if (!deleteBtn) return;
+    const activityId = deleteBtn.dataset.activityId;
+    state.currentUser.activity = state.currentUser.activity.filter(act => act.id !== activityId);
+    saveUser();
+    renderActivity();
   });
 }
 
