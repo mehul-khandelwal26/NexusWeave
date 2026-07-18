@@ -32,6 +32,7 @@
       theme: 'light',
       projects: [],
       tasks: [],
+      activity: [],
       createdAt: Date.now()
     };
   }
@@ -53,31 +54,120 @@
     ];
   }
 
-  function filterTasks(tasks, query, priority, dueFilter) {
-    const search = query.trim().toLowerCase();
+  function normalizeTask(task, fallbackProjectId) {
+    const labels = Array.isArray(task?.labels)
+      ? task.labels
+      : typeof task?.labels === 'string'
+        ? task.labels.split(',').map((label) => label.trim()).filter(Boolean)
+        : [];
+
+    return {
+      ...task,
+      title: task?.title || 'Untitled task',
+      status: task?.status || 'Todo',
+      priority: task?.priority || 'Medium',
+      description: task?.description || '',
+      dueDate: task?.dueDate || '',
+      projectId: task?.projectId || fallbackProjectId || null,
+      labels,
+      attachments: Array.isArray(task?.attachments) ? task.attachments : []
+    };
+  }
+
+  function formatDisplayDate(value) {
+    if (!value) return 'No deadline';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'No deadline';
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  function getPriorityTone(priority) {
+    switch (priority) {
+      case 'High': return 'priority-high';
+      case 'Low': return 'priority-low';
+      default: return 'priority-medium';
+    }
+  }
+
+  function getTaskStatusTone(status) {
+    switch (status) {
+      case 'Done': return 'status-done';
+      case 'In Progress': return 'status-progress';
+      default: return 'status-todo';
+    }
+  }
+
+  function getTaskDueState(task) {
+    if (!task?.dueDate || task.status === 'Done') return 'on-track';
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dueDate = new Date(task.dueDate);
+    if (Number.isNaN(dueDate.getTime())) return 'on-track';
+    const diff = Math.round((dueDate - today) / (1000 * 60 * 60 * 24));
+    if (diff < 0) return 'overdue';
+    if (diff <= 2) return 'soon';
+    return 'upcoming';
+  }
+
+  function filterTasks(tasks, filters = {}, projects = []) {
+    const search = (filters.query || '').trim().toLowerCase();
+    const projectLookup = new Map((projects || []).map((project) => [project.id, project]));
 
     return tasks.filter((task) => {
-      const matchesQuery = !search || task.title.toLowerCase().includes(search);
-      const matchesPriority = !priority || priority === 'All' || task.priority === priority;
+      const normalizedTask = normalizeTask(task);
+      const matchesQuery = !search || [normalizedTask.title, normalizedTask.description, normalizedTask.priority, normalizedTask.status, ...(normalizedTask.labels || []), projectLookup.get(normalizedTask.projectId)?.name || '']
+        .join(' ')
+        .toLowerCase()
+        .includes(search);
+
+      const matchesPriority = !filters.priority || filters.priority === 'All' || normalizedTask.priority === filters.priority;
+      const matchesStatus = !filters.status || filters.status === 'All' || normalizedTask.status === filters.status;
+      const matchesProject = !filters.project || filters.project === 'All' || normalizedTask.projectId === filters.project;
+      const matchesLabel = !filters.label || !filters.label.trim() || (normalizedTask.labels || []).includes(filters.label.trim());
 
       let matchesDue = true;
-      if (dueFilter && dueFilter !== 'All') {
+      if (filters.dueRange && filters.dueRange !== 'All') {
         const today = new Date();
-        const dueDate = task.dueDate ? new Date(task.dueDate) : null;
+        today.setHours(0, 0, 0, 0);
+        const dueDate = normalizedTask.dueDate ? new Date(normalizedTask.dueDate) : null;
+        if (dueDate) {
+          dueDate.setHours(0, 0, 0, 0);
+        }
 
-        if (dueFilter === 'Upcoming') {
+        if (filters.dueRange === 'Upcoming') {
           matchesDue = dueDate && dueDate >= today;
-        } else if (dueFilter === 'Overdue') {
+        } else if (filters.dueRange === 'Overdue') {
           matchesDue = dueDate && dueDate < today;
-        } else if (dueFilter === 'This Week') {
+        } else if (filters.dueRange === 'This Week') {
           const end = new Date(today);
           end.setDate(today.getDate() + 7);
           matchesDue = dueDate && dueDate >= today && dueDate <= end;
         }
       }
 
-      return matchesQuery && matchesPriority && matchesDue;
+      return matchesQuery && matchesPriority && matchesStatus && matchesProject && matchesLabel && matchesDue;
     });
+  }
+
+  function sortTasks(tasks, sortKey = 'updatedAt', direction = 'desc') {
+    const sorted = [...tasks].sort((left, right) => {
+      const leftValue = left[sortKey] || '';
+      const rightValue = right[sortKey] || '';
+
+      if (sortKey === 'dueDate') {
+        const leftDate = leftValue ? new Date(leftValue).getTime() : Number.POSITIVE_INFINITY;
+        const rightDate = rightValue ? new Date(rightValue).getTime() : Number.POSITIVE_INFINITY;
+        return leftDate - rightDate;
+      }
+
+      if (typeof leftValue === 'string' && typeof rightValue === 'string') {
+        return leftValue.localeCompare(rightValue);
+      }
+
+      return (leftValue > rightValue ? 1 : -1);
+    });
+
+    return direction === 'desc' ? sorted.reverse() : sorted;
   }
 
   function getDueSoonTasks(tasks) {
@@ -102,13 +192,48 @@
     return { total, done, inProgress };
   }
 
+  function getProjectProgress(project, tasks) {
+    const projectTasks = tasks.filter((task) => task.projectId === project.id);
+    if (!projectTasks.length) return 0;
+    const done = projectTasks.filter((task) => task.status === 'Done').length;
+    return Math.round((done / projectTasks.length) * 100);
+  }
+
+  function getWeeklyCompletion(tasks) {
+    const counts = Array.from({ length: 7 }, (_, index) => ({ day: index, value: 0 }));
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    tasks.filter((task) => task.status === 'Done').forEach((task) => {
+      if (!task.completedAt) return;
+      const completedAt = new Date(task.completedAt);
+      const diffDays = Math.floor((today - completedAt) / (1000 * 60 * 60 * 24));
+      if (diffDays >= 0 && diffDays < 7) {
+        counts[6 - diffDays].value += 1;
+      }
+    });
+
+    return counts.map((item, index) => ({
+      ...item,
+      label: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][index]
+    }));
+  }
+
   return {
     isValidEmail,
     validateAuthFields,
     createUserProfile,
     buildTaskSuggestions,
+    normalizeTask,
+    formatDisplayDate,
+    getPriorityTone,
+    getTaskStatusTone,
+    getTaskDueState,
     filterTasks,
+    sortTasks,
     getDueSoonTasks,
-    getTaskSummary
+    getTaskSummary,
+    getProjectProgress,
+    getWeeklyCompletion
   };
 });

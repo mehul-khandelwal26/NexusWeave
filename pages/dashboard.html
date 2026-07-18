@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="../styles/global.css" />
+  <link rel="stylesheet" href="../styles/product.css" />
   <link rel="stylesheet" href="../styles/dashboard.css" />
   <link rel="stylesheet" href="../styles/sidebar.css" />
 </head>
@@ -83,22 +84,58 @@
               <h2 id="welcomeText">Welcome</h2>
               <p>Track your momentum, organize work, and stay ahead of deadlines.</p>
             </div>
+            <label class="dashboard-toolbar" for="dashboardTaskSearch">
+              <span class="search-icon" aria-hidden="true">⌕</span>
+              <input id="dashboardTaskSearch" type="search" placeholder="Search tasks across your workspace" />
+            </label>
             <div id="alertBox" class="alert-box hidden"></div>
           </section>
 
           <section class="stats-grid">
-            <article class="card">
+            <article class="stat-card">
               <h3 id="projectCount">0</h3>
               <p>Projects</p>
             </article>
-            <article class="card">
+            <article class="stat-card">
               <h3 id="taskCount">0</h3>
               <p>Tasks</p>
             </article>
-            <article class="card">
+            <article class="stat-card">
               <h3 id="doneCount">0</h3>
               <p>Completed</p>
             </article>
+            <article class="stat-card">
+              <h3 id="overdueCount">0</h3>
+              <p>Overdue</p>
+            </article>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>Productivity overview</h2>
+                <p class="text-soft">Completion rate <strong id="completionRate">0%</strong> this week.</p>
+              </div>
+              <div class="panel-actions">
+                <button type="button" class="primary-btn" data-quick-action="new-task">New Task</button>
+                <button type="button" class="ghost-btn" data-quick-action="new-project">New Project</button>
+                <button type="button" class="ghost-btn" data-quick-action="open-board">Open Board</button>
+              </div>
+            </div>
+            <div class="dashboard-grid">
+              <div class="panel">
+                <div class="board-head">
+                  <h3>Weekly completion</h3>
+                  <div id="heatmap" class="heatmap"></div>
+                </div>
+              </div>
+              <div class="panel">
+                <div class="board-head">
+                  <h3>Recent activity</h3>
+                </div>
+                <div id="activityFeed" class="activity-list"></div>
+              </div>
+            </div>
           </section>
 
           <section class="panel">
@@ -168,6 +205,15 @@
                   <option value="High">High</option>
                   <option value="Medium">Medium</option>
                   <option value="Low">Low</option>
+                </select>
+                <select id="statusFilter">
+                  <option value="All">All statuses</option>
+                  <option value="Todo">Todo</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Done">Done</option>
+                </select>
+                <select id="projectFilter">
+                  <option value="All">All projects</option>
                 </select>
                 <select id="dueFilter">
                   <option value="All">All dates</option>

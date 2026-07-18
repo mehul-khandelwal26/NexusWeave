@@ -1,36 +1,40 @@
 :root {
-  --paper: #f6f2ea;
+  --paper: #f8fafc;
   --paper-raised: #ffffff;
-  --ink: #1d2430;
-  --ink-soft: #5d6470;
-  --accent: #2fbf9f;
-  --accent-strong: #167c66;
-  --border: rgba(29, 36, 48, 0.12);
-  --shadow: rgba(15, 23, 42, 0.12);
-  --radius: 24px;
+  --ink: #0f172a;
+  --ink-soft: #64748b;
+  --accent: #2563eb;
+  --accent-strong: #1d4ed8;
+  --border: #e2e8f0;
+  --shadow: rgba(15, 23, 42, 0.08);
+  --radius: 20px;
   --display: 'Space Grotesk', sans-serif;
   --body: 'Inter', sans-serif;
 }
 
 :root[data-theme='dark'] {
-  --paper: #07111f;
-  --paper-raised: #111d2f;
-  --ink: #f3f7ff;
-  --ink-soft: #9fb0c4;
-  --accent: #60e2c4;
-  --accent-strong: #8feddb;
-  --border: rgba(255, 255, 255, 0.1);
-  --shadow: rgba(0, 0, 0, 0.35);
+  --paper: #020617;
+  --paper-raised: #0f172a;
+  --ink: #f8fafc;
+  --ink-soft: #94a3b8;
+  --accent: #60a5fa;
+  --accent-strong: #93c5fd;
+  --border: #334155;
+  --shadow: rgba(2, 6, 23, 0.32);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
 body {
   font-family: var(--body);
-  background: radial-gradient(circle at top left, rgba(47, 191, 159, 0.2), transparent 28%), var(--paper);
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
   color: var(--ink);
   min-height: 100vh;
   transition: background 0.25s ease, color 0.25s ease;
+}
+
+body[data-theme='dark'] {
+  background: linear-gradient(180deg, #020617 0%, #0f172a 100%);
 }
 
 a { color: inherit; text-decoration: none; }
@@ -48,7 +52,7 @@ input::placeholder, textarea::placeholder {
 }
 
 .site-header, .page-shell, .site-shell, .dashboard-shell {
-  width: min(1220px, calc(100% - 2rem));
+  width: min(1280px, calc(100% - 2rem));
   margin: 0 auto;
 }
 
@@ -56,7 +60,7 @@ input::placeholder, textarea::placeholder {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1.25rem 0 1rem;
+  padding: 1.2rem 0 1rem;
 }
 
 .brand {
@@ -71,9 +75,9 @@ input::placeholder, textarea::placeholder {
 .brand-mark, .logo-box {
   width: 16px;
   height: 16px;
-  border-radius: 4px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
-  box-shadow: 0 0 0 4px rgba(47, 191, 159, 0.18);
+  border-radius: 6px;
+  background: linear-gradient(135deg, var(--accent), #3b82f6);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.16);
 }
 
 .nav-links {
@@ -84,14 +88,14 @@ input::placeholder, textarea::placeholder {
 }
 
 .nav-links a.active {
-  color: var(--accent-strong);
+  color: var(--accent);
   font-weight: 600;
 }
 
 .theme-toggle-btn, .primary-btn, .login-btn, .google-btn, .ghost-btn {
   border: 0;
   border-radius: 999px;
-  padding: 0.7rem 1rem;
+  padding: 0.72rem 1rem;
   transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
@@ -99,13 +103,13 @@ input::placeholder, textarea::placeholder {
   background: var(--paper-raised);
   color: var(--ink);
   border: 1px solid var(--border);
-  box-shadow: 0 8px 24px var(--shadow);
+  box-shadow: 0 10px 24px var(--shadow);
 }
 
 .primary-btn, .login-btn {
   background: linear-gradient(135deg, var(--accent), var(--accent-strong));
   color: white;
-  box-shadow: 0 12px 24px rgba(47, 191, 159, 0.2);
+  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.2);
 }
 
 .google-btn {
@@ -120,7 +124,7 @@ input::placeholder, textarea::placeholder {
 
 .form-errors {
   min-height: 1.2rem;
-  color: #d04f4f;
+  color: var(--danger);
   margin-bottom: 0.7rem;
   font-size: 0.95rem;
 }
