@@ -173,6 +173,38 @@ body.app-body {
   font-size: 1rem;
 }
 
+.sidebar-footer {
+  padding: 1.2rem;
+  border-top: 1px solid var(--border);
+}
+
+.sidebar-footer .profile-menu-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.sidebar-footer .profile-trigger {
+  width: 100%;
+  justify-content: flex-start;
+  box-shadow: none;
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 0.6rem 0.5rem;
+}
+
+.sidebar-footer .profile-trigger:hover {
+  background: var(--surface-muted);
+  border-color: var(--border);
+}
+
+.sidebar-footer .profile-menu {
+  bottom: calc(100% + 0.4rem);
+  top: auto;
+  left: 0;
+  right: auto;
+  width: 100%;
+}
+
 @media (max-width: 900px) {
   .app-shell {
     grid-template-columns: 1fr;
