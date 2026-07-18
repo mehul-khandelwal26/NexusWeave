@@ -21,18 +21,62 @@ const selectedLabelContainer = document.querySelector('[data-label-chips]');
 const attachmentInput = document.querySelector('[data-attachment-input]');
 const attachmentList = document.querySelector('[data-attachment-list]');
 const openAttachmentsButton = document.querySelector('[data-open-attachments]');
-const STORAGE_KEYS = {
-  tasks: 'nexusweave.tasks',
-  labels: 'nexusweave.labels',
-  projects: 'nexusweave.projects',
-};
+
+// Session and User-Scoped Database Setup
+const DB_KEY = 'users';
+const SESSION_KEY = 'session';
+const JWT_KEY = 'jwt';
 const DEFAULT_LABELS = ['Work', 'College', 'Personal', 'Urgent', 'Meeting'];
-let tasks = loadTasks();
-let labels = loadLabels();
-let projects = loadProjects();
+
+const sessionEmail = localStorage.getItem(SESSION_KEY);
+let database = JSON.parse(localStorage.getItem(DB_KEY) || '{}');
+
+function normalizeUser(user, fallbackEmail = sessionEmail) {
+  const resolvedEmail = fallbackEmail || user?.email || 'demo@nexusweave.app';
+  return {
+    ...(user || {}),
+    email: resolvedEmail,
+    theme: user?.theme || localStorage.getItem('nexus-theme') || 'light',
+    projects: Array.isArray(user?.projects) ? user.projects : [],
+    tasks: Array.isArray(user?.tasks) ? user.tasks : [],
+    activity: Array.isArray(user?.activity) ? user.activity : []
+  };
+}
+
+let currentUser = sessionEmail ? normalizeUser(database[sessionEmail], sessionEmail) : null;
+
+// Auth Redirect
+if (!currentUser) {
+  window.location.href = 'index.html';
+}
+
+let tasks = currentUser ? currentUser.tasks : [];
+let projects = currentUser ? currentUser.projects : [];
+let labels = currentUser && currentUser.labels ? currentUser.labels : [...DEFAULT_LABELS];
+
 let selectedLabels = [];
 let selectedAttachments = [];
+let selectedTasksForNewProject = [];
 let toastTimer = null;
+
+function saveUser() {
+  if (!currentUser || !sessionEmail) return;
+  currentUser.tasks = tasks;
+  currentUser.projects = projects;
+  currentUser.labels = labels;
+  database[sessionEmail] = currentUser;
+  localStorage.setItem(DB_KEY, JSON.stringify(database));
+  window.dispatchEvent(new CustomEvent('nexus:tasks-updated'));
+}
+
+function pushActivity(message) {
+  if (!currentUser) return;
+  currentUser.activity = [
+    { id: `activity-${Date.now()}`, message, createdAt: new Date().toISOString() },
+    ...(currentUser.activity || [])
+  ].slice(0, 6);
+  saveUser();
+}
 
 function setActiveEntity(targetKey) {
   toggleButtons.forEach((button) => {
@@ -45,81 +89,51 @@ function setActiveEntity(targetKey) {
     const isActive = form.dataset.entityForm === targetKey;
     form.classList.toggle('is-active', isActive);
   });
-};
+}
 
 function openModal() {
   if (!modal) return;
+  renderExistingTasksForModal();
   modal.classList.add('is-open');
   modal.setAttribute('aria-hidden', 'false');
-};
+}
 
 function closeModal() {
   if (!modal) return;
   modal.classList.remove('is-open');
   modal.setAttribute('aria-hidden', 'true');
-};
+}
 
 function openLabelModal() {
   if (!labelModal) return;
   renderLabelOptions();
   labelModal.classList.add('is-open');
   labelModal.setAttribute('aria-hidden', 'false');
-};
+}
 
 function closeLabelModal() {
   if (!labelModal) return;
   labelModal.classList.remove('is-open');
   labelModal.setAttribute('aria-hidden', 'true');
-};
-
-function loadTasks() {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEYS.tasks);
-    return stored ? JSON.parse(stored) : [];
-  } catch (error) {
-    console.warn('Unable to load tasks', error);
-    return [];
-  }
-};
-
-function loadLabels() {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEYS.labels);
-    return stored ? JSON.parse(stored) : [...DEFAULT_LABELS];
-  } catch (error) {
-    console.warn('Unable to load labels', error);
-    return [...DEFAULT_LABELS];
-  }
-};
+}
 
 function saveTasks() {
-  localStorage.setItem(STORAGE_KEYS.tasks, JSON.stringify(tasks));
-};
+  saveUser();
+}
 
 function saveLabels() {
-  localStorage.setItem(STORAGE_KEYS.labels, JSON.stringify(labels));
-};
-
-function loadProjects() {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEYS.projects);
-    return stored ? JSON.parse(stored) : [];
-  } catch (error) {
-    console.warn('Unable to load projects', error);
-    return [];
-  }
-};
+  saveUser();
+}
 
 function saveProjects() {
-  localStorage.setItem(STORAGE_KEYS.projects, JSON.stringify(projects));
-};
+  saveUser();
+}
 
 function getProjectFormValues() {
   return {
     name: projectForm?.querySelector('#project-name')?.value || '',
     description: projectForm?.querySelector('#project-description')?.value || '',
-    color: projectForm?.querySelector('#project-color')?.value || '#7c3aed',
-    status: projectForm?.querySelector('#project-status')?.value || 'active',
+    deadline: projectForm?.querySelector('#project-deadline')?.value || '',
   };
 }
 
@@ -127,19 +141,17 @@ function validateProjectForm(values) {
   if (!values.name.trim()) {
     return 'Project Name is required.';
   }
-
   return null;
-};
+}
 
 function buildProjectObject(values) {
   return {
-    id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `project-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    id: `project-${Date.now()}`,
     name: values.name.trim(),
-    description: values.description.trim(),
-    color: values.color || '#7c3aed',
-    status: values.status || 'active',
+    description: values.description.trim() || 'Focused project workspace',
+    deadline: values.deadline,
+    timeline: 'Planning',
     createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
   };
 }
 
@@ -160,12 +172,26 @@ function handleProjectSubmit(event) {
   }
 
   const project = buildProjectObject(values);
-  projects = [...projects, project];
+
+  // Link selected tasks to this project
+  selectedTasksForNewProject.forEach((taskId) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (task) {
+      task.projectId = project.id;
+    }
+  });
+
+  projects = [project, ...projects];
   saveProjects();
+  pushActivity(`Created project "${project.name}" with ${selectedTasksForNewProject.length} tasks.`);
   showFeedback('Project created successfully.', 'success');
   showToast('Project created successfully.');
+  
+  selectedTasksForNewProject = [];
+  updateSelectedTasksCount();
   resetProjectForm();
-};
+  populateProjectDropdown();
+}
 
 const escapeHtml = (value) => String(value)
   .replace(/&/g, '&amp;')
@@ -180,14 +206,14 @@ function syncTimeInputStates() {
     if (!timeInput) return;
     timeInput.disabled = !input.value;
   });
-};
+}
 
 function showFeedback(message, type = 'success') {
   const feedbackTarget = projectFeedback || taskFeedback;
   if (!feedbackTarget) return;
   feedbackTarget.textContent = message;
   feedbackTarget.className = message ? `form-message ${type}` : 'form-message';
-};
+}
 
 function showToast(message) {
   if (!taskToast) return;
@@ -195,19 +221,19 @@ function showToast(message) {
   taskToast.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => taskToast.classList.remove('show'), 2400);
-};
+}
 
 function getTaskFormValues() {
   return {
-  title: taskForm?.querySelector('#task-name')?.value || '',
-  description: taskForm?.querySelector('#task-description')?.value || '',
-  project: taskForm?.querySelector('#task-project')?.value || '',
-  priority: taskForm?.querySelector('#task-priority')?.value || 'none',
-  status: taskForm?.querySelector('#task-status')?.value || 'todo',
-  deadlineDate: taskForm?.querySelector('#task-deadline-date')?.value || '',
-  deadlineTime: taskForm?.querySelector('#task-deadline-time')?.value || '',
-  reminderDate: taskForm?.querySelector('#task-reminder-date')?.value || '',
-  reminderTime: taskForm?.querySelector('#task-reminder-time')?.value || '',
+    title: taskForm?.querySelector('#task-name')?.value || '',
+    description: taskForm?.querySelector('#task-description')?.value || '',
+    project: taskForm?.querySelector('#task-project')?.value || '',
+    priority: taskForm?.querySelector('#task-priority')?.value || 'none',
+    status: taskForm?.querySelector('#task-status')?.value || 'todo',
+    deadlineDate: taskForm?.querySelector('#task-deadline-date')?.value || '',
+    deadlineTime: taskForm?.querySelector('#task-deadline-time')?.value || '',
+    reminderDate: taskForm?.querySelector('#task-reminder-date')?.value || '',
+    reminderTime: taskForm?.querySelector('#task-reminder-time')?.value || '',
   };
 }
 
@@ -221,23 +247,38 @@ function validateTaskForm(values) {
   }
 
   return null;
-};
+}
 
 function buildTaskObject(values) {
-  return {
-  id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `task-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-  title: values.title.trim(),
-  description: values.description.trim(),
-  project: values.project || null,
-  priority: values.priority,
-  status: values.status,
-  deadline: values.deadlineDate ? { date: values.deadlineDate, time: values.deadlineTime || null } : null,
-  reminder: values.reminderDate ? { date: values.reminderDate, time: values.reminderTime || null } : null,
-  labels: [...selectedLabels],
-  attachments: [...selectedAttachments],
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
+  let priority = 'Medium';
+  if (values.priority === 'high') priority = 'High';
+  if (values.priority === 'low') priority = 'Low';
+  if (values.priority === 'medium') priority = 'Medium';
+
+  let status = 'Todo';
+  if (values.status === 'todo') status = 'Todo';
+  if (values.status === 'in-progress') status = 'In Progress';
+  if (values.status === 'done') status = 'Done';
+
+  const taskObj = {
+    id: `task-${Date.now()}`,
+    title: values.title.trim(),
+    description: values.description.trim() || 'Created from the task workspace.',
+    projectId: values.project || null,
+    priority: priority,
+    status: status,
+    dueDate: values.deadlineDate || '',
+    labels: [...selectedLabels],
+    attachments: selectedAttachments.map(a => a.name),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   };
+
+  if (status === 'Done') {
+    taskObj.completedAt = new Date().toISOString();
+  }
+
+  return taskObj;
 }
 
 function resetTaskForm() {
@@ -348,12 +389,71 @@ function handleTaskSubmit(event) {
   }
 
   const task = buildTaskObject(values);
-  tasks = [...tasks, task];
+  tasks = [task, ...tasks];
   saveTasks();
+  pushActivity(`Created task "${task.title}".`);
   showFeedback('Task created successfully.', 'success');
   showToast('Task created successfully.');
   resetTaskForm();
-};
+}
+
+function populateProjectDropdown() {
+  const dropdown = document.getElementById('task-project');
+  if (!dropdown) return;
+  dropdown.innerHTML = '<option value="">None</option>';
+  projects.forEach((project) => {
+    const option = document.createElement('option');
+    option.value = project.id;
+    option.textContent = project.name;
+    dropdown.appendChild(option);
+  });
+}
+
+function renderExistingTasksForModal() {
+  const lists = modal.querySelectorAll('.task-selection-list');
+  if (lists.length < 2) return;
+
+  const unassignedList = lists[0];
+  const assignedList = lists[1];
+
+  const unassigned = tasks.filter((task) => !task.projectId);
+  const assigned = tasks.filter((task) => task.projectId);
+
+  const filterInput = modal.querySelector('.modal-search input');
+  const query = filterInput ? filterInput.value.toLowerCase() : '';
+
+  function renderList(container, taskArray) {
+    const filtered = taskArray.filter(task => task.title.toLowerCase().includes(query));
+    if (!filtered.length) {
+      container.innerHTML = '<p class="empty-state-inline">No tasks available</p>';
+      return;
+    }
+
+    container.innerHTML = filtered.map(task => {
+      const isChecked = selectedTasksForNewProject.includes(task.id) ? 'checked' : '';
+      return `
+        <label class="task-selection-item">
+          <input type="checkbox" value="${task.id}" ${isChecked} data-task-select />
+          <span>${escapeHtml(task.title)}</span>
+        </label>
+      `;
+    }).join('');
+  }
+
+  renderList(unassignedList, unassigned);
+  renderList(assignedList, assigned);
+}
+
+function updateSelectedTasksCount() {
+  const placeholder = projectForm.querySelector('.placeholder-state');
+  if (!placeholder) return;
+
+  if (selectedTasksForNewProject.length === 0) {
+    placeholder.innerHTML = '<p>No tasks selected</p>';
+  } else {
+    placeholder.innerHTML = `<p><strong>${selectedTasksForNewProject.length}</strong> task(s) selected to link to this project.</p>`;
+  }
+}
 
 resetTaskFormButton?.addEventListener('click', resetTaskForm);
 taskForm?.addEventListener('submit', handleTaskSubmit);
@@ -373,6 +473,23 @@ if (modal) {
     if (event.target === modal) {
       closeModal();
     }
+  });
+
+  const modalSearch = modal.querySelector('.modal-search input');
+  modalSearch?.addEventListener('input', renderExistingTasksForModal);
+
+  modal.addEventListener('change', (event) => {
+    const checkbox = event.target.closest('[data-task-select]');
+    if (!checkbox) return;
+    const taskId = checkbox.value;
+    if (checkbox.checked) {
+      if (!selectedTasksForNewProject.includes(taskId)) {
+        selectedTasksForNewProject.push(taskId);
+      }
+    } else {
+      selectedTasksForNewProject = selectedTasksForNewProject.filter(id => id !== taskId);
+    }
+    updateSelectedTasksCount();
   });
 }
 
@@ -450,7 +567,10 @@ attachmentInput?.addEventListener('change', (event) => {
   event.target.value = '';
 });
 
+// Init page
 syncTimeInputStates();
 renderSelectedLabels();
 renderAttachments();
 setActiveEntity('task');
+populateProjectDropdown();
+updateSelectedTasksCount();

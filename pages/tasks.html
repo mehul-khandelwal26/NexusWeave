@@ -7,6 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="../styles/global.css" />
+  <link rel="stylesheet" href="../styles/product.css" />
+  <link rel="stylesheet" href="../styles/dashboard.css" />
   <link rel="stylesheet" href="../styles/sidebar.css" />
 </head>
 <body class="app-body">
@@ -38,6 +40,12 @@
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
           </span>
           <span>Tasks</span>
+        </a>
+        <a class="nav-item" href="focus.html">
+          <span class="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+          </span>
+          <span>Focus</span>
         </a>
         <a class="nav-item" href="board.html">
           <span class="nav-icon" aria-hidden="true">
@@ -71,18 +79,170 @@
             <span class="toggle-icon"></span>
             <span>Theme</span>
           </button>
+          <div class="profile-menu-wrapper">
+            <button class="profile-trigger" type="button" data-profile-menu-trigger aria-haspopup="menu" aria-expanded="false">
+              <span class="profile-avatar" data-profile-avatar>NW</span>
+              <span class="profile-meta">
+                <strong data-profile-name>Profile</strong>
+                <small data-profile-email>workspace</small>
+              </span>
+            </button>
+            <div class="profile-menu" data-profile-menu role="menu">
+              <button class="profile-menu-item" type="button" data-profile-action="change-photo">Change photo</button>
+              <button class="profile-menu-item" type="button" data-profile-action="copy-link">Copy link</button>
+              <button class="profile-menu-item" type="button" data-profile-action="settings">Settings</button>
+              <button class="profile-menu-item danger" type="button" data-profile-action="logout">Logout</button>
+            </div>
+          </div>
         </div>
       </header>
 
       <main class="page-main">
-        <div class="empty-state">
-          <h2>Tasks</h2>
-          <p>Manage and organize all your tasks.</p>
-        </div>
+        <section class="page-panel">
+          <div class="toolbar-row">
+            <div class="toolbar-group">
+              <input id="taskSearch" type="search" placeholder="Search tasks" aria-label="Search tasks" />
+              <select id="taskSort" aria-label="Sort tasks">
+                <option value="updatedAt|desc">Recently updated</option>
+                <option value="priority|desc">Priority: High → Low</option>
+                <option value="priority|asc">Priority: Low → High</option>
+                <option value="deadline|asc">Deadline: Earliest first</option>
+                <option value="deadline|desc">Deadline: Latest first</option>
+                <option value="title|asc">Task name: A → Z</option>
+                <option value="title|desc">Task name: Z → A</option>
+              </select>
+            </div>
+            <div class="toolbar-group">
+              <button id="addTask" class="primary-btn" type="button">+ Add Task</button>
+            </div>
+          </div>
+
+          <div class="filter-row" role="group" aria-label="Task filters">
+            <select id="taskPriorityFilter" aria-label="Filter by priority">
+              <option value="All">All priorities</option>
+              <option value="High">High</option>
+              <option value="Medium">Medium</option>
+              <option value="Low">Low</option>
+            </select>
+            <select id="taskStatusFilter" aria-label="Filter by status">
+              <option value="All">All statuses</option>
+              <option value="Todo">Todo</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Done">Done</option>
+            </select>
+            <select id="taskProjectFilter" aria-label="Filter by project">
+              <option value="All">All projects</option>
+            </select>
+            <select id="taskLabelFilter" aria-label="Filter by label">
+              <option value="All">All labels</option>
+            </select>
+            <select id="taskDueFilter" aria-label="Filter by due date">
+              <option value="All">All dates</option>
+              <option value="Upcoming">Upcoming</option>
+              <option value="This Week">This Week</option>
+              <option value="Overdue">Overdue</option>
+            </select>
+          </div>
+
+          <div id="filterChips" class="filter-chip-row"></div>
+
+          <div id="emptyState" class="empty-state hidden">
+            <h3>Create your first task</h3>
+            <p>Use this view to quickly capture work, sort it, and stay on top of deadlines.</p>
+          </div>
+          <div id="taskGroups" class="task-groups"></div>
+        </section>
       </main>
     </div>
   </div>
 
+  <div id="taskModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="taskModalTitle">
+    <div class="modal-card">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">Task workspace</p>
+          <h3 id="taskModalTitle">Create task</h3>
+        </div>
+        <button type="button" id="closeTaskModal" class="ghost-btn">×</button>
+      </div>
+      <form id="taskForm" class="task-form">
+        <input type="hidden" id="taskId" />
+        <label class="field-row">
+          <span>Task title</span>
+          <input id="taskTitle" type="text" required placeholder="Write a clear task title" />
+        </label>
+        <label class="field-row">
+          <span>Description</span>
+          <textarea id="taskDescription" rows="3" placeholder="Add context or next steps"></textarea>
+        </label>
+        <div class="field-grid">
+          <label class="field-row">
+            <span>Priority</span>
+            <select id="taskPriority">
+              <option value="High">High</option>
+              <option value="Medium" selected>Medium</option>
+              <option value="Low">Low</option>
+            </select>
+          </label>
+          <label class="field-row">
+            <span>Due date</span>
+            <input id="taskDueDate" type="date" />
+          </label>
+          <label class="field-row">
+            <span>Status</span>
+            <select id="taskStatus">
+              <option value="Todo">Todo</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Done">Done</option>
+            </select>
+          </label>
+          <label class="field-row">
+            <span>Attachments</span>
+            <input id="taskAttachments" type="text" placeholder="brief.pdf, design.png" />
+          </label>
+        </div>
+        <div class="modal-actions">
+          <button type="button" id="cancelTaskModal" class="ghost-btn">Cancel</button>
+          <button type="submit" id="taskSubmitBtn" class="primary-btn">Create task</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="deleteModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+    <div class="modal-card modal-card-small">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">Delete task</p>
+          <h3 id="deleteModalTitle">Remove this task?</h3>
+        </div>
+      </div>
+      <p class="text-soft">This action cannot be undone.</p>
+      <div class="modal-actions">
+        <button type="button" id="cancelDeleteTask" class="ghost-btn">Cancel</button>
+        <button type="button" id="confirmDeleteTask" class="primary-btn">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <aside id="taskDrawer" class="task-drawer" aria-label="Task details">
+    <div class="task-drawer-card">
+      <div class="task-drawer-head">
+        <div>
+          <p class="eyebrow">Task details</p>
+          <h3 id="drawerTitle">Task</h3>
+        </div>
+        <button type="button" id="closeDrawer" class="ghost-btn">×</button>
+      </div>
+      <p id="drawerMeta" class="text-soft"></p>
+      <p id="drawerDescription" class="drawer-description"></p>
+      <div id="drawerDetails" class="drawer-details"></div>
+    </div>
+  </aside>
+
   <script src="../scripts/shared/theme.js"></script>
+  <script src="../scripts/shared/app-helpers.js"></script>
+  <script src="../scripts/shared/profile-menu.js"></script>
+  <script src="../scripts/shared/task-board.js"></script>
 </body>
 </html>

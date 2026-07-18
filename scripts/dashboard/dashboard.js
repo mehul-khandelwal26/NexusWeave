@@ -6,20 +6,38 @@ const helpers = window.AppHelpers;
 
 let state = null;
 const sessionEmail = localStorage.getItem(SESSION_KEY);
-const database = JSON.parse(localStorage.getItem(DB_KEY) || '{}');
+let database = JSON.parse(localStorage.getItem(DB_KEY) || '{}');
 const storedTheme = localStorage.getItem('nexus-theme') || 'light';
-let currentUser = sessionEmail ? database[sessionEmail] : null;
+
+function normalizeUser(user, fallbackEmail = sessionEmail) {
+  const resolvedEmail = fallbackEmail || user?.email || 'demo@nexusweave.app';
+  return {
+    ...(user || {}),
+    email: resolvedEmail,
+    theme: user?.theme || localStorage.getItem('nexus-theme') || storedTheme || 'light',
+    projects: Array.isArray(user?.projects) ? user.projects : [],
+    tasks: Array.isArray(user?.tasks) ? user.tasks : [],
+    activity: Array.isArray(user?.activity) ? user.activity : []
+  };
+}
+
+function notifyTaskSync() {
+  window.dispatchEvent(new CustomEvent('nexus:tasks-updated'));
+}
+
+let currentUser = sessionEmail ? normalizeUser(database[sessionEmail], sessionEmail) : null;
 
 if (!currentUser) {
   const demoEmail = 'demo@nexusweave.app';
-  currentUser = {
+  currentUser = normalizeUser({
     email: demoEmail,
     password: 'demo123',
     theme: storedTheme,
     projects: [],
     tasks: [],
+    activity: [],
     createdAt: Date.now()
-  };
+  }, demoEmail);
   database[demoEmail] = currentUser;
   localStorage.setItem(DB_KEY, JSON.stringify(database));
   localStorage.setItem(SESSION_KEY, demoEmail);
@@ -29,20 +47,52 @@ const welcomeText = document.getElementById('welcomeText');
 const projectCount = document.getElementById('projectCount');
 const taskCount = document.getElementById('taskCount');
 const doneCount = document.getElementById('doneCount');
+const overdueCount = document.getElementById('overdueCount');
+const completionRate = document.getElementById('completionRate');
 const projectsContainer = document.getElementById('projects');
 const taskBoard = document.getElementById('taskBoard');
 const alertBox = document.getElementById('alertBox');
+const heatmap = document.getElementById('heatmap');
+const activityFeed = document.getElementById('activityFeed');
 const themeToggle = document.querySelector('[data-theme-toggle]');
 const searchInput = document.getElementById('taskSearch');
+const dashboardSearchInput = document.getElementById('dashboardTaskSearch');
 const priorityFilter = document.getElementById('priorityFilter');
+const statusFilter = document.getElementById('statusFilter');
+const projectFilter = document.getElementById('projectFilter');
 const dueFilter = document.getElementById('dueFilter');
 const addTaskButton = document.getElementById('addTask');
 const autoSuggestButton = document.getElementById('autoSuggestTasks');
+const quickActionButtons = document.querySelectorAll('[data-quick-action]');
 
 function saveUser() {
   if (!state) return;
-  database[sessionEmail] = state.currentUser;
+  const safeUser = normalizeUser(state.currentUser, sessionEmail || state.currentUser?.email);
+  state.currentUser = safeUser;
+  database[sessionEmail || safeUser.email] = safeUser;
   localStorage.setItem(DB_KEY, JSON.stringify(database));
+  notifyTaskSync();
+}
+
+function refreshCurrentUserFromStorage() {
+  if (!state) return;
+  const storedUsers = JSON.parse(localStorage.getItem(DB_KEY) || '{}');
+  const storedUser = sessionEmail ? storedUsers[sessionEmail] : null;
+  database = storedUsers;
+  if (storedUser) {
+    state.currentUser = normalizeUser(storedUser, sessionEmail);
+  }
+}
+
+function pushActivity(message) {
+  state.currentUser = normalizeUser(state.currentUser, sessionEmail);
+  state.currentUser.activity.unshift({
+    id: `activity-${Date.now()}`,
+    message,
+    createdAt: new Date().toISOString()
+  });
+  state.currentUser.activity = state.currentUser.activity.slice(0, 6);
+  saveUser();
 }
 
 function showAlert(message) {
@@ -82,32 +132,49 @@ function getDisplayName(email) {
   return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
+function getOverdueCount(tasks) {
+  return tasks.filter((task) => task.status !== 'Done' && task.dueDate && new Date(task.dueDate) < new Date()).length;
+}
+
 function renderStats() {
+  refreshCurrentUserFromStorage();
   const summary = helpers.getTaskSummary(state.currentUser.tasks);
+  const completion = summary.total ? Math.round((summary.done / summary.total) * 100) : 0;
+  const overdue = getOverdueCount(state.currentUser.tasks);
   welcomeText.textContent = `Welcome, ${getDisplayName(sessionEmail)}`;
   projectCount.textContent = state.currentUser.projects.length;
   taskCount.textContent = summary.total;
   doneCount.textContent = summary.done;
+  overdueCount.textContent = overdue;
+  completionRate.textContent = `${completion}%`;
 }
 
 function renderProjects() {
+  refreshCurrentUserFromStorage();
   projectsContainer.innerHTML = '';
 
   if (!state.currentUser.projects.length) {
-    projectsContainer.innerHTML = '<div class="project"><strong>No projects yet</strong><div class="meta">Create your first workspace to start shaping your workflow.</div></div>';
+    projectsContainer.innerHTML = '<div class="empty-state"><h3>No projects yet</h3><p>Start your first project to bring structure to your work.</p></div>';
     return;
   }
 
   state.currentUser.projects.forEach((project) => {
-    const projectCard = document.createElement('div');
-    projectCard.className = 'project';
+    const progress = helpers.getProjectProgress(project, state.currentUser.tasks);
+    const projectCard = document.createElement('article');
+    projectCard.className = 'project-card';
     projectCard.innerHTML = `
-      <strong>${project.name}</strong>
-      <div class="meta">${project.description || 'Focused project workspace'}</div>
-      <div class="meta">Deadline: ${project.deadline || 'No deadline'} • Timeline: ${project.timeline || 'Planning'}</div>
-      <div class="project-actions">
-        <button class="inline-btn" data-action="edit-project">Edit</button>
-        <button class="inline-btn" data-action="delete-project">Delete</button>
+      <div class="project-foot">
+        <strong>${project.name}</strong>
+        <span class="status-pill status-progress">${project.timeline || 'Planning'}</span>
+      </div>
+      <p class="meta">${project.description || 'Focused project workspace'}</p>
+      <p class="meta">${helpers.formatDisplayDate(project.deadline)} • ${state.currentUser.tasks.filter((task) => task.projectId === project.id).length} tasks</p>
+      <div class="project-foot">
+        <span class="priority-pill priority-low">${progress}% complete</span>
+        <div class="project-actions">
+          <button class="inline-btn" data-action="edit-project">Edit</button>
+          <button class="inline-btn danger" data-action="delete-project">Delete</button>
+        </div>
       </div>
     `;
     projectCard.addEventListener('click', (event) => {
@@ -120,15 +187,35 @@ function renderProjects() {
         deleteProject(project.id);
         return;
       }
-      state.selectedProjectId = project.id;
+      if (state.selectedProjectId === project.id) {
+        state.selectedProjectId = null;
+        state.filters.project = 'All';
+        if (projectFilter) {
+          projectFilter.value = 'All';
+        }
+      } else {
+        state.selectedProjectId = project.id;
+        state.filters.project = project.id;
+        if (projectFilter) {
+          projectFilter.value = project.id;
+        }
+      }
       renderProjects();
       renderBoard();
+      renderFilters();
     });
     if (state.selectedProjectId === project.id) {
       projectCard.style.borderColor = 'var(--accent)';
     }
     projectsContainer.appendChild(projectCard);
   });
+}
+
+function renderFilters() {
+  const options = state.currentUser.projects.map((project) => `<option value="${project.id}" ${state.filters.project === project.id ? 'selected' : ''}>${project.name}</option>`).join('');
+  if (projectFilter) {
+    projectFilter.innerHTML = `<option value="All">All projects</option>${options}`;
+  }
 }
 
 function resetProjectModal() {
@@ -177,6 +264,8 @@ function deleteProject(projectId) {
   renderProjects();
   renderBoard();
   renderStats();
+  renderFilters();
+  pushActivity('Deleted a project and its tasks.');
   showAlert('Project deleted.');
 }
 
@@ -203,6 +292,8 @@ function handleProjectSubmit(event) {
       saveUser();
       renderProjects();
       renderBoard();
+      renderFilters();
+      pushActivity(`Updated ${project.name}.`);
       showAlert(`Project “${project.name}” updated.`);
       closeProjectModal();
       return;
@@ -223,6 +314,8 @@ function handleProjectSubmit(event) {
   saveUser();
   renderProjects();
   renderBoard();
+  renderFilters();
+  pushActivity(`Created project ${project.name}.`);
   showAlert(`Project “${project.name}” created.`);
   closeProjectModal();
 }
@@ -237,12 +330,14 @@ function addSuggestedTasks(projectId, projectName) {
       dueDate: suggestion.dueDate,
       status: 'Todo',
       description: suggestion.description,
-      projectId
+      projectId,
+      createdAt: new Date().toISOString()
     });
   });
   saveUser();
   renderBoard();
   renderStats();
+  pushActivity('Added suggested tasks to your workspace.');
   showAlert('Suggested tasks added.');
 }
 
@@ -321,9 +416,14 @@ function handleTaskSubmit(event) {
       task.dueDate = dueDate || task.dueDate;
       task.status = status;
       task.attachments = attachments;
+      if (status === 'Done' && !task.completedAt) {
+        task.completedAt = new Date().toISOString();
+      }
       saveUser();
       renderBoard();
       renderStats();
+      renderActivity();
+      pushActivity(`Updated task ${task.title}.`);
       showAlert(`Task “${task.title}” updated.`);
     }
   } else {
@@ -335,29 +435,44 @@ function handleTaskSubmit(event) {
       status,
       description: description || 'Created from the task workspace.',
       projectId: state.selectedProjectId,
-      attachments
+      attachments,
+      createdAt: new Date().toISOString()
     };
 
     state.currentUser.tasks.push(task);
     saveUser();
     renderBoard();
     renderStats();
+    renderActivity();
+    pushActivity(`Created task ${task.title}.`);
     showAlert(`Task “${task.title}” added.`);
   }
 
   closeTaskModal();
 }
 
+function buildContributionGrid(tasks) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const totalCells = 371; // 53 weeks * 7 days
+  return Array.from({ length: totalCells }, (_, index) => {
+    const date = new Date(today);
+    date.setDate(today.getDate() - (totalCells - 1 - index));
+    const key = date.toISOString().slice(0, 10);
+    const value = tasks.filter((task) => task.status === 'Done' && task.completedAt && task.completedAt.slice(0, 10) === key).length;
+    const intensity = value === 0 ? 0 : value <= 1 ? 1 : value <= 2 ? 2 : value <= 3 ? 3 : 4;
+    return { key, value, intensity, label: date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) };
+  });
+}
+
 function renderBoard() {
-  const filteredTasks = helpers.filterTasks(
-    state.currentUser.tasks.filter((task) => {
-      if (!state.selectedProjectId) return true;
-      return task.projectId === state.selectedProjectId;
-    }),
-    state.filters.query,
-    state.filters.priority,
-    state.filters.due
-  );
+  refreshCurrentUserFromStorage();
+  const visibleTasks = state.currentUser.tasks.filter((task) => {
+    if (!state.selectedProjectId) return true;
+    return task.projectId === state.selectedProjectId;
+  });
+  const filteredTasks = helpers.filterTasks(visibleTasks, state.filters, state.currentUser.projects);
 
   const columns = {
     Todo: filteredTasks.filter((task) => task.status === 'Todo'),
@@ -367,10 +482,15 @@ function renderBoard() {
 
   taskBoard.innerHTML = '';
 
+  if (!filteredTasks.length) {
+    taskBoard.innerHTML = '<div class="empty-state"><h3>No tasks match your filters</h3><p>Try clearing a filter or create a new task.</p></div>';
+    return;
+  }
+
   Object.entries(columns).forEach(([title, tasks]) => {
-    const column = document.createElement('div');
-    column.className = 'task-column';
-    column.innerHTML = `<h3>${title}</h3>`;
+    const column = document.createElement('section');
+    column.className = 'board-column';
+    column.innerHTML = `<h3>${title}</h3><p class="column-meta">${tasks.length} item${tasks.length === 1 ? '' : 's'}</p>`;
     tasks.forEach((task) => {
       const card = document.createElement('article');
       card.className = 'task-card';
@@ -378,13 +498,16 @@ function renderBoard() {
       card.innerHTML = `
         <div class="top">
           <strong>${task.title}</strong>
-          <span class="badge">${task.priority}</span>
+          <span class="priority-pill ${helpers.getPriorityTone(task.priority)}">${task.priority}</span>
         </div>
         <p>${task.description || 'No notes yet.'}</p>
-        <p>Due: ${task.dueDate || 'No date'}</p>
+        <div class="project-foot">
+          <span class="status-pill ${helpers.getTaskStatusTone(task.status)}">${task.status}</span>
+          <span class="text-soft">${helpers.formatDisplayDate(task.dueDate)}</span>
+        </div>
         <div class="actions">
           <button class="inline-btn" data-action="edit">Edit</button>
-          <button class="inline-btn" data-action="delete">Delete</button>
+          <button class="inline-btn danger" data-action="delete">Delete</button>
         </div>
       `;
       card.addEventListener('dragstart', (event) => {
@@ -405,24 +528,54 @@ function renderBoard() {
     column.addEventListener('dragover', (event) => event.preventDefault());
     column.addEventListener('drop', (event) => {
       event.preventDefault();
+      event.stopPropagation();
       const draggedId = event.dataTransfer.getData('text/plain');
       const taskToMove = state.currentUser.tasks.find((item) => item.id === draggedId);
       if (taskToMove) {
         taskToMove.status = title;
+        if (title === 'Done' && !taskToMove.completedAt) {
+          taskToMove.completedAt = new Date().toISOString();
+        } else if (title !== 'Done') {
+          delete taskToMove.completedAt;
+        }
         saveUser();
+        pushActivity(`Moved ${taskToMove.title} to ${title}.`);
         renderBoard();
+        renderStats();
+        renderActivity();
       }
     });
     taskBoard.appendChild(column);
   });
 }
 
+function renderActivity() {
+  refreshCurrentUserFromStorage();
+  const feed = state.currentUser.activity.length ? state.currentUser.activity : [
+    { id: 'default-1', message: 'Create your first project to begin.', createdAt: new Date().toISOString() }
+  ];
+  activityFeed.innerHTML = feed.map((entry) => `<div class="activity-item">${entry.message}</div>`).join('');
+}
+
+function renderHeatmap() {
+  refreshCurrentUserFromStorage();
+  const grid = buildContributionGrid(state.currentUser.tasks);
+  heatmap.innerHTML = grid.map((item) => `<div class="heatmap-cell level-${item.intensity}" title="${item.label}: ${item.value} completed"></div>`).join('');
+  
+  let legend = heatmap.parentElement.querySelector('.heatmap-legend');
+  if (!legend) {
+    heatmap.insertAdjacentHTML('afterend', '<div class="heatmap-legend"><span>Less</span><span class="legend-swatch level-0"></span><span class="legend-swatch level-1"></span><span class="legend-swatch level-2"></span><span class="legend-swatch level-3"></span><span class="legend-swatch level-4"></span><span>More</span></div>');
+  }
+}
+
 function removeTask(taskId) {
   if (!window.confirm('Delete this task?')) return;
   state.currentUser.tasks = state.currentUser.tasks.filter((task) => task.id !== taskId);
   saveUser();
+  pushActivity('Removed a task from the workspace.');
   renderBoard();
   renderStats();
+  renderActivity();
   showAlert('Task removed.');
 }
 
@@ -431,11 +584,33 @@ function editTask(taskId) {
 }
 
 function bindEvents() {
-  document.getElementById('logout').addEventListener('click', () => {
+  document.getElementById('logout')?.addEventListener('click', () => {
     localStorage.removeItem(SESSION_KEY);
     localStorage.removeItem(JWT_KEY);
     localStorage.removeItem(PROVIDER_KEY);
     window.location.href = 'index.html';
+  });
+
+  window.addEventListener('storage', (event) => {
+    if (!event.key || event.key === DB_KEY || event.key === SESSION_KEY) {
+      refreshCurrentUserFromStorage();
+      renderStats();
+      renderProjects();
+      renderFilters();
+      renderBoard();
+      renderActivity();
+      renderHeatmap();
+    }
+  });
+
+  window.addEventListener('nexus:tasks-updated', () => {
+    refreshCurrentUserFromStorage();
+    renderStats();
+    renderProjects();
+    renderFilters();
+    renderBoard();
+    renderActivity();
+    renderHeatmap();
   });
 
   document.getElementById('newProject').addEventListener('click', openProjectModal);
@@ -448,6 +623,18 @@ function bindEvents() {
     addSuggestedTasks(project.id, project.name);
   });
   addTaskButton.addEventListener('click', () => openTaskModal());
+  quickActionButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const action = button.dataset.quickAction;
+      if (action === 'new-task') {
+        openTaskModal();
+      } else if (action === 'new-project') {
+        openProjectModal();
+      } else if (action === 'open-board') {
+        window.location.href = 'board.html';
+      }
+    });
+  });
 
   document.getElementById('taskForm').addEventListener('submit', handleTaskSubmit);
   document.getElementById('closeTaskModal').addEventListener('click', closeTaskModal);
@@ -467,16 +654,30 @@ function bindEvents() {
     }
   });
 
-  searchInput.addEventListener('input', (event) => {
+  searchInput?.addEventListener('input', (event) => {
     state.filters.query = event.target.value;
     renderBoard();
   });
-  priorityFilter.addEventListener('change', (event) => {
+  dashboardSearchInput?.addEventListener('input', (event) => {
+    state.filters.query = event.target.value;
+    renderBoard();
+  });
+  priorityFilter?.addEventListener('change', (event) => {
     state.filters.priority = event.target.value;
     renderBoard();
   });
-  dueFilter.addEventListener('change', (event) => {
-    state.filters.due = event.target.value;
+  statusFilter?.addEventListener('change', (event) => {
+    state.filters.status = event.target.value;
+    renderBoard();
+  });
+  projectFilter?.addEventListener('change', (event) => {
+    state.filters.project = event.target.value;
+    state.selectedProjectId = event.target.value === 'All' ? null : event.target.value;
+    renderProjects();
+    renderBoard();
+  });
+  dueFilter?.addEventListener('change', (event) => {
+    state.filters.dueRange = event.target.value;
     renderBoard();
   });
 
@@ -487,8 +688,12 @@ function bindEvents() {
     const taskToMove = state.currentUser.tasks.find((item) => item.id === draggedId);
     if (taskToMove) {
       taskToMove.status = 'In Progress';
+      delete taskToMove.completedAt;
       saveUser();
+      pushActivity(`Moved ${taskToMove.title} to In Progress.`);
       renderBoard();
+      renderStats();
+      renderActivity();
     }
   });
 }
@@ -499,13 +704,19 @@ function initDashboard() {
       id: 'project-demo',
       name: 'Launch Sprint',
       description: 'A starter project for your first week.',
+      deadline: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
+      timeline: 'Execution',
       createdAt: new Date().toISOString()
     });
     state.selectedProjectId = 'project-demo';
     state.currentUser.tasks = [
-      { id: 'task-demo-1', title: 'Draft roadmap', priority: 'High', dueDate: new Date().toISOString().slice(0, 10), status: 'Todo', description: 'Capture your plan.', projectId: 'project-demo' },
-      { id: 'task-demo-2', title: 'Review notes', priority: 'Medium', dueDate: new Date(Date.now() + 86400000).toISOString().slice(0, 10), status: 'In Progress', description: 'Share updates.', projectId: 'project-demo' },
-      { id: 'task-demo-3', title: 'Ship weekly update', priority: 'Low', dueDate: new Date(Date.now() + 172800000).toISOString().slice(0, 10), status: 'Done', description: 'Celebrate the close.', projectId: 'project-demo' }
+      { id: 'task-demo-1', title: 'Draft roadmap', priority: 'High', dueDate: new Date().toISOString().slice(0, 10), status: 'Todo', description: 'Capture your plan.', projectId: 'project-demo', createdAt: new Date().toISOString() },
+      { id: 'task-demo-2', title: 'Review notes', priority: 'Medium', dueDate: new Date(Date.now() + 86400000).toISOString().slice(0, 10), status: 'In Progress', description: 'Share updates.', projectId: 'project-demo', createdAt: new Date().toISOString() },
+      { id: 'task-demo-3', title: 'Ship weekly update', priority: 'Low', dueDate: new Date(Date.now() + 172800000).toISOString().slice(0, 10), status: 'Done', description: 'Celebrate the close.', projectId: 'project-demo', completedAt: new Date().toISOString(), createdAt: new Date().toISOString() }
+    ];
+    state.currentUser.activity = [
+      { id: 'activity-demo-1', message: 'Created project Launch Sprint.', createdAt: new Date().toISOString() },
+      { id: 'activity-demo-2', message: 'Completed Ship weekly update.', createdAt: new Date().toISOString() }
     ];
     saveUser();
   }
@@ -513,13 +724,19 @@ function initDashboard() {
   if (!state.selectedProjectId && state.currentUser.projects.length) {
     state.selectedProjectId = state.currentUser.projects[0].id;
   }
+  if (state.selectedProjectId) {
+    state.filters.project = state.selectedProjectId;
+  }
 
   const preferredTheme = localStorage.getItem('nexus-theme') || state.currentUser.theme || 'light';
   state.currentUser.theme = preferredTheme;
   applyTheme(preferredTheme, false);
   renderStats();
   renderProjects();
+  renderFilters();
   renderBoard();
+  renderActivity();
+  renderHeatmap();
   bindEvents();
 
   const dueSoonTasks = helpers.getDueSoonTasks(state.currentUser.tasks);
@@ -537,7 +754,7 @@ if (!sessionEmail || !localStorage.getItem(JWT_KEY) || !currentUser) {
   state = {
     currentUser,
     selectedProjectId: null,
-    filters: { query: '', priority: 'All', due: 'All' }
+    filters: { query: '', priority: 'All', status: 'All', project: 'All', dueRange: 'All' }
   };
   initDashboard();
 }

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Reports | NexusWeave</title>
+  <title>Focus Mode | NexusWeave</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="../styles/global.css" />
@@ -17,7 +17,7 @@
       <div class="sidebar-brand">
         <div class="brand-mark"></div>
         <div>
-          <p class="eyebrow">Productivity suite</p>
+          <p class="eyebrow">Focus suite</p>
           <h2>NexusWeave</h2>
         </div>
       </div>
@@ -41,7 +41,7 @@
           </span>
           <span>Tasks</span>
         </a>
-        <a class="nav-item" href="focus.html">
+        <a class="nav-item active" href="focus.html">
           <span class="nav-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
           </span>
@@ -53,26 +53,20 @@
           </span>
           <span>Board</span>
         </a>
-        <a class="nav-item active" href="reports.html">
+        <a class="nav-item" href="reports.html">
           <span class="nav-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M7 14l3-3 2 2 5-6"></path></svg>
           </span>
           <span>Reports</span>
         </a>
       </nav>
-
-      <div class="sidebar-footer">
-        <div class="sidebar-footer-card">
-          <p>Reserved for future workspace tools and preferences.</p>
-        </div>
-      </div>
     </aside>
 
     <div class="content-shell">
       <header class="topbar">
         <div>
-          <p class="eyebrow">Productivity workspace</p>
-          <h1>Reports</h1>
+          <p class="eyebrow">Deep work</p>
+          <h1>Focus Mode</h1>
         </div>
         <div class="header-actions">
           <button class="theme-toggle-btn" type="button" data-theme-toggle aria-label="Toggle dark mode">
@@ -98,96 +92,29 @@
       </header>
 
       <main class="page-main">
-        <div class="dashboard-shell">
-          <!-- Welcome and Overview Stats -->
-          <section class="welcome-card">
-            <div>
-              <h2>Productivity Analytics</h2>
-              <p>Understand your focus, project timelines, and completion metrics.</p>
-            </div>
-            <div class="reports-header-stats">
-              <span class="object-chip">Analytics Mode</span>
-            </div>
-          </section>
-
-          <!-- Overall Completion & Priority rings/bars -->
-          <div class="dashboard-grid">
-            <section class="panel">
-              <div class="board-head">
-                <h3>Overall Completion</h3>
-              </div>
-              <div class="completion-box">
-                <div class="completion-ring-container">
-                  <div class="completion-rate-text" id="overallCompletionRate">0%</div>
-                  <p class="text-soft">Total completed tasks</p>
-                </div>
-                <div class="completion-details">
-                  <div class="stat-row">
-                    <span>Todo</span>
-                    <strong id="todoCount">0</strong>
-                  </div>
-                  <div class="stat-row">
-                    <span>In Progress</span>
-                    <strong id="progressCount">0</strong>
-                  </div>
-                  <div class="stat-row">
-                    <span>Done</span>
-                    <strong id="completedCount">0</strong>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <section class="panel">
-              <div class="board-head">
-                <h3>Priority Distribution</h3>
-              </div>
-              <div class="priority-chart" id="priorityDistribution">
-                <div class="bar-item">
-                  <div class="bar-label"><span>High Priority</span><strong id="highPriorityPct">0%</strong></div>
-                  <div class="bar-track"><div class="bar-fill priority-high" id="highPriorityBar" style="width: 0%"></div></div>
-                </div>
-                <div class="bar-item">
-                  <div class="bar-label"><span>Medium Priority</span><strong id="mediumPriorityPct">0%</strong></div>
-                  <div class="bar-track"><div class="bar-fill priority-medium" id="mediumPriorityBar" style="width: 0%"></div></div>
-                </div>
-                <div class="bar-item">
-                  <div class="bar-label"><span>Low Priority</span><strong id="lowPriorityPct">0%</strong></div>
-                  <div class="bar-track"><div class="bar-fill priority-low" id="lowPriorityBar" style="width: 0%"></div></div>
-                </div>
-              </div>
-            </section>
+        <section class="focus-card">
+          <div class="focus-intro">
+            <p class="eyebrow">Pomodoro session</p>
+            <h2>Stay present and keep the next block moving.</h2>
+            <p class="text-soft">A calm, focused timer for one uninterrupted work sprint.</p>
           </div>
 
-          <!-- Project Wise Progress -->
-          <section class="panel">
-            <div class="panel-head">
-              <h2>Project Progress</h2>
-              <p class="text-soft">Real-time status of active workspaces.</p>
+          <div class="focus-timer-card">
+            <div class="focus-timer" id="timerDisplay">25:00</div>
+            <p id="timerStatus" class="focus-status">Ready to focus</p>
+            <div class="focus-actions">
+              <button id="startTimer" class="primary-btn" type="button">Start</button>
+              <button id="pauseTimer" class="ghost-btn" type="button">Pause</button>
+              <button id="resetTimer" class="ghost-btn" type="button">Reset</button>
             </div>
-            <div id="projectProgressList" class="project-progress-list">
-              <!-- rendered project items with progress bar -->
-            </div>
-          </section>
-
-          <!-- Overdue & Upcoming Focus Alert -->
-          <section class="panel">
-            <div class="panel-head">
-              <h2>Action Items</h2>
-              <p class="text-soft">Overdue or critical tasks requiring attention.</p>
-            </div>
-            <div id="actionItemsList" class="action-items-list">
-              <!-- list of overdue tasks -->
-            </div>
-          </section>
-        </div>
+          </div>
+        </section>
       </main>
     </div>
   </div>
 
-  <script src="../scripts/shared/app-helpers.js"></script>
   <script src="../scripts/shared/theme.js"></script>
   <script src="../scripts/shared/profile-menu.js"></script>
-  <script src="../scripts/reports/reports.js"></script>
+  <script src="../scripts/focus/focus.js"></script>
 </body>
 </html>
