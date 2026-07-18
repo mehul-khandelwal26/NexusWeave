@@ -4,6 +4,33 @@
     module.exports = api;
   }
   root.AppHelpers = api;
+
+  document.addEventListener('keydown', (event) => {
+    const activeEl = document.activeElement;
+    if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable)) {
+      return;
+    }
+
+    if (event.key === 'n' || event.key === 'N') {
+      event.preventDefault();
+      const addTaskBtn = document.getElementById('addTask');
+      if (addTaskBtn) {
+        addTaskBtn.click();
+      } else {
+        const path = window.location.pathname;
+        const isOnLanding = path.endsWith('index.html') || path.endsWith('/') || path === '';
+        if (!isOnLanding) {
+          window.location.href = 'create.html?type=task';
+        }
+      }
+    } else if (event.key === '/') {
+      const searchInput = document.getElementById('taskSearch') || document.getElementById('dashboardTaskSearch');
+      if (searchInput) {
+        event.preventDefault();
+        searchInput.focus();
+      }
+    }
+  });
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   function isValidEmail(email) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);

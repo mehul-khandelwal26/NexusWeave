@@ -28,19 +28,7 @@ function notifyTaskSync() {
 let currentUser = sessionEmail ? normalizeUser(database[sessionEmail], sessionEmail) : null;
 
 if (!currentUser) {
-  const demoEmail = 'demo@nexusweave.app';
-  currentUser = normalizeUser({
-    email: demoEmail,
-    password: 'demo123',
-    theme: storedTheme,
-    projects: [],
-    tasks: [],
-    activity: [],
-    createdAt: Date.now()
-  }, demoEmail);
-  database[demoEmail] = currentUser;
-  localStorage.setItem(DB_KEY, JSON.stringify(database));
-  localStorage.setItem(SESSION_KEY, demoEmail);
+  window.location.href = 'index.html';
 }
 
 const welcomeText = document.getElementById('welcomeText');
@@ -50,27 +38,40 @@ const doneCount = document.getElementById('doneCount');
 const overdueCount = document.getElementById('overdueCount');
 const completionRate = document.getElementById('completionRate');
 const projectsContainer = document.getElementById('projects');
-const taskBoard = document.getElementById('taskBoard');
 const alertBox = document.getElementById('alertBox');
 const heatmap = document.getElementById('heatmap');
 const activityFeed = document.getElementById('activityFeed');
 const themeToggle = document.querySelector('[data-theme-toggle]');
-const searchInput = document.getElementById('taskSearch');
 const dashboardSearchInput = document.getElementById('dashboardTaskSearch');
-const priorityFilter = document.getElementById('priorityFilter');
-const statusFilter = document.getElementById('statusFilter');
-const projectFilter = document.getElementById('projectFilter');
-const dueFilter = document.getElementById('dueFilter');
-const addTaskButton = document.getElementById('addTask');
-const autoSuggestButton = document.getElementById('autoSuggestTasks');
-const quickActionButtons = document.querySelectorAll('[data-quick-action]');
+
+// Project Modal Elements
+const projectModal = document.getElementById('projectModal');
+const closeProjectModalBtn = document.getElementById('closeProjectModal');
+const cancelProjectModalBtn = document.getElementById('cancelProjectModal');
+const projectForm = document.getElementById('projectForm');
+const projectIdInput = document.getElementById('projectId');
+const projectNameInput = document.getElementById('projectName');
+const projectDescriptionInput = document.getElementById('projectDescription');
+const projectDeadlineInput = document.getElementById('projectDeadline');
+const projectTimelineInput = document.getElementById('projectTimeline');
+const aiSuggestBtn = document.getElementById('aiSuggestBtn');
+const aiSuggestStatus = document.getElementById('aiSuggestStatus');
+let aiSuggestedTasks = null;
+let aiSuggestedBg = null;
+
+state = {
+  currentUser,
+  selectedProjectId: null
+};
 
 function saveUser() {
   if (!state) return;
+  const storedUsers = JSON.parse(localStorage.getItem(DB_KEY) || '{}');
   const safeUser = normalizeUser(state.currentUser, sessionEmail || state.currentUser?.email);
   state.currentUser = safeUser;
-  database[sessionEmail || safeUser.email] = safeUser;
-  localStorage.setItem(DB_KEY, JSON.stringify(database));
+  storedUsers[sessionEmail || safeUser.email] = safeUser;
+  localStorage.setItem(DB_KEY, JSON.stringify(storedUsers));
+  database = storedUsers;
   notifyTaskSync();
 }
 
@@ -96,6 +97,7 @@ function pushActivity(message) {
 }
 
 function showAlert(message) {
+  if (!alertBox) return;
   alertBox.textContent = message;
   alertBox.classList.remove('hidden');
   setTimeout(() => alertBox.classList.add('hidden'), 2600);
@@ -180,277 +182,127 @@ function renderProjects() {
     projectCard.addEventListener('click', (event) => {
       const action = event.target.dataset.action;
       if (action === 'edit-project') {
+        event.stopPropagation();
         editProject(project.id);
         return;
       }
       if (action === 'delete-project') {
+        event.stopPropagation();
         deleteProject(project.id);
         return;
       }
-      if (state.selectedProjectId === project.id) {
-        state.selectedProjectId = null;
-        state.filters.project = 'All';
-        if (projectFilter) {
-          projectFilter.value = 'All';
-        }
-      } else {
-        state.selectedProjectId = project.id;
-        state.filters.project = project.id;
-        if (projectFilter) {
-          projectFilter.value = project.id;
-        }
-      }
-      renderProjects();
-      renderBoard();
-      renderFilters();
+      // Redirect to full board workspace
+      const viewState = JSON.parse(localStorage.getItem('nexus-task-view-state') || '{}');
+      viewState.project = project.id;
+      localStorage.setItem('nexus-task-view-state', JSON.stringify(viewState));
+      window.location.href = 'board.html';
     });
-    if (state.selectedProjectId === project.id) {
-      projectCard.style.borderColor = 'var(--accent)';
-    }
     projectsContainer.appendChild(projectCard);
   });
 }
 
-function renderFilters() {
-  const options = state.currentUser.projects.map((project) => `<option value="${project.id}" ${state.filters.project === project.id ? 'selected' : ''}>${project.name}</option>`).join('');
-  if (projectFilter) {
-    projectFilter.innerHTML = `<option value="All">All projects</option>${options}`;
-  }
-}
-
-function resetProjectModal() {
-  document.getElementById('projectId').value = '';
-  document.getElementById('projectName').value = '';
-  document.getElementById('projectDescription').value = '';
-  document.getElementById('projectDeadline').value = '';
-  document.getElementById('projectTimeline').value = 'Planning';
+function openProjectModal(projectId = null) {
+  projectForm.reset();
+  projectIdInput.value = '';
   document.getElementById('projectModalTitle').textContent = 'Create project';
   document.getElementById('projectSubmitBtn').textContent = 'Create project';
+
+  if (projectId) {
+    const project = state.currentUser.projects.find((p) => p.id === projectId);
+    if (project) {
+      projectIdInput.value = project.id;
+      projectNameInput.value = project.name;
+      projectDescriptionInput.value = project.description || '';
+      projectDeadlineInput.value = project.deadline || '';
+      projectTimelineInput.value = project.timeline || 'Planning';
+      document.getElementById('projectModalTitle').textContent = 'Edit project';
+      document.getElementById('projectSubmitBtn').textContent = 'Save changes';
+    }
+  }
+  projectModal.classList.remove('hidden');
 }
 
 function closeProjectModal() {
-  document.getElementById('projectModal').classList.add('hidden');
-  resetProjectModal();
-}
-
-function openProjectModal() {
-  resetProjectModal();
-  document.getElementById('projectModal').classList.remove('hidden');
-  document.getElementById('projectName').focus();
-}
-
-function editProject(projectId) {
-  const project = state.currentUser.projects.find((item) => item.id === projectId);
-  if (!project) return;
-  document.getElementById('projectId').value = project.id;
-  document.getElementById('projectName').value = project.name;
-  document.getElementById('projectDescription').value = project.description || '';
-  document.getElementById('projectDeadline').value = project.deadline || '';
-  document.getElementById('projectTimeline').value = project.timeline || 'Planning';
-  document.getElementById('projectModalTitle').textContent = 'Edit project';
-  document.getElementById('projectSubmitBtn').textContent = 'Save project';
-  document.getElementById('projectModal').classList.remove('hidden');
-  document.getElementById('projectName').focus();
-}
-
-function deleteProject(projectId) {
-  if (!window.confirm('Delete this project and its tasks?')) return;
-  state.currentUser.projects = state.currentUser.projects.filter((project) => project.id !== projectId);
-  state.currentUser.tasks = state.currentUser.tasks.filter((task) => task.projectId !== projectId);
-  if (state.selectedProjectId === projectId) {
-    state.selectedProjectId = state.currentUser.projects[0]?.id || null;
-  }
-  saveUser();
-  renderProjects();
-  renderBoard();
-  renderStats();
-  renderFilters();
-  pushActivity('Deleted a project and its tasks.');
-  showAlert('Project deleted.');
+  projectModal.classList.add('hidden');
 }
 
 function handleProjectSubmit(event) {
   event.preventDefault();
-  const name = document.getElementById('projectName').value.trim();
-  if (!name) {
-    showAlert('Project name is required.');
-    return;
-  }
+  const name = projectNameInput.value.trim();
+  if (!name) return;
 
-  const description = document.getElementById('projectDescription').value.trim();
-  const deadline = document.getElementById('projectDeadline').value;
-  const timeline = document.getElementById('projectTimeline').value;
-  const projectId = document.getElementById('projectId').value;
-
-  if (projectId) {
-    const project = state.currentUser.projects.find((item) => item.id === projectId);
-    if (project) {
-      project.name = name;
-      project.description = description || 'Focused project workspace';
-      project.deadline = deadline;
-      project.timeline = timeline;
-      saveUser();
-      renderProjects();
-      renderBoard();
-      renderFilters();
-      pushActivity(`Updated ${project.name}.`);
-      showAlert(`Project “${project.name}” updated.`);
-      closeProjectModal();
-      return;
-    }
-  }
-
-  const project = {
-    id: `project-${Date.now()}`,
+  const projectId = projectIdInput.value;
+  const projectPayload = {
     name,
-    description: description || 'Freshly created workspace',
-    deadline,
-    timeline,
-    createdAt: new Date().toISOString()
+    description: projectDescriptionInput.value.trim(),
+    deadline: projectDeadlineInput.value,
+    timeline: projectTimelineInput.value
   };
 
-  state.currentUser.projects.unshift(project);
-  state.selectedProjectId = project.id;
-  saveUser();
-  renderProjects();
-  renderBoard();
-  renderFilters();
-  pushActivity(`Created project ${project.name}.`);
-  showAlert(`Project “${project.name}” created.`);
-  closeProjectModal();
-}
-
-function addSuggestedTasks(projectId, projectName) {
-  const suggestions = helpers.buildTaskSuggestions(projectName);
-  suggestions.forEach((suggestion) => {
-    state.currentUser.tasks.push({
-      id: `task-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-      title: suggestion.title,
-      priority: suggestion.priority,
-      dueDate: suggestion.dueDate,
-      status: 'Todo',
-      description: suggestion.description,
-      projectId,
-      createdAt: new Date().toISOString()
-    });
-  });
-  saveUser();
-  renderBoard();
-  renderStats();
-  pushActivity('Added suggested tasks to your workspace.');
-  showAlert('Suggested tasks added.');
-}
-
-function resetTaskModal() {
-  document.getElementById('taskId').value = '';
-  document.getElementById('taskTitle').value = '';
-  document.getElementById('taskDescription').value = '';
-  document.getElementById('taskPriority').value = 'Medium';
-  document.getElementById('taskDueDate').value = '';
-  document.getElementById('taskStatus').value = 'Todo';
-  document.getElementById('taskAttachments').value = '';
-  document.getElementById('taskModalTitle').textContent = 'Create task';
-  document.getElementById('taskSubmitBtn').textContent = 'Create task';
-}
-
-function closeTaskModal() {
-  document.getElementById('taskModal').classList.add('hidden');
-  resetTaskModal();
-}
-
-function openTaskModal(taskId = null) {
-  if (!state.selectedProjectId && state.currentUser.projects.length) {
-    state.selectedProjectId = state.currentUser.projects[0].id;
-  }
-
-  if (!state.selectedProjectId) {
-    showAlert('Create or select a project first.');
-    return;
-  }
-
-  resetTaskModal();
-
-  if (taskId) {
-    const task = state.currentUser.tasks.find((item) => item.id === taskId);
-    if (!task) return;
-    document.getElementById('taskId').value = task.id;
-    document.getElementById('taskTitle').value = task.title;
-    document.getElementById('taskDescription').value = task.description || '';
-    document.getElementById('taskPriority').value = task.priority || 'Medium';
-    document.getElementById('taskDueDate').value = task.dueDate || '';
-    document.getElementById('taskStatus').value = task.status || 'Todo';
-    document.getElementById('taskAttachments').value = (task.attachments || []).join(', ');
-    document.getElementById('taskModalTitle').textContent = 'Edit task';
-    document.getElementById('taskSubmitBtn').textContent = 'Save task';
-  }
-
-  document.getElementById('taskModal').classList.remove('hidden');
-  document.getElementById('taskTitle').focus();
-}
-
-function handleTaskSubmit(event) {
-  event.preventDefault();
-
-  const title = document.getElementById('taskTitle').value.trim();
-  if (!title) {
-    showAlert('Task title is required.');
-    return;
-  }
-
-  const description = document.getElementById('taskDescription').value.trim();
-  const priority = document.getElementById('taskPriority').value;
-  const dueDate = document.getElementById('taskDueDate').value;
-  const status = document.getElementById('taskStatus').value;
-  const attachments = document.getElementById('taskAttachments').value
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean);
-  const taskId = document.getElementById('taskId').value;
-
-  if (taskId) {
-    const task = state.currentUser.tasks.find((item) => item.id === taskId);
-    if (task) {
-      task.title = title;
-      task.description = description;
-      task.priority = priority;
-      task.dueDate = dueDate || task.dueDate;
-      task.status = status;
-      task.attachments = attachments;
-      if (status === 'Done' && !task.completedAt) {
-        task.completedAt = new Date().toISOString();
-      }
-      saveUser();
-      renderBoard();
-      renderStats();
-      renderActivity();
-      renderHeatmap();
-      pushActivity(`Updated task ${task.title}.`);
-      showAlert(`Task “${task.title}” updated.`);
+  if (projectId) {
+    const project = state.currentUser.projects.find((p) => p.id === projectId);
+    if (project) {
+      Object.assign(project, projectPayload);
+      pushActivity(`Updated project ${name}.`);
     }
   } else {
-    const task = {
-      id: `task-${Date.now()}`,
-      title,
-      priority,
-      dueDate: dueDate || new Date().toISOString().slice(0, 10),
-      status,
-      description: description || 'Created from the task workspace.',
-      projectId: state.selectedProjectId,
-      attachments,
+    const newProjectId = `project-${Date.now()}`;
+    const newProject = {
+      id: newProjectId,
+      ...projectPayload,
+      boardBg: aiSuggestedBg || 'none',
       createdAt: new Date().toISOString()
     };
+    state.currentUser.projects.push(newProject);
 
-    state.currentUser.tasks.push(task);
-    saveUser();
-    renderBoard();
-    renderStats();
-    renderActivity();
-    renderHeatmap();
-    pushActivity(`Created task ${task.title}.`);
-    showAlert(`Task “${task.title}” added.`);
+    if (aiSuggestedTasks) {
+      aiSuggestedTasks.forEach((title, idx) => {
+        state.currentUser.tasks.unshift({
+          id: `task-${Date.now()}-${idx}`,
+          title,
+          priority: idx === 0 ? 'High' : idx <= 2 ? 'Medium' : 'Low',
+          dueDate: new Date(Date.now() + (idx + 1) * 86400000).toISOString().slice(0, 10),
+          status: idx === 3 ? 'In Progress' : 'Todo',
+          description: 'AI-suggested workspace task breakdown.',
+          projectId: newProjectId,
+          labels: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+      });
+      aiSuggestedTasks = null;
+    }
+    aiSuggestedBg = null;
+
+    pushActivity(`Created project ${name}.`);
   }
 
-  closeTaskModal();
+  saveUser();
+  renderProjects();
+  renderStats();
+  closeProjectModal();
+
+  if (aiSuggestBtn) {
+    aiSuggestBtn.innerHTML = '✨ AI Auto-Suggest Tasks & Background';
+  }
+}
+
+function editProject(projectId) {
+  openProjectModal(projectId);
+}
+
+function deleteProject(projectId) {
+  if (!window.confirm('Delete this project? All associated tasks will be unassigned.')) return;
+  state.currentUser.projects = state.currentUser.projects.filter((p) => p.id !== projectId);
+  state.currentUser.tasks.forEach((task) => {
+    if (task.projectId === projectId) {
+      task.projectId = null;
+    }
+  });
+  saveUser();
+  pushActivity('Removed a project.');
+  renderProjects();
+  renderStats();
 }
 
 function getLocalDateString(date) {
@@ -481,90 +333,6 @@ function buildContributionGrid(tasks) {
   });
 }
 
-function renderBoard() {
-  refreshCurrentUserFromStorage();
-  const visibleTasks = state.currentUser.tasks.filter((task) => {
-    if (!state.selectedProjectId) return true;
-    return task.projectId === state.selectedProjectId;
-  });
-  const filteredTasks = helpers.filterTasks(visibleTasks, state.filters, state.currentUser.projects);
-
-  const columns = {
-    Todo: filteredTasks.filter((task) => task.status === 'Todo'),
-    'In Progress': filteredTasks.filter((task) => task.status === 'In Progress'),
-    Done: filteredTasks.filter((task) => task.status === 'Done')
-  };
-
-  taskBoard.innerHTML = '';
-
-  if (!filteredTasks.length) {
-    taskBoard.innerHTML = '<div class="empty-state"><h3>No tasks match your filters</h3><p>Try clearing a filter or create a new task.</p></div>';
-    return;
-  }
-
-  Object.entries(columns).forEach(([title, tasks]) => {
-    const column = document.createElement('section');
-    column.className = 'board-column';
-    column.innerHTML = `<h3>${title}</h3><p class="column-meta">${tasks.length} item${tasks.length === 1 ? '' : 's'}</p>`;
-    tasks.forEach((task) => {
-      const card = document.createElement('article');
-      card.className = 'task-card';
-      card.draggable = true;
-      card.innerHTML = `
-        <div class="top">
-          <strong>${task.title}</strong>
-          <span class="priority-pill ${helpers.getPriorityTone(task.priority)}">${task.priority}</span>
-        </div>
-        <p>${task.description || 'No notes yet.'}</p>
-        <div class="project-foot">
-          <span class="status-pill ${helpers.getTaskStatusTone(task.status)}">${task.status}</span>
-          <span class="text-soft">${helpers.formatDisplayDate(task.dueDate)}</span>
-        </div>
-        <div class="actions">
-          <button class="inline-btn" data-action="edit">Edit</button>
-          <button class="inline-btn danger" data-action="delete">Delete</button>
-        </div>
-      `;
-      card.addEventListener('dragstart', (event) => {
-        event.dataTransfer.setData('text/plain', task.id);
-        card.classList.add('dragging');
-      });
-      card.addEventListener('dragend', () => card.classList.remove('dragging'));
-      card.addEventListener('click', (event) => {
-        const action = event.target.dataset.action;
-        if (action === 'delete') {
-          removeTask(task.id);
-        } else if (action === 'edit') {
-          editTask(task.id);
-        }
-      });
-      column.appendChild(card);
-    });
-    column.addEventListener('dragover', (event) => event.preventDefault());
-    column.addEventListener('drop', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      const draggedId = event.dataTransfer.getData('text/plain');
-      const taskToMove = state.currentUser.tasks.find((item) => item.id === draggedId);
-      if (taskToMove) {
-        taskToMove.status = title;
-        if (title === 'Done' && !taskToMove.completedAt) {
-          taskToMove.completedAt = new Date().toISOString();
-        } else if (title !== 'Done') {
-          delete taskToMove.completedAt;
-        }
-        saveUser();
-        pushActivity(`Moved ${taskToMove.title} to ${title}.`);
-        renderBoard();
-        renderStats();
-        renderActivity();
-        renderHeatmap();
-      }
-    });
-    taskBoard.appendChild(column);
-  });
-}
-
 function renderActivity() {
   refreshCurrentUserFromStorage();
   const feed = state.currentUser.activity;
@@ -591,22 +359,6 @@ function renderHeatmap() {
   }
 }
 
-function removeTask(taskId) {
-  if (!window.confirm('Delete this task?')) return;
-  state.currentUser.tasks = state.currentUser.tasks.filter((task) => task.id !== taskId);
-  saveUser();
-  pushActivity('Removed a task from the workspace.');
-  renderBoard();
-  renderStats();
-  renderActivity();
-  renderHeatmap();
-  showAlert('Task removed.');
-}
-
-function editTask(taskId) {
-  openTaskModal(taskId);
-}
-
 function bindEvents() {
   document.getElementById('logout')?.addEventListener('click', () => {
     localStorage.removeItem(SESSION_KEY);
@@ -615,109 +367,105 @@ function bindEvents() {
     window.location.href = 'index.html';
   });
 
-  window.addEventListener('storage', (event) => {
-    if (!event.key || event.key === DB_KEY || event.key === SESSION_KEY) {
-      refreshCurrentUserFromStorage();
-      renderStats();
-      renderProjects();
-      renderFilters();
-      renderBoard();
-      renderActivity();
-      renderHeatmap();
-    }
+  themeToggle?.addEventListener('click', () => {
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+    const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    applyTheme(nextTheme);
+    window.dispatchEvent(new CustomEvent('themechange', { detail: { theme: nextTheme } }));
   });
 
-  window.addEventListener('nexus:tasks-updated', () => {
-    refreshCurrentUserFromStorage();
-    renderStats();
-    renderProjects();
-    renderFilters();
-    renderBoard();
-    renderActivity();
-    renderHeatmap();
+  // Project Modal bindings
+  document.getElementById('newProject')?.addEventListener('click', () => {
+    openProjectModal();
   });
+  closeProjectModalBtn?.addEventListener('click', closeProjectModal);
+  cancelProjectModalBtn?.addEventListener('click', closeProjectModal);
+  projectModal?.addEventListener('click', (event) => {
+    if (event.target === projectModal) closeProjectModal();
+  });
+  projectForm?.addEventListener('submit', handleProjectSubmit);
 
-  document.getElementById('newProject').addEventListener('click', openProjectModal);
-  autoSuggestButton.addEventListener('click', () => {
-    const project = state.currentUser.projects.find((item) => item.id === state.selectedProjectId);
-    if (!project) {
-      showAlert('Select a project first.');
+  aiSuggestBtn?.addEventListener('click', () => {
+    const projectName = projectNameInput.value.trim();
+    if (!projectName) {
+      showAlert('Please enter a project name first.');
       return;
     }
-    addSuggestedTasks(project.id, project.name);
+
+    aiSuggestStatus.classList.remove('hidden');
+    aiSuggestBtn.disabled = true;
+
+    setTimeout(() => {
+      aiSuggestStatus.classList.add('hidden');
+      aiSuggestBtn.disabled = false;
+
+      const nameLower = projectName.toLowerCase();
+      let suggestions = [];
+      if (nameLower.includes('web') || nameLower.includes('app') || nameLower.includes('site') || nameLower.includes('design')) {
+        suggestions = [
+          'Design landing page high-fidelity mockups',
+          'Set up structural components & stylesheet foundations',
+          'Implement user auth flow redirects',
+          'Deploy staging build to Vercel/Netlify'
+        ];
+      } else if (nameLower.includes('research') || nameLower.includes('paper') || nameLower.includes('study') || nameLower.includes('college')) {
+        suggestions = [
+          'Conduct comprehensive literature review of sources',
+          'Define research methodology & target goals',
+          'Draft abstract, findings, and analysis sections',
+          'Format citations & proofread document final draft'
+        ];
+      } else {
+        suggestions = [
+          `Define scope & core milestones for ${projectName}`,
+          'Assign team member roles & project timeline schedules',
+          'Draft initial mockups & functional specs draft',
+          'Conduct final milestone delivery demo review'
+        ];
+      }
+
+      aiSuggestedTasks = suggestions;
+
+      let bgTheme = 'aurora';
+      if (nameLower.includes('web') || nameLower.includes('app') || nameLower.includes('site') || nameLower.includes('design')) bgTheme = 'tech';
+      else if (nameLower.includes('research') || nameLower.includes('paper') || nameLower.includes('study') || nameLower.includes('college')) bgTheme = 'calm';
+
+      const themeUrls = {
+        tech: "url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800')",
+        calm: "url('https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=800')",
+        aurora: "url('https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?q=80&w=800')"
+      };
+      aiSuggestedBg = themeUrls[bgTheme] || themeUrls.aurora;
+
+      showAlert(`AI generated ${suggestions.length} suggested tasks & custom board theme background successfully!`);
+      aiSuggestBtn.innerHTML = '✨ AI Suggested (Ready)';
+    }, 1500);
   });
-  addTaskButton.addEventListener('click', () => openTaskModal());
-  quickActionButtons.forEach((button) => {
+
+  // Quick Action Buttons
+  document.querySelectorAll('[data-quick-action]').forEach((button) => {
     button.addEventListener('click', () => {
       const action = button.dataset.quickAction;
-      if (action === 'new-task') {
-        openTaskModal();
-      } else if (action === 'new-project') {
+      if (action === 'new-project') {
         openProjectModal();
+      } else if (action === 'new-task') {
+        window.location.href = 'create.html?type=task';
       } else if (action === 'open-board') {
         window.location.href = 'board.html';
       }
     });
   });
 
-  document.getElementById('taskForm').addEventListener('submit', handleTaskSubmit);
-  document.getElementById('closeTaskModal').addEventListener('click', closeTaskModal);
-  document.getElementById('cancelTaskModal').addEventListener('click', closeTaskModal);
-  document.getElementById('taskModal').addEventListener('click', (event) => {
-    if (event.target.id === 'taskModal') {
-      closeTaskModal();
-    }
-  });
-
-  document.getElementById('projectForm').addEventListener('submit', handleProjectSubmit);
-  document.getElementById('closeProjectModal').addEventListener('click', closeProjectModal);
-  document.getElementById('cancelProjectModal').addEventListener('click', closeProjectModal);
-  document.getElementById('projectModal').addEventListener('click', (event) => {
-    if (event.target.id === 'projectModal') {
-      closeProjectModal();
-    }
-  });
-
-  searchInput?.addEventListener('input', (event) => {
-    state.filters.query = event.target.value;
-    renderBoard();
-  });
-  dashboardSearchInput?.addEventListener('input', (event) => {
-    state.filters.query = event.target.value;
-    renderBoard();
-  });
-  priorityFilter?.addEventListener('change', (event) => {
-    state.filters.priority = event.target.value;
-    renderBoard();
-  });
-  statusFilter?.addEventListener('change', (event) => {
-    state.filters.status = event.target.value;
-    renderBoard();
-  });
-  projectFilter?.addEventListener('change', (event) => {
-    state.filters.project = event.target.value;
-    state.selectedProjectId = event.target.value === 'All' ? null : event.target.value;
-    renderProjects();
-    renderBoard();
-  });
-  dueFilter?.addEventListener('change', (event) => {
-    state.filters.dueRange = event.target.value;
-    renderBoard();
-  });
-
-  taskBoard.addEventListener('dragover', (event) => event.preventDefault());
-  taskBoard.addEventListener('drop', (event) => {
-    event.preventDefault();
-    const draggedId = event.dataTransfer.getData('text/plain');
-    const taskToMove = state.currentUser.tasks.find((item) => item.id === draggedId);
-    if (taskToMove) {
-      taskToMove.status = 'In Progress';
-      delete taskToMove.completedAt;
-      saveUser();
-      pushActivity(`Moved ${taskToMove.title} to In Progress.`);
-      renderBoard();
-      renderStats();
-      renderActivity();
+  // Global search redirect
+  dashboardSearchInput?.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      const query = event.target.value.trim();
+      if (query) {
+        const viewState = JSON.parse(localStorage.getItem('nexus-task-view-state') || '{}');
+        viewState.query = query;
+        localStorage.setItem('nexus-task-view-state', JSON.stringify(viewState));
+        window.location.href = 'tasks.html';
+      }
     }
   });
 
@@ -764,40 +512,20 @@ function initDashboard() {
     saveUser();
   }
 
-  if (!state.selectedProjectId && state.currentUser.projects.length) {
-    state.selectedProjectId = state.currentUser.projects[0].id;
-  }
-  if (state.selectedProjectId) {
-    state.filters.project = state.selectedProjectId;
-  }
-
   const preferredTheme = localStorage.getItem('nexus-theme') || state.currentUser.theme || 'light';
   state.currentUser.theme = preferredTheme;
   applyTheme(preferredTheme, false);
   renderStats();
   renderProjects();
-  renderFilters();
-  renderBoard();
   renderActivity();
   renderHeatmap();
   bindEvents();
 
   const dueSoonTasks = helpers.getDueSoonTasks(state.currentUser.tasks);
-  if (dueSoonTasks.length) {
-    showAlert(`Reminder: ${dueSoonTasks[0].title} is due soon.`);
+  if (dueSoonTasks.length > 0) {
+    const titles = dueSoonTasks.map((t) => `“${t.title}”`).join(', ');
+    showAlert(`Alert: task ${titles} is approaching deadline!`);
   }
 }
 
-if (!sessionEmail || !localStorage.getItem(JWT_KEY) || !currentUser) {
-  localStorage.removeItem(SESSION_KEY);
-  localStorage.removeItem(JWT_KEY);
-  localStorage.removeItem(PROVIDER_KEY);
-  window.location.href = 'index.html';
-} else {
-  state = {
-    currentUser,
-    selectedProjectId: null,
-    filters: { query: '', priority: 'All', status: 'All', project: 'All', dueRange: 'All' }
-  };
-  initDashboard();
-}
+initDashboard();

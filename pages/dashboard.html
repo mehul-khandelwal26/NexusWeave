@@ -186,6 +186,12 @@
                   <span>Project name</span>
                   <input id="projectName" type="text" required placeholder="Example: Launch Sprint" />
                 </label>
+                <div style="margin: 0.5rem 0 1rem 0;">
+                  <button type="button" id="aiSuggestBtn" class="ghost-btn" style="border: 1px dashed var(--accent); color: var(--accent); width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.6rem; border-radius: 12px; font-weight: 600;">
+                    ✨ AI Auto-Suggest Tasks & Background
+                  </button>
+                  <p id="aiSuggestStatus" class="meta hidden" style="color: var(--accent); font-size: 0.85rem; margin-top: 0.4rem; text-align: center; font-style: italic;">AI is scope-analyzing project...</p>
+                </div>
                 <label class="field-row">
                   <span>Description</span>
                   <textarea id="projectDescription" rows="3" placeholder="What is this workspace for?"></textarea>
@@ -211,100 +217,10 @@
                 </div>
               </form>
             </div>
-          </div>
-
-          <section class="panel board-panel">
-            <div class="board-head">
-              <div>
-                <h2>Today’s focus</h2>
-                <p>Use the board to move work forward and keep the flow calm.</p>
-              </div>
-              <div class="filters">
-                <button id="addTask" class="primary-btn">+ Add Task</button>
-                <input id="taskSearch" type="search" placeholder="Search tasks" />
-                <select id="priorityFilter">
-                  <option value="All">All priorities</option>
-                  <option value="High">High</option>
-                  <option value="Medium">Medium</option>
-                  <option value="Low">Low</option>
-                </select>
-                <select id="statusFilter">
-                  <option value="All">All statuses</option>
-                  <option value="Todo">Todo</option>
-                  <option value="In Progress">In Progress</option>
-                  <option value="Done">Done</option>
-                </select>
-                <select id="projectFilter">
-                  <option value="All">All projects</option>
-                </select>
-                <select id="dueFilter">
-                  <option value="All">All dates</option>
-                  <option value="Upcoming">Upcoming</option>
-                  <option value="This Week">This Week</option>
-                  <option value="Overdue">Overdue</option>
-                </select>
-              </div>
-            </div>
-            <div id="taskBoard" class="task-board"></div>
-          </section>
-        </div>
+          </div>        </div>
       </main>
     </div>
   </div>
-
-  <div id="taskModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="taskModalTitle">
-    <div class="modal-card">
-      <div class="modal-head">
-        <div>
-          <p class="eyebrow">Task workspace</p>
-          <h3 id="taskModalTitle">Create task</h3>
-        </div>
-        <button type="button" id="closeTaskModal" class="ghost-btn">×</button>
-      </div>
-      <form id="taskForm" class="task-form">
-        <input type="hidden" id="taskId" />
-        <label class="field-row">
-          <span>Task title</span>
-          <input id="taskTitle" type="text" required placeholder="Write a clear task title" />
-        </label>
-        <label class="field-row">
-          <span>Description</span>
-          <textarea id="taskDescription" rows="3" placeholder="Add context, notes, or next steps"></textarea>
-        </label>
-        <div class="field-grid">
-          <label class="field-row">
-            <span>Priority</span>
-            <select id="taskPriority">
-              <option value="High">High</option>
-              <option value="Medium" selected>Medium</option>
-              <option value="Low">Low</option>
-            </select>
-          </label>
-          <label class="field-row">
-            <span>Due date</span>
-            <input id="taskDueDate" type="date" />
-          </label>
-          <label class="field-row">
-            <span>Status</span>
-            <select id="taskStatus">
-              <option value="Todo">Todo</option>
-              <option value="In Progress">In Progress</option>
-              <option value="Done">Done</option>
-            </select>
-          </label>
-          <label class="field-row">
-            <span>Attachments</span>
-            <input id="taskAttachments" type="text" placeholder="brief.pdf, design.png" />
-          </label>
-        </div>
-        <div class="modal-actions">
-          <button type="button" id="cancelTaskModal" class="ghost-btn">Cancel</button>
-          <button type="submit" id="taskSubmitBtn" class="primary-btn">Create task</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
   <script src="../scripts/shared/app-helpers.js"></script>
   <script src="../scripts/shared/theme.js"></script>
   <script src="../scripts/shared/profile-menu.js"></script>

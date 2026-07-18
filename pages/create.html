@@ -215,6 +215,12 @@
                     <label for="project-name">Project Name *</label>
                     <input id="project-name" name="project-name" type="text" placeholder="Example: Product Launch" />
                   </div>
+                  <div class="field" style="grid-column: 1 / -1; margin: 0.5rem 0 1rem 0;">
+                    <button type="button" id="aiSuggestBtn" class="ghost-btn" style="border: 1px dashed var(--accent); color: var(--accent); width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.6rem; border-radius: 12px; font-weight: 600;">
+                      ✨ AI Auto-Suggest Tasks & Background
+                    </button>
+                    <p id="aiSuggestStatus" class="meta hidden" style="color: var(--accent); font-size: 0.85rem; margin-top: 0.4rem; text-align: center; font-style: italic;">AI is scope-analyzing project...</p>
+                  </div>
                   <div class="field">
                     <label for="project-description">Description</label>
                     <textarea id="project-description" name="project-description" placeholder="Describe the project..."></textarea>

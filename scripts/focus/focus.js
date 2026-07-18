@@ -6,6 +6,7 @@
   const startButton = document.getElementById('startTimer');
   const pauseButton = document.getElementById('pauseTimer');
   const resetButton = document.getElementById('resetTimer');
+  const customMinutesInput = document.getElementById('customMinutes');
 
   const sessionEmail = localStorage.getItem(SESSION_KEY);
   const database = JSON.parse(localStorage.getItem(DB_KEY) || '{}');
@@ -17,6 +18,9 @@
   }
 
   let totalSeconds = 25 * 60;
+  if (customMinutesInput) {
+    totalSeconds = (parseInt(customMinutesInput.value, 10) || 25) * 60;
+  }
   let remainingSeconds = totalSeconds;
   let timerId = null;
   let isRunning = false;
@@ -34,6 +38,9 @@
       clearInterval(timerId);
       isRunning = false;
       timerStatus.textContent = 'Session complete';
+      if (customMinutesInput) {
+        customMinutesInput.disabled = false;
+      }
       return;
     }
 
@@ -43,6 +50,9 @@
 
   function startTimer() {
     if (isRunning) return;
+    if (customMinutesInput) {
+      customMinutesInput.disabled = true;
+    }
     isRunning = true;
     timerId = setInterval(tick, 1000);
     renderTimer();
@@ -51,15 +61,32 @@
   function pauseTimer() {
     isRunning = false;
     clearInterval(timerId);
+    if (customMinutesInput) {
+      customMinutesInput.disabled = false;
+    }
     renderTimer();
   }
 
   function resetTimer() {
     isRunning = false;
     clearInterval(timerId);
+    if (customMinutesInput) {
+      customMinutesInput.disabled = false;
+      const mins = Math.max(1, parseInt(customMinutesInput.value, 10) || 25);
+      totalSeconds = mins * 60;
+    }
     remainingSeconds = totalSeconds;
     renderTimer();
   }
+
+  customMinutesInput?.addEventListener('change', () => {
+    if (isRunning) return;
+    const mins = Math.max(1, parseInt(customMinutesInput.value, 10) || 25);
+    customMinutesInput.value = mins;
+    totalSeconds = mins * 60;
+    remainingSeconds = totalSeconds;
+    renderTimer();
+  });
 
   startButton?.addEventListener('click', startTimer);
   pauseButton?.addEventListener('click', pauseTimer);

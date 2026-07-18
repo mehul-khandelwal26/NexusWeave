@@ -535,7 +535,10 @@
   function applyBoardBackground() {
     const boardColumns = document.getElementById('boardColumns');
     if (!boardColumns) return;
-    const bg = state.currentUser.boardBg || 'none';
+    
+    const activeProjectId = state.filters.project;
+    const project = state.currentUser.projects.find(p => p.id === activeProjectId);
+    const bg = (project && project.boardBg) || state.currentUser.boardBg || 'none';
     
     const options = document.querySelectorAll('.bg-option');
     options.forEach(opt => {
@@ -605,7 +608,14 @@
     boardBgModal?.addEventListener('click', (e) => {
       const option = e.target.closest('.bg-option');
       if (!option) return;
-      state.currentUser.boardBg = option.dataset.bgValue;
+      const bgValue = option.dataset.bgValue;
+      const activeProjectId = state.filters.project;
+      const project = state.currentUser.projects.find(p => p.id === activeProjectId);
+      if (project && activeProjectId !== 'All') {
+        project.boardBg = bgValue;
+      } else {
+        state.currentUser.boardBg = bgValue;
+      }
       persistUser();
       applyBoardBackground();
     });

@@ -57,6 +57,8 @@ let labels = currentUser && currentUser.labels ? currentUser.labels : [...DEFAUL
 let selectedLabels = [];
 let selectedAttachments = [];
 let selectedTasksForNewProject = [];
+let aiSuggestedTasks = null;
+let aiSuggestedBg = null;
 let toastTimer = null;
 
 function saveUser() {
@@ -151,6 +153,7 @@ function buildProjectObject(values) {
     description: values.description.trim() || 'Focused project workspace',
     deadline: values.deadline,
     timeline: 'Planning',
+    boardBg: aiSuggestedBg || 'none',
     createdAt: new Date().toISOString(),
   };
 }
@@ -173,6 +176,25 @@ function handleProjectSubmit(event) {
 
   const project = buildProjectObject(values);
 
+  if (aiSuggestedTasks) {
+    aiSuggestedTasks.forEach((title, idx) => {
+      tasks.unshift({
+        id: `task-${Date.now()}-${idx}`,
+        title,
+        priority: idx === 0 ? 'High' : idx <= 2 ? 'Medium' : 'Low',
+        dueDate: new Date(Date.now() + (idx + 1) * 86400000).toISOString().slice(0, 10),
+        status: idx === 3 ? 'In Progress' : 'Todo',
+        description: 'AI-suggested workspace task breakdown.',
+        projectId: project.id,
+        labels: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+    });
+    aiSuggestedTasks = null;
+  }
+  aiSuggestedBg = null;
+
   // Link selected tasks to this project
   selectedTasksForNewProject.forEach((taskId) => {
     const task = tasks.find(t => t.id === taskId);
@@ -191,6 +213,11 @@ function handleProjectSubmit(event) {
   updateSelectedTasksCount();
   resetProjectForm();
   populateProjectDropdown();
+
+  const aiSuggestBtn = document.getElementById('aiSuggestBtn');
+  if (aiSuggestBtn) {
+    aiSuggestBtn.innerHTML = '✨ AI Auto-Suggest Tasks & Background';
+  }
 }
 
 const escapeHtml = (value) => String(value)
@@ -458,6 +485,67 @@ function updateSelectedTasksCount() {
 resetTaskFormButton?.addEventListener('click', resetTaskForm);
 taskForm?.addEventListener('submit', handleTaskSubmit);
 projectForm?.addEventListener('submit', handleProjectSubmit);
+
+const aiSuggestBtn = document.getElementById('aiSuggestBtn');
+const aiSuggestStatus = document.getElementById('aiSuggestStatus');
+
+aiSuggestBtn?.addEventListener('click', () => {
+  const nameInput = document.getElementById('project-name');
+  const projectName = nameInput ? nameInput.value.trim() : '';
+  if (!projectName) {
+    showToast('Please enter a project name first.');
+    return;
+  }
+
+  aiSuggestStatus?.classList.remove('hidden');
+  aiSuggestBtn.disabled = true;
+
+  setTimeout(() => {
+    aiSuggestStatus?.classList.add('hidden');
+    aiSuggestBtn.disabled = false;
+
+    const nameLower = projectName.toLowerCase();
+    let suggestions = [];
+    if (nameLower.includes('web') || nameLower.includes('app') || nameLower.includes('site') || nameLower.includes('design')) {
+      suggestions = [
+        'Design landing page high-fidelity mockups',
+        'Set up structural components & stylesheet foundations',
+        'Implement user auth flow redirects',
+        'Deploy staging build to Vercel/Netlify'
+      ];
+    } else if (nameLower.includes('research') || nameLower.includes('paper') || nameLower.includes('study') || nameLower.includes('college')) {
+      suggestions = [
+        'Conduct literature review of current sources',
+        'Define research methodology and target goals',
+        'Draft initial abstract, outline and findings',
+        'Format bibliography and proofread paper'
+      ];
+    } else {
+      suggestions = [
+        `Define scope & core milestones for ${projectName}`,
+        'Assign team member roles & project timeline schedules',
+        'Draft initial mockups & functional specs draft',
+        'Conduct final milestone delivery demo review'
+      ];
+    }
+
+    aiSuggestedTasks = suggestions;
+
+    let bgTheme = 'aurora';
+    if (nameLower.includes('web') || nameLower.includes('app') || nameLower.includes('site') || nameLower.includes('design')) bgTheme = 'tech';
+    else if (nameLower.includes('research') || nameLower.includes('paper') || nameLower.includes('study') || nameLower.includes('college')) bgTheme = 'calm';
+
+    const themeUrls = {
+      tech: "url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800')",
+      calm: "url('https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=800')",
+      aurora: "url('https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?q=80&w=800')"
+    };
+    aiSuggestedBg = themeUrls[bgTheme] || themeUrls.aurora;
+
+    showToast(`AI successfully generated ${suggestions.length} suggestions and custom workspace background.`);
+    aiSuggestBtn.innerHTML = '✨ AI Suggested (Ready)';
+  }, 1500);
+});
 
 toggleButtons.forEach((button) => {
   button.addEventListener('click', () => setActiveEntity(button.dataset.target));
