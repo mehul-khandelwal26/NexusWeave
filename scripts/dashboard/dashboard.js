@@ -187,7 +187,19 @@ function renderProjects() {
         deleteProject(project.id);
         return;
       }
-      state.selectedProjectId = project.id;
+      if (state.selectedProjectId === project.id) {
+        state.selectedProjectId = null;
+        state.filters.project = 'All';
+        if (projectFilter) {
+          projectFilter.value = 'All';
+        }
+      } else {
+        state.selectedProjectId = project.id;
+        state.filters.project = project.id;
+        if (projectFilter) {
+          projectFilter.value = project.id;
+        }
+      }
       renderProjects();
       renderBoard();
       renderFilters();
@@ -443,9 +455,10 @@ function buildContributionGrid(tasks) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  return Array.from({ length: 35 }, (_, index) => {
+  const totalCells = 371; // 53 weeks * 7 days
+  return Array.from({ length: totalCells }, (_, index) => {
     const date = new Date(today);
-    date.setDate(today.getDate() - (34 - index));
+    date.setDate(today.getDate() - (totalCells - 1 - index));
     const key = date.toISOString().slice(0, 10);
     const value = tasks.filter((task) => task.status === 'Done' && task.completedAt && task.completedAt.slice(0, 10) === key).length;
     const intensity = value === 0 ? 0 : value <= 1 ? 1 : value <= 2 ? 2 : value <= 3 ? 3 : 4;
@@ -548,7 +561,11 @@ function renderHeatmap() {
   refreshCurrentUserFromStorage();
   const grid = buildContributionGrid(state.currentUser.tasks);
   heatmap.innerHTML = grid.map((item) => `<div class="heatmap-cell level-${item.intensity}" title="${item.label}: ${item.value} completed"></div>`).join('');
-  heatmap.insertAdjacentHTML('afterend', '<div class="heatmap-legend"><span>Less</span><span class="legend-swatch level-0"></span><span class="legend-swatch level-1"></span><span class="legend-swatch level-2"></span><span class="legend-swatch level-3"></span><span class="legend-swatch level-4"></span><span>More</span></div>');
+  
+  let legend = heatmap.parentElement.querySelector('.heatmap-legend');
+  if (!legend) {
+    heatmap.insertAdjacentHTML('afterend', '<div class="heatmap-legend"><span>Less</span><span class="legend-swatch level-0"></span><span class="legend-swatch level-1"></span><span class="legend-swatch level-2"></span><span class="legend-swatch level-3"></span><span class="legend-swatch level-4"></span><span>More</span></div>');
+  }
 }
 
 function removeTask(taskId) {
@@ -655,6 +672,8 @@ function bindEvents() {
   });
   projectFilter?.addEventListener('change', (event) => {
     state.filters.project = event.target.value;
+    state.selectedProjectId = event.target.value === 'All' ? null : event.target.value;
+    renderProjects();
     renderBoard();
   });
   dueFilter?.addEventListener('change', (event) => {
@@ -704,6 +723,9 @@ function initDashboard() {
 
   if (!state.selectedProjectId && state.currentUser.projects.length) {
     state.selectedProjectId = state.currentUser.projects[0].id;
+  }
+  if (state.selectedProjectId) {
+    state.filters.project = state.selectedProjectId;
   }
 
   const preferredTheme = localStorage.getItem('nexus-theme') || state.currentUser.theme || 'light';
