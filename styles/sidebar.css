@@ -181,7 +181,7 @@ body.app-body {
   padding: 0.6rem 0.8rem;
   border: 1px solid var(--border);
   border-radius: 999px;
-  background: var(--surface);
+  background: var(--paper-raised);
   color: inherit;
   box-shadow: 0 12px 30px var(--shadow);
 }
@@ -191,12 +191,12 @@ body.app-body {
   display: grid;
   place-items: center;
   border-radius: 999px;
-  background: var(--primary-soft);
-  color: var(--primary);
+  background: var(--accent);
+  color: var(--paper-raised);
   font-weight: 700;
 }
 .profile-meta { display: grid; text-align: left; }
-.profile-meta small { color: var(--text-soft); }
+.profile-meta small { color: var(--ink-soft); }
 .profile-menu {
   position: absolute;
   top: calc(100% + 0.4rem);
@@ -206,7 +206,7 @@ body.app-body {
   padding: 0.5rem;
   border: 1px solid var(--border);
   border-radius: 16px;
-  background: var(--surface);
+  background: var(--paper-raised);
   box-shadow: 0 16px 36px var(--shadow);
   z-index: 2200;
 }
@@ -219,7 +219,7 @@ body.app-body {
   text-align: left;
   color: inherit;
 }
-.profile-menu-item:hover { background: var(--surface-muted); }
+.profile-menu-item:hover { background: var(--paper); }
 .profile-menu-item.danger { color: var(--danger); }
 
 .sidebar-footer {
@@ -242,7 +242,7 @@ body.app-body {
 }
 
 .sidebar-footer .profile-trigger:hover {
-  background: var(--surface-muted);
+  background: var(--paper);
   border-color: var(--border);
 }
 
