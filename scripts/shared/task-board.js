@@ -5,8 +5,25 @@
   const helpers = window.AppHelpers;
 
   const sessionEmail = localStorage.getItem(SESSION_KEY);
-  const database = JSON.parse(localStorage.getItem(DB_KEY) || '{}');
-  const currentUser = sessionEmail ? database[sessionEmail] : null;
+  let database = JSON.parse(localStorage.getItem(DB_KEY) || '{}');
+
+  function normalizeUser(user, fallbackEmail = sessionEmail) {
+    const resolvedEmail = fallbackEmail || user?.email || 'demo@nexusweave.app';
+    return {
+      ...(user || {}),
+      email: resolvedEmail,
+      theme: user?.theme || 'light',
+      projects: Array.isArray(user?.projects) ? user.projects : [],
+      tasks: Array.isArray(user?.tasks) ? user.tasks : [],
+      activity: Array.isArray(user?.activity) ? user.activity : []
+    };
+  }
+
+  function notifyTaskSync() {
+    window.dispatchEvent(new CustomEvent('nexus:tasks-updated'));
+  }
+
+  const currentUser = sessionEmail ? normalizeUser(database[sessionEmail], sessionEmail) : null;
 
   if (!currentUser) {
     window.location.href = 'index.html';
@@ -25,7 +42,7 @@
   };
 
   const state = {
-    currentUser,
+    currentUser: normalizeUser(currentUser, sessionEmail),
     selectedProjectId: currentUser.projects?.[0]?.id || null,
     filters: loadViewState(),
     pendingDeleteTaskId: null
@@ -79,13 +96,31 @@
     localStorage.setItem(VIEW_STATE_KEY, JSON.stringify(state.filters));
   }
 
+  function refreshCurrentUserFromStorage() {
+    const storedUsers = JSON.parse(localStorage.getItem(DB_KEY) || '{}');
+    const storedUser = sessionEmail ? storedUsers[sessionEmail] : null;
+    database = storedUsers;
+    if (storedUser) {
+      state.currentUser = normalizeUser(storedUser, sessionEmail);
+      return state.currentUser;
+    }
+    state.currentUser = normalizeUser(state.currentUser, sessionEmail);
+    return state.currentUser;
+  }
+
   function persistUser() {
-    database[sessionEmail] = state.currentUser;
+    if (!sessionEmail) return;
+    refreshCurrentUserFromStorage();
+    const safeUser = normalizeUser(state.currentUser, sessionEmail);
+    state.currentUser = safeUser;
+    database[sessionEmail] = safeUser;
     localStorage.setItem(DB_KEY, JSON.stringify(database));
     saveViewState();
+    notifyTaskSync();
   }
 
   function pushActivity(message) {
+    state.currentUser = normalizeUser(state.currentUser, sessionEmail);
     state.currentUser.activity = [
       { id: `activity-${Date.now()}`, message, createdAt: new Date().toISOString() },
       ...(state.currentUser.activity || [])
@@ -94,7 +129,8 @@
   }
 
   function getVisibleTasks() {
-    const visibleProjects = state.currentUser.tasks.filter((task) => {
+    const taskList = Array.isArray(state.currentUser.tasks) ? state.currentUser.tasks : [];
+    const visibleProjects = taskList.filter((task) => {
       if (!state.selectedProjectId) return true;
       return task.projectId === state.selectedProjectId;
     });
@@ -498,6 +534,7 @@
   }
 
   function render() {
+    refreshCurrentUserFromStorage();
     renderFilterOptions();
     renderFilterChips();
     if (taskGroupsEl) renderTasksPage();
@@ -550,6 +587,11 @@
     });
   }
 
+  function syncFromExternalChanges() {
+    refreshCurrentUserFromStorage();
+    render();
+  }
+
   function init() {
     if (searchInput) searchInput.value = state.filters.query;
     if (sortSelect) {
@@ -560,6 +602,12 @@
     if (projectFilter) projectFilter.value = state.filters.project;
     if (labelFilter) labelFilter.value = state.filters.label;
     if (dueFilter) dueFilter.value = state.filters.dueRange;
+    window.addEventListener('storage', (event) => {
+      if (!event.key || event.key === DB_KEY || event.key === SESSION_KEY || event.key === VIEW_STATE_KEY) {
+        syncFromExternalChanges();
+      }
+    });
+    window.addEventListener('nexus:tasks-updated', syncFromExternalChanges);
     bindEvents();
     render();
   }

@@ -6,13 +6,30 @@ const helpers = window.AppHelpers;
 
 let state = null;
 const sessionEmail = localStorage.getItem(SESSION_KEY);
-const database = JSON.parse(localStorage.getItem(DB_KEY) || '{}');
+let database = JSON.parse(localStorage.getItem(DB_KEY) || '{}');
 const storedTheme = localStorage.getItem('nexus-theme') || 'light';
-let currentUser = sessionEmail ? database[sessionEmail] : null;
+
+function normalizeUser(user, fallbackEmail = sessionEmail) {
+  const resolvedEmail = fallbackEmail || user?.email || 'demo@nexusweave.app';
+  return {
+    ...(user || {}),
+    email: resolvedEmail,
+    theme: user?.theme || localStorage.getItem('nexus-theme') || storedTheme || 'light',
+    projects: Array.isArray(user?.projects) ? user.projects : [],
+    tasks: Array.isArray(user?.tasks) ? user.tasks : [],
+    activity: Array.isArray(user?.activity) ? user.activity : []
+  };
+}
+
+function notifyTaskSync() {
+  window.dispatchEvent(new CustomEvent('nexus:tasks-updated'));
+}
+
+let currentUser = sessionEmail ? normalizeUser(database[sessionEmail], sessionEmail) : null;
 
 if (!currentUser) {
   const demoEmail = 'demo@nexusweave.app';
-  currentUser = {
+  currentUser = normalizeUser({
     email: demoEmail,
     password: 'demo123',
     theme: storedTheme,
@@ -20,7 +37,7 @@ if (!currentUser) {
     tasks: [],
     activity: [],
     createdAt: Date.now()
-  };
+  }, demoEmail);
   database[demoEmail] = currentUser;
   localStorage.setItem(DB_KEY, JSON.stringify(database));
   localStorage.setItem(SESSION_KEY, demoEmail);
@@ -50,11 +67,25 @@ const quickActionButtons = document.querySelectorAll('[data-quick-action]');
 
 function saveUser() {
   if (!state) return;
-  database[sessionEmail] = state.currentUser;
+  const safeUser = normalizeUser(state.currentUser, sessionEmail || state.currentUser?.email);
+  state.currentUser = safeUser;
+  database[sessionEmail || safeUser.email] = safeUser;
   localStorage.setItem(DB_KEY, JSON.stringify(database));
+  notifyTaskSync();
+}
+
+function refreshCurrentUserFromStorage() {
+  if (!state) return;
+  const storedUsers = JSON.parse(localStorage.getItem(DB_KEY) || '{}');
+  const storedUser = sessionEmail ? storedUsers[sessionEmail] : null;
+  database = storedUsers;
+  if (storedUser) {
+    state.currentUser = normalizeUser(storedUser, sessionEmail);
+  }
 }
 
 function pushActivity(message) {
+  state.currentUser = normalizeUser(state.currentUser, sessionEmail);
   state.currentUser.activity.unshift({
     id: `activity-${Date.now()}`,
     message,
@@ -106,6 +137,7 @@ function getOverdueCount(tasks) {
 }
 
 function renderStats() {
+  refreshCurrentUserFromStorage();
   const summary = helpers.getTaskSummary(state.currentUser.tasks);
   const completion = summary.total ? Math.round((summary.done / summary.total) * 100) : 0;
   const overdue = getOverdueCount(state.currentUser.tasks);
@@ -118,6 +150,7 @@ function renderStats() {
 }
 
 function renderProjects() {
+  refreshCurrentUserFromStorage();
   projectsContainer.innerHTML = '';
 
   if (!state.currentUser.projects.length) {
@@ -421,6 +454,7 @@ function buildContributionGrid(tasks) {
 }
 
 function renderBoard() {
+  refreshCurrentUserFromStorage();
   const visibleTasks = state.currentUser.tasks.filter((task) => {
     if (!state.selectedProjectId) return true;
     return task.projectId === state.selectedProjectId;
@@ -503,6 +537,7 @@ function renderBoard() {
 }
 
 function renderActivity() {
+  refreshCurrentUserFromStorage();
   const feed = state.currentUser.activity.length ? state.currentUser.activity : [
     { id: 'default-1', message: 'Create your first project to begin.', createdAt: new Date().toISOString() }
   ];
@@ -510,8 +545,10 @@ function renderActivity() {
 }
 
 function renderHeatmap() {
+  refreshCurrentUserFromStorage();
   const grid = buildContributionGrid(state.currentUser.tasks);
   heatmap.innerHTML = grid.map((item) => `<div class="heatmap-cell level-${item.intensity}" title="${item.label}: ${item.value} completed"></div>`).join('');
+  heatmap.insertAdjacentHTML('afterend', '<div class="heatmap-legend"><span>Less</span><span class="legend-swatch level-0"></span><span class="legend-swatch level-1"></span><span class="legend-swatch level-2"></span><span class="legend-swatch level-3"></span><span class="legend-swatch level-4"></span><span>More</span></div>');
 }
 
 function removeTask(taskId) {
@@ -530,11 +567,33 @@ function editTask(taskId) {
 }
 
 function bindEvents() {
-  document.getElementById('logout').addEventListener('click', () => {
+  document.getElementById('logout')?.addEventListener('click', () => {
     localStorage.removeItem(SESSION_KEY);
     localStorage.removeItem(JWT_KEY);
     localStorage.removeItem(PROVIDER_KEY);
     window.location.href = 'index.html';
+  });
+
+  window.addEventListener('storage', (event) => {
+    if (!event.key || event.key === DB_KEY || event.key === SESSION_KEY) {
+      refreshCurrentUserFromStorage();
+      renderStats();
+      renderProjects();
+      renderFilters();
+      renderBoard();
+      renderActivity();
+      renderHeatmap();
+    }
+  });
+
+  window.addEventListener('nexus:tasks-updated', () => {
+    refreshCurrentUserFromStorage();
+    renderStats();
+    renderProjects();
+    renderFilters();
+    renderBoard();
+    renderActivity();
+    renderHeatmap();
   });
 
   document.getElementById('newProject').addEventListener('click', openProjectModal);
