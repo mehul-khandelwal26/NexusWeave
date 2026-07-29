@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Profile | NexusWeave</title>
+  <meta name="description" content="NexusWeave Profile — View employee performance, skills, projects, and productivity activity." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../styles/global.css" />
+  <link rel="stylesheet" href="../styles/product.css" />
+  <link rel="stylesheet" href="../styles/dashboard.css" />
+  <link rel="stylesheet" href="../styles/sidebar.css" />
+  <link rel="stylesheet" href="../styles/org.css" />
+  <link rel="stylesheet" href="../styles/realtime.css" />
+  <link rel="stylesheet" href="../styles/ai.css" />
+</head>
+<body class="app-body">
+  <div class="app-shell">
+    <!-- ── Sidebar ── -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-mark"></div>
+        <div>
+          <p class="eyebrow">Productivity suite</p>
+          <h2>NexusWeave</h2>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav" aria-label="Primary navigation">
+        <a class="nav-item" href="dashboard.html">
+          <span class="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          </span>
+          <span>Dashboard</span>
+        </a>
+        <a class="nav-item" href="create.html">
+          <span class="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v8"></path><path d="M8 12h8"></path></svg>
+          </span>
+          <span>Create</span>
+        </a>
+        <a class="nav-item" href="tasks.html">
+          <span class="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+          </span>
+          <span>Tasks</span>
+        </a>
+        <a class="nav-item" href="board.html">
+          <span class="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M8 7v10"></path><path d="M12 7v6"></path><path d="M16 7v4"></path></svg>
+          </span>
+          <span>Board</span>
+        </a>
+        <a class="nav-item" href="reports.html">
+          <span class="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M7 14l3-3 2 2 5-6"></path></svg>
+          </span>
+          <span>Reports</span>
+        </a>
+        <a class="nav-item" href="org.html">
+          <span class="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          </span>
+          <span>Organization</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="profile-menu-wrapper">
+          <button class="profile-trigger" type="button" data-profile-menu-trigger aria-haspopup="menu" aria-expanded="false">
+            <span class="profile-avatar" data-profile-avatar>NW</span>
+            <span class="profile-meta">
+              <strong data-profile-name>Profile</strong>
+              <small data-profile-email>workspace</small>
+            </span>
+          </button>
+          <div class="profile-menu" data-profile-menu role="menu">
+            <button class="profile-menu-item" type="button" data-profile-action="change-photo">Change photo</button>
+            <button class="profile-menu-item" type="button" data-profile-action="copy-link">Copy link</button>
+            <button class="profile-menu-item" type="button" data-profile-action="settings">Settings</button>
+            <button class="profile-menu-item danger" type="button" data-profile-action="logout">Logout</button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ── Main Content ── -->
+    <div class="content-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Workspace Profile</p>
+          <h1 id="profileHeaderTitle">User Profile</h1>
+        </div>
+        <div class="header-actions">
+          <button class="theme-toggle-btn" type="button" data-theme-toggle aria-label="Toggle dark mode">
+            <span class="toggle-icon"></span>
+            <span>Theme</span>
+          </button>
+        </div>
+      </header>
+
+      <main class="page-main">
+        <div class="dashboard-shell">
+
+          <!-- Profile Hero Card -->
+          <section class="welcome-card glass-panel" style="display:flex;align-items:center;justify-content:space-between;gap:1.5rem;flex-wrap:wrap;padding:1.8rem;">
+            <div style="display:flex;align-items:center;gap:1.4rem;">
+              <div style="position:relative;">
+                <div id="userProfileAvatar" class="profile-avatar-large" style="width:4.2rem;height:4.2rem;font-size:1.6rem;">E</div>
+                <button type="button" id="editAvatarBtn" title="Change Avatar" style="position:absolute;bottom:-2px;right:-2px;border:1px solid var(--border);border-radius:50%;background:var(--surface);width:1.5rem;height:1.5rem;display:grid;place-items:center;font-size:0.75rem;cursor:pointer;">📷</button>
+              </div>
+              <div>
+                <div style="display:flex;align-items:center;gap:0.6rem;">
+                  <h2 id="userProfileName">User Name</h2>
+                  <span id="userProfileRoleBadge" class="org-badge badge-employee">👤 Employee</span>
+                </div>
+                <p id="userProfileEmail" class="text-soft" style="margin-top:0.15rem;">email@workspace.com</p>
+                <div style="display:flex;align-items:center;gap:0.75rem;margin-top:0.45rem;">
+                  <span id="userProfileDepartment" class="filter-chip" style="font-size:0.78rem;">🏢 Engineering</span>
+                  <span id="userProfileOrg" class="text-soft" style="font-size:0.82rem;">NexusWeave Org</span>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:0.6rem;flex-wrap:wrap;">
+              <button type="button" id="editProfileBtn" class="primary-btn">✏️ Edit Profile</button>
+              <button type="button" id="shareProfileBtn" class="ghost-btn">🔗 Share Profile</button>
+            </div>
+          </section>
+
+          <!-- Metrics Row -->
+          <section class="stats-grid" style="margin-top:1.2rem;">
+            <article class="stat-card glass-card">
+              <div class="stat-card-head"><span class="stat-icon">📌</span></div>
+              <h3 id="profProjectsCount">0</h3>
+              <p>Active Projects</p>
+            </article>
+
+            <article class="stat-card glass-card">
+              <div class="stat-card-head"><span class="stat-icon">🏆</span></div>
+              <h3 id="profCompletedTasks">0</h3>
+              <p>Completed Tasks</p>
+            </article>
+
+            <article class="stat-card glass-card">
+              <div class="stat-card-head"><span class="stat-icon">🎯</span></div>
+              <h3 id="profProductivityScore">0%</h3>
+              <p>Productivity Score</p>
+            </article>
+
+            <article class="stat-card glass-card">
+              <div class="stat-card-head"><span class="stat-icon">⏱️</span></div>
+              <h3 id="profWeeklyHours">0h</h3>
+              <p>Hours This Week</p>
+            </article>
+          </section>
+
+          <!-- Main Grid: Bio & Skills vs Recent Activity -->
+          <div class="dashboard-grid-split" style="margin-top:1.2rem;">
+
+            <!-- Left: Bio & Skills -->
+            <div style="display:grid;gap:1.2rem;">
+              <section class="panel glass-card">
+                <div class="panel-head">
+                  <h2>About & Bio</h2>
+                </div>
+                <p id="userProfileBio" class="text-soft" style="line-height:1.6;font-size:0.95rem;">
+                  No bio written yet. Click 'Edit Profile' to add your bio, role description, and expertise.
+                </p>
+              </section>
+
+              <section class="panel glass-card">
+                <div class="panel-head">
+                  <h2>Skills & Expertise</h2>
+                </div>
+                <div id="userProfileSkills" style="display:flex;flex-wrap:wrap;gap:0.5rem;">
+                  <span class="filter-chip">JavaScript</span>
+                  <span class="filter-chip">React</span>
+                  <span class="filter-chip">System Architecture</span>
+                  <span class="filter-chip">UI/UX Design</span>
+                </div>
+              </section>
+            </div>
+
+            <!-- Right: Recent Activity Feed -->
+            <section class="panel glass-card">
+              <div class="panel-head">
+                <h2>Recent Activity</h2>
+              </div>
+              <div id="userProfileActivityFeed" class="activity-list" style="max-height:360px;">
+                <div class="empty-inline">No recent activity.</div>
+              </div>
+            </section>
+
+          </div>
+
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Edit Profile Modal -->
+  <div id="editProfileModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="editProfModalTitle">
+    <div class="modal-card">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">Settings</p>
+          <h3 id="editProfModalTitle">Edit Profile</h3>
+        </div>
+        <button type="button" id="closeEditProfModal" class="ghost-btn">×</button>
+      </div>
+      <form id="editProfileForm" class="task-form">
+        <label class="field-row">
+          <span>Full Name</span>
+          <input type="text" id="editProfName" required />
+        </label>
+        <label class="field-row">
+          <span>Department</span>
+          <input type="text" id="editProfDepartment" placeholder="Engineering, Design, Marketing" />
+        </label>
+        <label class="field-row">
+          <span>Bio</span>
+          <textarea id="editProfBio" rows="3" placeholder="Tell your team about yourself…"></textarea>
+        </label>
+        <label class="field-row">
+          <span>Skills (comma separated)</span>
+          <input type="text" id="editProfSkills" placeholder="JavaScript, UI Design, Project Management" />
+        </label>
+        <div class="modal-actions">
+          <button type="button" id="cancelEditProfModal" class="ghost-btn">Cancel</button>
+          <button type="submit" class="primary-btn">Save Profile</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="../scripts/services/api-client.js"></script>
+  <script src="../scripts/services/socket-service.js"></script>
+  <script src="../scripts/services/productivity-tracker.js"></script>
+  <script src="../scripts/services/ai-service.js"></script>
+  <script src="../scripts/shared/notification-system.js"></script>
+  <script src="../scripts/shared/chat-widget.js"></script>
+  <script src="../scripts/shared/ai-assistant.js"></script>
+  <script src="../scripts/shared/app-helpers.js"></script>
+  <script src="../scripts/shared/theme.js"></script>
+  <script src="../scripts/shared/profile-menu.js"></script>
+  <script src="../scripts/profile/profile.js"></script>
+</body>
+</html>

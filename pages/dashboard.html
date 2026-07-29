@@ -4,15 +4,22 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dashboard | NexusWeave</title>
+  <meta name="description" content="NexusWeave Employee Productivity Platform — Command center for performance, tasks, and attendance." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="../styles/global.css" />
   <link rel="stylesheet" href="../styles/product.css" />
   <link rel="stylesheet" href="../styles/dashboard.css" />
   <link rel="stylesheet" href="../styles/sidebar.css" />
+  <link rel="stylesheet" href="../styles/org.css" />
+  <link rel="stylesheet" href="../styles/realtime.css" />
+  <link rel="stylesheet" href="../styles/ai.css" />
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="app-body">
   <div class="app-shell">
+    <!-- ── Sidebar ── -->
     <aside class="sidebar">
       <div class="sidebar-brand">
         <div class="brand-mark"></div>
@@ -41,7 +48,6 @@
           </span>
           <span>Tasks</span>
         </a>
-
         <a class="nav-item" href="board.html">
           <span class="nav-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M8 7v10"></path><path d="M12 7v6"></path><path d="M16 7v4"></path></svg>
@@ -53,6 +59,12 @@
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M7 14l3-3 2 2 5-6"></path></svg>
           </span>
           <span>Reports</span>
+        </a>
+        <a class="nav-item" href="org.html">
+          <span class="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          </span>
+          <span>Organization</span>
         </a>
       </nav>
 
@@ -75,13 +87,15 @@
       </div>
     </aside>
 
+    <!-- ── Main Content ── -->
     <div class="content-shell">
       <header class="topbar">
         <div>
-          <p class="eyebrow">Productivity workspace</p>
-          <h1>Dashboard</h1>
+          <p class="eyebrow" id="dashboardEyebrow">Productivity Workspace</p>
+          <h1 id="dashboardHeading">Dashboard</h1>
         </div>
         <div class="header-actions">
+          <span id="roleBadgeHeader" class="profile-role-badge"></span>
           <a class="ghost-btn" href="focus.html" style="padding: 0.6rem 1rem; border-radius: 999px; text-decoration: none; border: 1px solid var(--border); display: flex; align-items: center; gap: 0.4rem; font-size: 0.9rem; font-weight: 500; color: inherit;">
             ⏱ Focus
           </a>
@@ -94,78 +108,325 @@
 
       <main class="page-main">
         <div class="dashboard-shell">
-          <section class="welcome-card">
-            <div>
-              <h2 id="welcomeText">Welcome</h2>
-              <p>Track your momentum, organize work, and stay ahead of deadlines.</p>
-            </div>
-            <label class="dashboard-toolbar" for="dashboardTaskSearch">
-              <span class="search-icon" aria-hidden="true">⌕</span>
-              <input id="dashboardTaskSearch" type="search" placeholder="Search tasks across your workspace" />
-            </label>
-            <div id="alertBox" class="alert-box hidden"></div>
-          </section>
 
-          <section class="stats-grid">
-            <article class="stat-card">
-              <h3 id="projectCount">0</h3>
-              <p>Projects</p>
-            </article>
-            <article class="stat-card">
-              <h3 id="taskCount">0</h3>
-              <p>Tasks</p>
-            </article>
-            <article class="stat-card">
-              <h3 id="doneCount">0</h3>
-              <p>Completed</p>
-            </article>
-            <article class="stat-card">
-              <h3 id="overdueCount">0</h3>
-              <p>Overdue</p>
-            </article>
-          </section>
-
-          <section class="panel">
-            <div class="panel-head">
+          <!-- ══════════════════════════════════════════
+               ADMIN DASHBOARD VIEW
+          ══════════════════════════════════════════ -->
+          <div id="adminDashboardView" class="hidden">
+            
+            <!-- Welcome Header Card -->
+            <section class="welcome-card glass-panel">
               <div>
-                <h2>Productivity overview</h2>
-                <p class="text-soft">Completion rate <strong id="completionRate">0%</strong> this week.</p>
+                <h2 id="adminWelcomeTitle">Welcome, Admin</h2>
+                <p>Organization Overview & Management Command Center</p>
               </div>
-              <div class="panel-actions">
-                <button type="button" class="primary-btn" data-quick-action="new-task">New Task</button>
-                <button type="button" class="ghost-btn" data-quick-action="new-project">New Project</button>
-                <button type="button" class="ghost-btn" data-quick-action="open-board">Open Board</button>
-                <a class="ghost-btn" href="focus.html">Focus Mode</a>
+              <div class="header-widget-actions">
+                <a href="org.html" class="primary-btn" style="text-decoration:none;">🛡️ Manage Organization</a>
               </div>
-            </div>
-            <div class="dashboard-grid">
-              <div class="panel">
-                <div class="board-head">
-                  <h3>Weekly completion</h3>
-                </div>
-                <div id="heatmap" class="heatmap"></div>
-              </div>
-              <div class="panel">
-                <div class="board-head">
-                  <h3>Recent activity</h3>
-                  <button type="button" id="clearActivity" class="ghost-btn" style="padding: 0.35rem 0.8rem; font-size: 0.82rem; border-radius: 999px;">Clear</button>
-                </div>
-                <div id="activityFeed" class="activity-list"></div>
-              </div>
-            </div>
-          </section>
+            </section>
 
-          <section class="panel">
-            <div class="panel-head">
-              <h2>Projects</h2>
-              <div class="panel-actions">
-                <button id="newProject" class="primary-btn">+ New Project</button>
-                <button id="autoSuggestTasks" class="ghost-btn">Auto-Suggest Tasks</button>
-              </div>
-            </div>
-            <div id="projects" class="project-list"></div>
-          </section>
+            <!-- Admin Stats Grid (6 key metrics) -->
+            <section class="stats-grid admin-stats-grid">
+              <article class="stat-card glass-card">
+                <div class="stat-card-head">
+                  <span class="stat-icon">👥</span>
+                  <span class="stat-trend positive">+100%</span>
+                </div>
+                <h3 id="adminTotalEmployees">0</h3>
+                <p>Total Employees</p>
+              </article>
 
+              <article class="stat-card glass-card">
+                <div class="stat-card-head">
+                  <span class="stat-icon">🟢</span>
+                  <span class="stat-live-dot">Live</span>
+                </div>
+                <h3 id="adminOnlineEmployees">0</h3>
+                <p>Online Employees</p>
+              </article>
+
+              <article class="stat-card glass-card">
+                <div class="stat-card-head">
+                  <span class="stat-icon">📋</span>
+                </div>
+                <h3 id="adminTasksAssigned">0</h3>
+                <p>Tasks Assigned</p>
+              </article>
+
+              <article class="stat-card glass-card">
+                <div class="stat-card-head">
+                  <span class="stat-icon">✅</span>
+                </div>
+                <h3 id="adminCompletedTasks">0</h3>
+                <p>Completed Tasks</p>
+              </article>
+
+              <article class="stat-card glass-card">
+                <div class="stat-card-head">
+                  <span class="stat-icon">⏳</span>
+                </div>
+                <h3 id="adminPendingTasks">0</h3>
+                <p>Pending Tasks</p>
+              </article>
+
+              <article class="stat-card glass-card">
+                <div class="stat-card-head">
+                  <span class="stat-icon">📅</span>
+                </div>
+                <h3 id="adminAttendanceRate">0%</h3>
+                <p>Attendance Today</p>
+              </article>
+
+              <article class="stat-card glass-card">
+                <div class="stat-card-head">
+                  <span class="stat-icon">⏱️</span>
+                  <span class="stat-trend positive">W / M</span>
+                </div>
+                <h3 id="adminWorkingHours">0h</h3>
+                <p>Weekly / Monthly Hours</p>
+              </article>
+
+              <article class="stat-card glass-card">
+                <div class="stat-card-head">
+                  <span class="stat-icon">🎯</span>
+                </div>
+                <h3 id="adminProductivityScore">0%</h3>
+                <p>Productivity Score</p>
+              </article>
+
+              <article class="stat-card glass-card">
+                <div class="stat-card-head">
+                  <span class="stat-icon">⚡</span>
+                </div>
+                <h3 id="adminAvgCompletionTime">0d</h3>
+                <p>Avg Completion Time</p>
+              </article>
+            </section>
+
+            <!-- Admin Main Grid: Productivity Graph & Leaderboard -->
+            <div class="dashboard-grid-split">
+              <!-- Productivity Graph (Chart.js) -->
+              <section class="panel glass-card">
+                <div class="panel-head">
+                  <div>
+                    <h2>Organization Productivity</h2>
+                    <p class="text-soft">Weekly task completions vs targets across all teams</p>
+                  </div>
+                  <div class="chart-legend-pills">
+                    <span class="legend-pill pill-completed">Completed</span>
+                    <span class="legend-pill pill-target">Target</span>
+                  </div>
+                </div>
+                <div class="chart-container" style="position: relative; height:280px; width:100%;">
+                  <canvas id="adminProductivityChart"></canvas>
+                </div>
+              </section>
+
+              <!-- Employee Leaderboard -->
+              <section class="panel glass-card">
+                <div class="panel-head">
+                  <div>
+                    <h2>Top Performers</h2>
+                    <p class="text-soft">Employee Leaderboard by completed work</p>
+                  </div>
+                  <a href="org.html" class="ghost-btn" style="font-size:0.82rem;padding:0.3rem 0.7rem;text-decoration:none;">View All →</a>
+                </div>
+                <div id="adminLeaderboardList" class="leaderboard-list">
+                  <div class="empty-inline">Loading leaderboard…</div>
+                </div>
+              </section>
+            </div>
+
+            <!-- Attendance & Org Activity Split -->
+            <div class="dashboard-grid-split" style="margin-top:1.2rem;">
+              <section class="panel glass-card">
+                <div class="panel-head">
+                  <div>
+                    <h2>Today's Attendance & Presence</h2>
+                    <p class="text-soft">Real-time employee check-ins & presence</p>
+                  </div>
+                </div>
+                <div id="adminAttendanceList" class="attendance-admin-list">
+                  <div class="empty-inline">Loading attendance data…</div>
+                </div>
+              </section>
+
+              <!-- Attendance Calendar -->
+              <section class="panel glass-card">
+                <div class="panel-head">
+                  <div>
+                    <h2>Attendance Calendar</h2>
+                    <p class="text-soft">Monthly organization check-in matrix</p>
+                  </div>
+                  <div style="display:flex;gap:0.4rem;font-size:0.75rem;">
+                    <span class="legend-pill" style="background:rgba(34,197,94,0.15);color:#16a34a;">🟢 Present</span>
+                    <span class="legend-pill" style="background:rgba(245,158,11,0.15);color:#d97706;">🟡 Late</span>
+                    <span class="legend-pill" style="background:rgba(239,68,68,0.15);color:#dc2626;">🔴 Absent</span>
+                  </div>
+                </div>
+                <div id="attendanceCalendarGrid" class="attendance-calendar-grid">
+                  <div class="empty-inline">Loading calendar…</div>
+                </div>
+              </section>
+            </div>
+
+              <section class="panel glass-card">
+                <div class="panel-head">
+                  <div>
+                    <h2>Recent Organization Activity</h2>
+                    <p class="text-soft">Activity feed across all projects</p>
+                  </div>
+                </div>
+                <div id="adminActivityFeed" class="activity-list">
+                  <div class="empty-inline">No activity recorded yet.</div>
+                </div>
+              </section>
+            </div>
+
+          </div>
+
+          <!-- ══════════════════════════════════════════
+               EMPLOYEE DASHBOARD VIEW
+          ══════════════════════════════════════════ -->
+          <div id="employeeDashboardView" class="hidden">
+
+            <!-- Employee Top Banner: Welcome + Profile Quick View -->
+            <section class="welcome-card glass-panel employee-hero">
+              <div class="employee-hero-left">
+                <h2 id="employeeWelcomeTitle">Welcome back</h2>
+                <p id="employeeOrgSub">Member of <span id="employeeOrgNameText">Workspace</span></p>
+              </div>
+
+              <!-- Interactive Attendance Control Card -->
+              <div class="attendance-control-box glass-card">
+                <div class="attendance-status-indicator">
+                  <span id="clockStatusBadge" class="clock-badge badge-out">⚪ Clocked Out</span>
+                  <small id="clockTimeDisplay" class="text-soft">Not clocked in today</small>
+                </div>
+                <button type="button" id="toggleClockBtn" class="primary-btn clock-btn">Clock In Today</button>
+              </div>
+            </section>
+
+            <!-- Employee Stats Cards (Assigned, Completed, Deadlines, Attendance) -->
+            <section class="stats-grid">
+              <article class="stat-card glass-card">
+                <div class="stat-card-head">
+                  <span class="stat-icon">📌</span>
+                </div>
+                <h3 id="empAssignedTasks">0</h3>
+                <p>Assigned Tasks</p>
+              </article>
+
+              <article class="stat-card glass-card">
+                <div class="stat-card-head">
+                  <span class="stat-icon">🏆</span>
+                </div>
+                <h3 id="empCompletedTasks">0</h3>
+                <p>Completed Tasks</p>
+              </article>
+
+              <article class="stat-card glass-card">
+                <div class="stat-card-head">
+                  <span class="stat-icon">⏰</span>
+                </div>
+                <h3 id="empUpcomingDeadlines">0</h3>
+                <p>Upcoming Deadlines</p>
+              </article>
+
+              <article class="stat-card glass-card">
+                <div class="stat-card-head">
+                  <span class="stat-icon">⏱️</span>
+                </div>
+                <h3 id="empHoursThisWeek">0h</h3>
+                <p>Work Hours This Week</p>
+              </article>
+            </section>
+
+            <!-- Main Employee Grid Split: Charts & Deadlines -->
+            <div class="dashboard-grid-split">
+
+              <!-- Personal Analytics (Chart.js) -->
+              <section class="panel glass-card">
+                <div class="panel-head">
+                  <div>
+                    <h2>Task Progress Breakdown</h2>
+                    <p class="text-soft">Personal completion rates & task statuses</p>
+                  </div>
+                </div>
+                <div class="emp-chart-wrapper" style="display:grid;grid-template-columns:1fr 1.2fr;gap:1.5rem;align-items:center;">
+                  <div style="position:relative;height:220px;">
+                    <canvas id="empTaskDoughnutChart"></canvas>
+                  </div>
+                  <div style="position:relative;height:220px;">
+                    <canvas id="empWeeklyBarChart"></canvas>
+                  </div>
+                </div>
+              </section>
+
+              <!-- Deadlines & Priorities -->
+              <section class="panel glass-card">
+                <div class="panel-head">
+                  <div>
+                    <h2>Deadlines & Priorities</h2>
+                    <p class="text-soft">Urgent tasks requiring your focus</p>
+                  </div>
+                  <a href="tasks.html" class="ghost-btn" style="font-size:0.82rem;padding:0.3rem 0.7rem;text-decoration:none;">All Tasks →</a>
+                </div>
+                <div id="empDeadlinesList" class="deadlines-list">
+                  <div class="empty-inline">No pending deadlines. Nice work!</div>
+                </div>
+              </section>
+
+            </div>
+
+            <!-- Profile Summary & Notifications Split -->
+            <div class="dashboard-grid-split" style="margin-top:1.2rem;">
+
+              <!-- Notifications Panel -->
+              <section class="panel glass-card">
+                <div class="panel-head">
+                  <div>
+                    <h2>Notifications & Updates</h2>
+                    <p class="text-soft">Latest workspace activity & mentions</p>
+                  </div>
+                  <button type="button" id="clearNotifsBtn" class="ghost-btn" style="padding: 0.3rem 0.7rem; font-size: 0.82rem; border-radius: 999px;">Clear All</button>
+                </div>
+                <div id="empNotificationsList" class="notifications-feed">
+                  <div class="empty-inline">No new notifications.</div>
+                </div>
+              </section>
+
+              <!-- Profile & Quick Actions Card -->
+              <section class="panel glass-card">
+                <div class="panel-head">
+                  <div>
+                    <h2>Your Profile & Quick Actions</h2>
+                    <p class="text-soft">Manage work & focus sessions</p>
+                  </div>
+                </div>
+                <div class="profile-card-content">
+                  <div class="profile-hero-card">
+                    <div class="profile-avatar-large" id="empProfileAvatar">E</div>
+                    <div>
+                      <h3 id="empProfileName">Employee Name</h3>
+                      <p id="empProfileEmail" class="text-soft">email@workspace.com</p>
+                      <span id="empProfileRoleBadge" class="profile-role-badge role-employee" style="margin-top:0.3rem;">👤 Employee</span>
+                    </div>
+                  </div>
+
+                  <div class="quick-action-buttons">
+                    <a href="create.html" class="primary-btn" style="text-decoration:none;text-align:center;">+ Create Task</a>
+                    <a href="focus.html" class="ghost-btn" style="text-decoration:none;text-align:center;">⏱ Focus Mode</a>
+                    <a href="board.html" class="ghost-btn" style="text-decoration:none;text-align:center;">📊 Task Board</a>
+                  </div>
+                </div>
+              </section>
+
+            </div>
+
+          </div>
+
+          <!-- Project Creation Modal (Preserved) -->
           <div id="projectModal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="projectModalTitle">
             <div class="modal-card">
               <div class="modal-head">
@@ -212,10 +473,20 @@
                 </div>
               </form>
             </div>
-          </div>        </div>
+          </div>
+
+        </div>
       </main>
     </div>
   </div>
+
+  <script src="../scripts/services/api-client.js"></script>
+  <script src="../scripts/services/socket-service.js"></script>
+  <script src="../scripts/services/productivity-tracker.js"></script>
+  <script src="../scripts/services/ai-service.js"></script>
+  <script src="../scripts/shared/ai-assistant.js"></script>
+  <script src="../scripts/shared/notification-system.js"></script>
+  <script src="../scripts/shared/chat-widget.js"></script>
   <script src="../scripts/shared/app-helpers.js"></script>
   <script src="../scripts/shared/theme.js"></script>
   <script src="../scripts/shared/profile-menu.js"></script>

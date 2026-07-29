@@ -10,6 +10,8 @@
   <link rel="stylesheet" href="../styles/product.css" />
   <link rel="stylesheet" href="../styles/dashboard.css" />
   <link rel="stylesheet" href="../styles/sidebar.css" />
+  <link rel="stylesheet" href="../styles/realtime.css" />
+  <link rel="stylesheet" href="../styles/ai.css" />
 </head>
 <body class="app-body">
   <div class="app-shell">
@@ -53,6 +55,12 @@
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M7 14l3-3 2 2 5-6"></path></svg>
           </span>
           <span>Reports</span>
+        </a>
+        <a class="nav-item" href="org.html">
+          <span class="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          </span>
+          <span>Organization</span>
         </a>
       </nav>
 
@@ -168,8 +176,15 @@
         </label>
         <div class="field-grid">
           <label class="field-row">
+            <span>Assignee</span>
+            <select id="taskAssignee">
+              <option value="">Myself (Unassigned)</option>
+            </select>
+          </label>
+          <label class="field-row">
             <span>Priority</span>
             <select id="taskPriority">
+              <option value="Urgent">Urgent 🔥</option>
               <option value="High">High</option>
               <option value="Medium" selected>Medium</option>
               <option value="Low">Low</option>
@@ -184,10 +199,24 @@
             <select id="taskStatus">
               <option value="Todo">Todo</option>
               <option value="In Progress">In Progress</option>
+              <option value="Review">Review</option>
               <option value="Done">Done</option>
             </select>
           </label>
           <label class="field-row">
+            <span>Recurring</span>
+            <select id="taskRecurring">
+              <option value="None" selected>None</option>
+              <option value="Daily">Daily</option>
+              <option value="Weekly">Weekly</option>
+              <option value="Monthly">Monthly</option>
+            </select>
+          </label>
+          <label class="field-row">
+            <span>Labels</span>
+            <input id="taskLabels" type="text" placeholder="Frontend, Bug, Design" />
+          </label>
+          <label class="field-row" style="grid-column: span 2;">
             <span>Attachments</span>
             <input id="taskAttachments" type="text" placeholder="brief.pdf, design.png" />
           </label>
@@ -260,6 +289,13 @@
     </div>
   </div>
 
+  <script src="../scripts/services/api-client.js"></script>
+  <script src="../scripts/services/socket-service.js"></script>
+  <script src="../scripts/services/productivity-tracker.js"></script>
+  <script src="../scripts/services/ai-service.js"></script>
+  <script src="../scripts/shared/ai-assistant.js"></script>
+  <script src="../scripts/shared/notification-system.js"></script>
+  <script src="../scripts/shared/chat-widget.js"></script>
   <script src="../scripts/shared/theme.js"></script>
   <script src="../scripts/shared/app-helpers.js"></script>
   <script src="../scripts/shared/profile-menu.js"></script>
