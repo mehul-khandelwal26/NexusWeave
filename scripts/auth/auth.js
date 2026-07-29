@@ -1,5 +1,4 @@
-const API_BASE = 'http://localhost:4000/api';
-
+const DB_KEY = 'users';
 const SESSION_KEY = 'session';
 const JWT_KEY = 'jwt';
 const PROVIDER_KEY = 'authProvider';
@@ -18,10 +17,29 @@ const switchText = document.getElementById('switchText');
 
 let loginMode = true;
 
-function setAuthSession(token, user) {
-  localStorage.setItem(SESSION_KEY, user.email);
-  localStorage.setItem(JWT_KEY, token);
-  localStorage.setItem(PROVIDER_KEY, user.provider);
+function reg() {
+  const users = localStorage.getItem(DB_KEY);
+  return users ? JSON.parse(users) : {};
+}
+
+function sav(users) {
+  localStorage.setItem(DB_KEY, JSON.stringify(users));
+}
+
+function createJwtToken(email, provider = 'email') {
+  const payload = {
+    sub: email,
+    email,
+    provider,
+    exp: Date.now() + 1000 * 60 * 60 * 4
+  };
+  return `eyJhbGciOiJub25lIn0.${btoa(JSON.stringify(payload))}.signature`;
+}
+
+function setAuthSession(email, provider = 'email') {
+  localStorage.setItem(SESSION_KEY, email);
+  localStorage.setItem(JWT_KEY, createJwtToken(email, provider));
+  localStorage.setItem(PROVIDER_KEY, provider);
 }
 
 function showErrors(errors) {
@@ -30,25 +48,6 @@ function showErrors(errors) {
 
 function clearErrors() {
   errorsBox.textContent = '';
-}
-
-async function callApi(path, body) {
-  let response;
-  try {
-    response = await fetch(`${API_BASE}${path}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-  } catch (networkErr) {
-    return { ok: false, errors: ['Could not reach the server. Is the backend running?'] };
-  }
-
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    return { ok: false, errors: data.errors || ['Something went wrong. Please try again.'] };
-  }
-  return { ok: true, ...data };
 }
 
 function toggleMode() {
@@ -74,7 +73,7 @@ switchh.addEventListener('click', function (e) {
   toggleMode();
 });
 
-googleBtn.addEventListener('click', async function () {
+googleBtn.addEventListener('click', function () {
   clearErrors();
   const requestedEmail = window.prompt('Enter your Google email to continue', userin.value.trim() || 'you@gmail.com');
   if (!requestedEmail) {
@@ -88,18 +87,18 @@ googleBtn.addEventListener('click', async function () {
     return;
   }
 
-  const result = await callApi('/auth/google-demo', { email: normalizedEmail });
-  if (!result.ok) {
-    showErrors(result.errors);
-    return;
+  const users = reg();
+  if (!users[normalizedEmail]) {
+    users[normalizedEmail] = helpers.createUserProfile(normalizedEmail, 'google-sign-in');
+    sav(users);
   }
 
   userin.value = normalizedEmail;
-  setAuthSession(result.token, result.user);
+  setAuthSession(normalizedEmail, 'google');
   window.location.href = 'dashboard.html';
 });
 
-form.addEventListener('submit', async function (e) {
+form.addEventListener('submit', function (e) {
   e.preventDefault();
   clearErrors();
 
@@ -112,37 +111,40 @@ form.addEventListener('submit', async function (e) {
     return;
   }
 
-  submit.disabled = true;
-  const endpoint = loginMode ? '/auth/login' : '/auth/signup';
-  const result = await callApi(endpoint, { email, password });
-  submit.disabled = false;
+  const users = reg();
 
-  if (!result.ok) {
-    showErrors(result.errors);
+  if (!loginMode) {
+    if (users[email]) {
+      showErrors(['An account with that email already exists.']);
+      return;
+    }
+
+    users[email] = helpers.createUserProfile(email, password);
+    sav(users);
+    setAuthSession(email, 'email');
+    window.location.href = 'dashboard.html';
     return;
   }
 
-  setAuthSession(result.token, result.user);
+  const user = users[email];
+  if (!user) {
+    showErrors(['Account not found.']);
+    return;
+  }
+
+  if (user.password !== password) {
+    showErrors(['Incorrect password.']);
+    return;
+  }
+
+  setAuthSession(email, 'email');
   window.location.href = 'dashboard.html';
 });
 
-window.addEventListener('load', async () => {
+window.addEventListener('load', () => {
+  const session = localStorage.getItem(SESSION_KEY);
   const jwt = localStorage.getItem(JWT_KEY);
-  if (!jwt) return;
-
-  // Verify the stored token is still valid before trusting the session.
-  try {
-    const response = await fetch(`${API_BASE}/auth/me`, {
-      headers: { Authorization: `Bearer ${jwt}` }
-    });
-    if (response.ok) {
-      window.location.href = 'dashboard.html';
-    } else {
-      localStorage.removeItem(SESSION_KEY);
-      localStorage.removeItem(JWT_KEY);
-      localStorage.removeItem(PROVIDER_KEY);
-    }
-  } catch {
-
+  if (session && jwt) {
+    window.location.href = 'dashboard.html';
   }
 });
