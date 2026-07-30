@@ -14,8 +14,10 @@
   }
 
   const isAdmin = currentUser.role === 'admin';
+  const isPersonal = currentUser.role === 'personal' || (!isAdmin && currentUser.role !== 'employee');
 
   /* ── DOM Elements ── */
+  const personalView = document.getElementById('personalDashboardView');
   const adminView = document.getElementById('adminDashboardView');
   const employeeView = document.getElementById('employeeDashboardView');
   const roleBadgeHeader = document.getElementById('roleBadgeHeader');
@@ -24,20 +26,27 @@
 
   // Set topbar header info
   if (roleBadgeHeader) {
-    roleBadgeHeader.textContent = isAdmin ? '🛡️ Admin' : '👤 Employee';
-    roleBadgeHeader.className = `profile-role-badge role-${isAdmin ? 'admin' : 'employee'}`;
+    roleBadgeHeader.textContent = isPersonal ? '👤 Personal' : isAdmin ? '🛡️ Admin' : '👤 Employee';
+    roleBadgeHeader.className = `profile-role-badge role-${isPersonal ? 'personal' : isAdmin ? 'admin' : 'employee'}`;
   }
-  if (dashboardEyebrow) dashboardEyebrow.textContent = isAdmin ? 'Admin Command Center' : 'Personal Workspace';
-  if (dashboardHeading) dashboardHeading.textContent = isAdmin ? 'Executive Dashboard' : 'Employee Dashboard';
+  if (dashboardEyebrow) dashboardEyebrow.textContent = isPersonal ? 'Personal Focus Hub' : isAdmin ? 'Admin Command Center' : 'Team Workspace';
+  if (dashboardHeading) dashboardHeading.textContent = isPersonal ? 'Personal Dashboard' : isAdmin ? 'Executive Dashboard' : 'Employee Dashboard';
 
   // Toggle View
-  if (isAdmin) {
-    adminView.classList.remove('hidden');
-    employeeView.classList.add('hidden');
+  if (isPersonal) {
+    personalView?.classList.remove('hidden');
+    adminView?.classList.add('hidden');
+    employeeView?.classList.add('hidden');
+    initPersonalDashboard();
+  } else if (isAdmin) {
+    personalView?.classList.add('hidden');
+    adminView?.classList.remove('hidden');
+    employeeView?.classList.add('hidden');
     initAdminDashboard();
   } else {
-    adminView.classList.add('hidden');
-    employeeView.classList.remove('hidden');
+    personalView?.classList.add('hidden');
+    adminView?.classList.add('hidden');
+    employeeView?.classList.remove('hidden');
     initEmployeeDashboard();
   }
 
@@ -601,15 +610,210 @@
     renderNotifsList(notifs);
   }
 
+  /* ─────────────────────────────────────────────
+     PERSONAL DASHBOARD IMPLEMENTATION (HEATMAP)
+  ───────────────────────────────────────────── */
+  let personalChartInstance = null;
+
+  function initPersonalDashboard() {
+    const welcomeTitle = document.getElementById('personalWelcomeTitle');
+    if (welcomeTitle) welcomeTitle.textContent = `Welcome back, ${currentUser.name || 'Developer'}`;
+
+    const userTasks = currentUser.tasks || [];
+    const projects = currentUser.projects || [];
+    const completedTasks = userTasks.filter(t => t.status === 'Done');
+
+    // Metrics
+    const completedCount = completedTasks.length;
+    const activeProjectsCount = projects.length;
+    
+    // Focus hours from tracker / activity
+    const focusTracker = window.NexusTracker;
+    const focusHours = focusTracker ? focusTracker.calculateWorkingHours(currentUser.email, 'weekly') : Math.max(12, Math.round(completedCount * 1.4));
+
+    // Velocity (completed in past 7 days)
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000);
+    const weeklyDone = completedTasks.filter(t => t.completedAt && new Date(t.completedAt) >= sevenDaysAgo).length;
+
+    const completedEl = document.getElementById('personalCompletedTasksCount');
+    const projectsEl = document.getElementById('personalActiveProjectsCount');
+    const hoursEl = document.getElementById('personalFocusHoursCount');
+    const velocityEl = document.getElementById('personalTaskVelocity');
+
+    if (completedEl) completedEl.textContent = completedCount;
+    if (projectsEl) projectsEl.textContent = activeProjectsCount;
+    if (hoursEl) hoursEl.textContent = `${focusHours}h`;
+    if (velocityEl) velocityEl.textContent = `${weeklyDone}/wk`;
+
+    // Render Heatmap
+    renderPersonalHeatmap(userTasks);
+
+    // Render Productivity Chart
+    renderPersonalProductivityChart(userTasks);
+
+    // Render Active Tasks
+    renderPersonalTasksList(userTasks);
+  }
+
+  function renderPersonalHeatmap(tasks) {
+    const grid = document.getElementById('personalHeatmapGrid');
+    if (!grid) return;
+
+    // Create Map of completed dates: 'YYYY-MM-DD' -> count
+    const completionMap = {};
+    tasks.forEach(t => {
+      if (t.status === 'Done' && t.completedAt) {
+        const dateKey = new Date(t.completedAt).toISOString().split('T')[0];
+        completionMap[dateKey] = (completionMap[dateKey] || 0) + 1;
+      }
+    });
+
+    // Build 52-week matrix (364 days leading up to today)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const startDate = new Date(today);
+    startDate.setDate(today.getDate() - 364);
+
+    let cellsHTML = '';
+    let totalContributions = 0;
+    let currentStreak = 0;
+    let longestStreak = 0;
+    let tempStreak = 0;
+
+    // Loop through 365 days
+    for (let d = 0; d < 365; d++) {
+      const currentDate = new Date(startDate.getTime() + d * 86400000);
+      const dateKey = currentDate.toISOString().split('T')[0];
+      const count = completionMap[dateKey] || 0;
+
+      totalContributions += count;
+
+      // Streak calculation
+      if (count > 0) {
+        tempStreak++;
+        if (tempStreak > longestStreak) longestStreak = tempStreak;
+      } else {
+        tempStreak = 0;
+      }
+
+      let intensity = 0;
+      if (count === 1) intensity = 1;
+      else if (count === 2) intensity = 2;
+      else if (count === 3) intensity = 3;
+      else if (count >= 4) intensity = 4;
+
+      const formattedDate = currentDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+      const tooltip = `${count} task(s) completed on ${formattedDate}`;
+
+      cellsHTML += `<div class="heatmap-cell level-${intensity}" title="${tooltip}" data-date="${dateKey}" data-count="${count}"></div>`;
+    }
+
+    // Current streak (consecutive active days up to today or yesterday)
+    let checkDate = new Date(today);
+    let todayKey = checkDate.toISOString().split('T')[0];
+    if (!completionMap[todayKey]) {
+      checkDate.setDate(checkDate.getDate() - 1);
+      todayKey = checkDate.toISOString().split('T')[0];
+    }
+    while (completionMap[todayKey] && completionMap[todayKey] > 0) {
+      currentStreak++;
+      checkDate.setDate(checkDate.getDate() - 1);
+      todayKey = checkDate.toISOString().split('T')[0];
+    }
+
+    grid.innerHTML = cellsHTML;
+
+    const currentStreakEl = document.getElementById('personalCurrentStreak');
+    const longestStreakEl = document.getElementById('personalLongestStreak');
+    const totalContributionsEl = document.getElementById('personalTotalContributions');
+
+    if (currentStreakEl) currentStreakEl.textContent = `${currentStreak} Days`;
+    if (longestStreakEl) longestStreakEl.textContent = `${longestStreak} Days`;
+    if (totalContributionsEl) totalContributionsEl.textContent = `${totalContributions}`;
+  }
+
+  function renderPersonalProductivityChart(tasks) {
+    const ctx = document.getElementById('personalProductivityChart');
+    if (!ctx) return;
+
+    if (personalChartInstance) personalChartInstance.destroy();
+
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const counts = [0, 0, 0, 0, 0, 0, 0];
+
+    tasks.filter(t => t.status === 'Done').forEach(t => {
+      const d = t.completedAt ? new Date(t.completedAt) : new Date();
+      const idx = (d.getDay() + 6) % 7;
+      counts[idx] += 1;
+    });
+
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const accentColor = isDark ? '#4ade80' : '#16a34a';
+    const textColor = isDark ? '#94a3b8' : '#64748b';
+
+    personalChartInstance = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: days,
+        datasets: [{
+          label: 'Daily Task Completion',
+          data: counts,
+          borderColor: accentColor,
+          backgroundColor: isDark ? 'rgba(74, 222, 128, 0.15)' : 'rgba(22, 163, 74, 0.1)',
+          fill: true,
+          tension: 0.35,
+          borderWidth: 3,
+          pointRadius: 4,
+          pointBackgroundColor: accentColor
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: textColor, font: { family: 'Inter', size: 11 } } },
+          y: { grid: { color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }, ticks: { color: textColor, precision: 0 } }
+        }
+      }
+    });
+  }
+
+  function renderPersonalTasksList(tasks) {
+    const container = document.getElementById('personalTasksList');
+    if (!container) return;
+
+    const pending = tasks.filter(t => t.status !== 'Done');
+
+    if (!pending.length) {
+      container.innerHTML = `<div class="empty-inline">All personal tasks completed! High five! ✋</div>`;
+      return;
+    }
+
+    container.innerHTML = pending.slice(0, 5).map(task => `
+      <div class="deadline-item">
+        <div class="deadline-info">
+          <strong>${task.title || 'Untitled Task'}</strong>
+          <small>${task.priority || 'Medium'} priority • ${task.dueDate || 'No deadline'}</small>
+        </div>
+        <span class="profile-role-badge role-personal">${task.status || 'Todo'}</span>
+      </div>
+    `).join('');
+  }
+
   /* ── Automatic Live Updates ── */
   const socket = window.NexusSocket;
   if (socket) {
     socket.on('presence:update', () => {
       if (isAdmin) initAdminDashboard();
+      else if (isPersonal) initPersonalDashboard();
     });
 
     socket.on('attendance:marked', () => {
       if (isAdmin) initAdminDashboard();
+      else if (isPersonal) initPersonalDashboard();
       else initEmployeeDashboard();
     });
   }

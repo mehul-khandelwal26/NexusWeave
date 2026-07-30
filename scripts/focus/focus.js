@@ -59,10 +59,27 @@
     if (remainingSeconds <= 0) {
       clearInterval(timerId);
       isRunning = false;
-      timerStatus.textContent = 'Session complete';
+      timerStatus.textContent = 'Session complete 🎉';
       if (customMinutesInput) {
         customMinutesInput.disabled = false;
       }
+
+      // Log Focus Activity
+      const focusMins = customMinutesInput ? (parseInt(customMinutesInput.value, 10) || 25) : 25;
+      if (sessionEmail && database[sessionEmail]) {
+        const user = database[sessionEmail];
+        if (!user.activity) user.activity = [];
+        user.activity.unshift({
+          id: `act-focus-${Date.now()}`,
+          text: `Completed a ${focusMins}-minute Focus Sprint! ⏱️`,
+          time: 'Just now',
+          createdAt: new Date().toISOString()
+        });
+        database[sessionEmail] = user;
+        localStorage.setItem(DB_KEY, JSON.stringify(database));
+        window.dispatchEvent(new CustomEvent('nexus:tasks-updated'));
+      }
+
       clearTimerState();
       return;
     }

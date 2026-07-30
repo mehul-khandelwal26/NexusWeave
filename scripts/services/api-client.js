@@ -48,6 +48,31 @@
     localStorage.removeItem('authProvider');
   }
 
+  const API_BASE = 'http://localhost:4000/api';
+
+  async function tryBackendRequest(endpoint, options = {}) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
+      const res = await fetch(`${API_BASE}${endpoint}`, {
+        ...options,
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('jwt') || ''}`,
+          ...(options.headers || {})
+        }
+      });
+      clearTimeout(timeoutId);
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (e) {
+      // Backend offline or error -> fallback to LocalStorage
+    }
+    return null;
+  }
+
   function sanitizeUser(user) {
     const sanitized = { ...user };
     delete sanitized.password;
@@ -56,7 +81,17 @@
 
   root.NexusAPI = {
     /* ── Auth ── */
-    async signup({ name, email, password, role, orgName, orgKey, orgVisibility, orgId }) {
+    async signup({ name, email, password, role = 'personal', orgName, orgKey, orgVisibility, orgId }) {
+      // Attempt backend API call first
+      const backendRes = await tryBackendRequest('/auth/signup', {
+        method: 'POST',
+        body: JSON.stringify({ name, email, password, role, orgName, orgKey, orgVisibility, orgId })
+      });
+      if (backendRes && backendRes.token) {
+        localStorage.setItem('session', email);
+        localStorage.setItem('jwt', backendRes.token);
+        localStorage.setItem('authProvider', 'email');
+      }
       const users = getUsers();
       if (users[email]) {
         return { success: false, error: 'Email already exists.' };
@@ -99,19 +134,72 @@
         if (!org.members.includes(email)) org.members.push(email);
         saveOrgs(orgs);
         assignedOrgId = org.id;
+      } else {
+        // Personal scope
+        role = 'personal';
+        assignedOrgId = null;
+      }
+
+      // Seed starter tasks for personal accounts to generate an instant contribution heatmap
+      const now = new Date();
+      const seedTasks = [];
+      const seedProjects = [
+        { id: 'proj-personal-1', name: 'Personal Portfolio & Web App', description: 'Personal project & website development', deadline: new Date(now.getTime() + 14 * 86400000).toISOString().slice(0, 10), timeline: 'Execution', createdAt: now.toISOString() },
+        { id: 'proj-personal-2', name: 'Skill Mastery & Learning', description: 'Daily coding challenges, algorithms, and books', deadline: new Date(now.getTime() + 30 * 86400000).toISOString().slice(0, 10), timeline: 'Planning', createdAt: now.toISOString() }
+      ];
+
+      if (role === 'personal') {
+        const sampleTitles = [
+          'Solve HackerRank Algorithm Challenge',
+          'Design Responsive UI Mockup',
+          'Implement JWT Auth Flow',
+          'Optimize Database Queries',
+          'Refactor CSS Utility System',
+          'Set up CI/CD Pipeline',
+          'Read Chapter 4 of System Design',
+          'Deploy Staging Server',
+          'Write Unit Tests for API',
+          'Build Kanban Drag & Drop Feature',
+          'Complete Focus Timer Sprint',
+          'Review Pull Request #14',
+          'Setup Dark Theme Variables',
+          'Create Heatmap Analytics Widget',
+          'Fix Mobile Layout Overflow'
+        ];
+
+        // Generate activity over past 45 days
+        for (let i = 0; i < 35; i++) {
+          const daysAgo = Math.floor(Math.random() * 45);
+          const taskDate = new Date(now.getTime() - daysAgo * 86400000 - Math.random() * 36000000);
+          const title = sampleTitles[i % sampleTitles.length];
+          seedTasks.push({
+            id: `task-personal-${i + 1}`,
+            title: `${title} #${i + 1}`,
+            priority: ['High', 'Medium', 'Low'][i % 3],
+            dueDate: taskDate.toISOString().slice(0, 10),
+            status: i % 6 === 0 ? 'In Progress' : i % 8 === 0 ? 'Todo' : 'Done',
+            description: 'Personal productivity task.',
+            projectId: i % 2 === 0 ? 'proj-personal-1' : 'proj-personal-2',
+            completedAt: i % 6 !== 0 && i % 8 !== 0 ? taskDate.toISOString() : null,
+            createdAt: taskDate.toISOString()
+          });
+        }
       }
 
       const newUser = {
         id: generateId('user'),
-        name,
+        name: name || email.split('@')[0],
         email,
         password,
         role,
         organizationId: assignedOrgId,
         theme: 'light',
-        projects: [],
-        tasks: [],
-        activity: [],
+        projects: seedProjects,
+        tasks: seedTasks,
+        activity: [
+          { id: 'act-1', text: 'Created personal workspace account.', time: 'Just now', createdAt: new Date().toISOString() },
+          { id: 'act-2', text: 'Completed 34 personal coding & focus tasks.', time: 'Recently', createdAt: new Date().toISOString() }
+        ],
         createdAt: Date.now()
       };
 
@@ -131,11 +219,14 @@
       if (user.password !== password) {
         return { success: false, error: 'Invalid email or password.' };
       }
-      if (!user.role) {
-        return { success: false, error: 'Please re-register with the updated system.' };
-      }
-      if (user.role !== role) {
-        return { success: false, error: 'Role mismatch.' };
+      if (role && user.role && user.role !== role) {
+        // If login specified role, match it, or auto adjust if personal user
+        if (role === 'personal' && user.role !== 'personal') {
+          return { success: false, error: 'Account registered under Organization scope. Please switch tab to Organization.' };
+        }
+        if ((role === 'admin' || role === 'employee') && user.role === 'personal') {
+          return { success: false, error: 'Account registered under Personal scope. Please switch tab to Personal.' };
+        }
       }
 
       setSession(user, 'email');
@@ -167,7 +258,9 @@
         return null;
       }
 
-      return sanitizeUser(user);
+      const sanitized = sanitizeUser(user);
+      if (!sanitized.role) sanitized.role = 'personal';
+      return sanitized;
     },
 
     isAuthenticated() {

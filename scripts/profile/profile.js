@@ -50,11 +50,12 @@
     if (userProfileName) userProfileName.textContent = user.name || 'User';
     if (userProfileEmail) userProfileEmail.textContent = user.email;
     if (userProfileRoleBadge) {
-      userProfileRoleBadge.textContent = isAdmin ? '🛡️ Admin' : '👤 Employee';
-      userProfileRoleBadge.className = `org-badge ${isAdmin ? 'badge-admin' : 'badge-employee'}`;
+      const isPersonal = user.role === 'personal';
+      userProfileRoleBadge.textContent = isPersonal ? '👤 Personal' : isAdmin ? '🛡️ Admin' : '👤 Employee';
+      userProfileRoleBadge.className = `org-badge ${isPersonal ? 'badge-personal' : isAdmin ? 'badge-admin' : 'badge-employee'}`;
     }
 
-    if (userProfileDepartment) userProfileDepartment.textContent = `🏢 ${user.department || 'General'}`;
+    if (userProfileDepartment) userProfileDepartment.textContent = `🏢 ${user.department || (user.role === 'personal' ? 'Individual' : 'Engineering')}`;
     if (userProfileOrg) userProfileOrg.textContent = orgInfo ? orgInfo.name : 'Personal Workspace';
 
     if (userProfileBio) {
@@ -71,12 +72,15 @@
     const tasks = user.tasks || [];
     const completed = tasks.filter(t => t.status === 'Done').length;
     const score = tracker ? tracker.calculateProductivityScore(user) : 85;
-    const hours = tracker ? tracker.calculateWorkingHours(user.email, 'weekly') : 38;
+    const hours = tracker ? tracker.calculateWorkingHours(user.email, 'weekly') : Math.max(12, Math.round(completed * 1.4));
 
     if (profProjectsCount) profProjectsCount.textContent = (user.projects || []).length;
     if (profCompletedTasks) profCompletedTasks.textContent = completed;
     if (profProductivityScore) profProductivityScore.textContent = `${score}%`;
     if (profWeeklyHours) profWeeklyHours.textContent = `${hours}h`;
+
+    // Render Profile Heatmap Grid
+    renderProfileHeatmap(tasks);
 
     // Activity Feed
     if (userProfileActivityFeed) {
@@ -91,6 +95,79 @@
         `).join('');
       }
     }
+  }
+
+  function renderProfileHeatmap(tasks) {
+    const grid = document.getElementById('profHeatmapGrid');
+    if (!grid) return;
+
+    const completionMap = {};
+    tasks.forEach(t => {
+      if (t.status === 'Done' && t.completedAt) {
+        const dateKey = new Date(t.completedAt).toISOString().split('T')[0];
+        completionMap[dateKey] = (completionMap[dateKey] || 0) + 1;
+      }
+    });
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const startDate = new Date(today);
+    startDate.setDate(today.getDate() - 364);
+
+    let cellsHTML = '';
+    let totalContributions = 0;
+    let currentStreak = 0;
+    let longestStreak = 0;
+    let tempStreak = 0;
+
+    for (let d = 0; d < 365; d++) {
+      const currentDate = new Date(startDate.getTime() + d * 86400000);
+      const dateKey = currentDate.toISOString().split('T')[0];
+      const count = completionMap[dateKey] || 0;
+
+      totalContributions += count;
+
+      if (count > 0) {
+        tempStreak++;
+        if (tempStreak > longestStreak) longestStreak = tempStreak;
+      } else {
+        tempStreak = 0;
+      }
+
+      let intensity = 0;
+      if (count === 1) intensity = 1;
+      else if (count === 2) intensity = 2;
+      else if (count === 3) intensity = 3;
+      else if (count >= 4) intensity = 4;
+
+      const formattedDate = currentDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+      const tooltip = `${count} task(s) completed on ${formattedDate}`;
+
+      cellsHTML += `<div class="heatmap-cell level-${intensity}" title="${tooltip}"></div>`;
+    }
+
+    let checkDate = new Date(today);
+    let todayKey = checkDate.toISOString().split('T')[0];
+    if (!completionMap[todayKey]) {
+      checkDate.setDate(checkDate.getDate() - 1);
+      todayKey = checkDate.toISOString().split('T')[0];
+    }
+    while (completionMap[todayKey] && completionMap[todayKey] > 0) {
+      currentStreak++;
+      checkDate.setDate(checkDate.getDate() - 1);
+      todayKey = checkDate.toISOString().split('T')[0];
+    }
+
+    grid.innerHTML = cellsHTML;
+
+    const currentStreakEl = document.getElementById('profCurrentStreak');
+    const longestStreakEl = document.getElementById('profLongestStreak');
+    const totalContributionsEl = document.getElementById('profTotalContributions');
+
+    if (currentStreakEl) currentStreakEl.textContent = `${currentStreak} Days`;
+    if (longestStreakEl) longestStreakEl.textContent = `${longestStreak} Days`;
+    if (totalContributionsEl) totalContributionsEl.textContent = `${totalContributions}`;
   }
 
   // Edit Modal Event Listeners

@@ -79,11 +79,23 @@
 
         <section class="auth-panel" id="auth">
           <div class="panel-card">
+            <!-- HackerRank Style Dual Portal Switcher -->
+            <div class="portal-tabs" role="tablist" aria-label="Account scope selector">
+              <button type="button" class="portal-tab active" id="portalPersonalBtn" role="tab" aria-selected="true">
+                <span>👤 For Individuals</span>
+                <span class="portal-tab-subtitle">Personal tasks & Heatmap</span>
+              </button>
+              <button type="button" class="portal-tab" id="portalOrgBtn" role="tab" aria-selected="false">
+                <span>🏢 For Organizations</span>
+                <span class="portal-tab-subtitle">Teams & Company workspace</span>
+              </button>
+            </div>
+
             <h2 id="panelTitle">Welcome back</h2>
-            <p id="authSubtitle">Log into your workspace</p>
+            <p id="authSubtitle">Log into your personal workspace</p>
             <div id="formErrors" class="form-errors" aria-live="polite"></div>
 
-            <div class="role-selector" id="roleSelector">
+            <div class="role-selector hidden" id="roleSelector">
               <button type="button" class="role-btn active" data-role="admin" id="roleAdminBtn">
                 <span class="role-icon">🛡️</span>
                 <span>Admin</span>

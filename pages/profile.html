@@ -156,6 +156,47 @@
             </article>
           </section>
 
+          <!-- Contribution Heatmap Card on Profile -->
+          <section class="panel glass-card heatmap-card" style="margin-top: 1.2rem;">
+            <div class="heatmap-header">
+              <div>
+                <h2>🔥 Contribution & Activity Matrix</h2>
+                <p class="text-soft">Visual log of completed tasks & productivity streaks</p>
+              </div>
+              <div class="heatmap-stats-strip">
+                <div class="streak-badge">
+                  <span>🔥 Streak:</span>
+                  <strong id="profCurrentStreak">0 Days</strong>
+                </div>
+                <div class="streak-badge">
+                  <span>⚡ Longest:</span>
+                  <strong id="profLongestStreak">0 Days</strong>
+                </div>
+                <div class="streak-badge">
+                  <span>✅ Total:</span>
+                  <strong id="profTotalContributions">0</strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- 52-Week Matrix Grid -->
+            <div class="heatmap-grid-scroll">
+              <div id="profHeatmapGrid" class="heatmap-grid">
+                <!-- Generated via JS -->
+              </div>
+            </div>
+
+            <div class="heatmap-legend">
+              <span>Less</span>
+              <span class="legend-swatch level-0"></span>
+              <span class="legend-swatch level-1"></span>
+              <span class="legend-swatch level-2"></span>
+              <span class="legend-swatch level-3"></span>
+              <span class="legend-swatch level-4"></span>
+              <span>More</span>
+            </div>
+          </section>
+
           <!-- Main Grid: Bio & Skills vs Recent Activity -->
           <div class="dashboard-grid-split" style="margin-top:1.2rem;">
 

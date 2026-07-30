@@ -28,7 +28,7 @@
   } else {
     adminPanel.classList.add('hidden');
     employeePanel.classList.remove('hidden');
-    if (pageRoleLabel) pageRoleLabel.textContent = '👤 Member Panel';
+    if (pageRoleLabel) pageRoleLabel.textContent = currentUser.role === 'personal' ? '👤 Personal Account — Join Org' : '👤 Member Panel';
   }
 
   /* ─────────────────────────────────────────────

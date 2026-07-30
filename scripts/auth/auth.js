@@ -18,6 +18,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const switchText = document.getElementById('switchText');
   const submitBtn = document.querySelector('.login-btn');
 
+  // Dual Portal Tabs
+  const portalPersonalBtn = document.getElementById('portalPersonalBtn');
+  const portalOrgBtn = document.getElementById('portalOrgBtn');
+
+  // Role Selector & Fields
+  const roleSelector = document.getElementById('roleSelector');
   const roleAdminBtn = document.getElementById('roleAdminBtn');
   const roleEmployeeBtn = document.getElementById('roleEmployeeBtn');
   const nameField = document.getElementById('nameField');
@@ -34,10 +40,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const employeeOrgKey = document.getElementById('employeeOrgKey');
 
   let loginMode = true;
-  let selectedRole = 'admin';
+  let portalScope = 'personal'; // 'personal' | 'organization'
+  let orgRole = 'admin'; // 'admin' | 'employee'
+
+  function getEffectiveRole() {
+    if (portalScope === 'personal') return 'personal';
+    return orgRole;
+  }
 
   function populateOrgDropdown() {
     const orgs = api.getPublicOrganizations();
+    if (!orgSelect) return;
     orgSelect.innerHTML = '<option value="">Select Organization</option>';
     orgs.forEach(org => {
       const opt = document.createElement('option');
@@ -49,97 +62,134 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function updateFormVisibility() {
-    formErrors.textContent = '';
-    formErrors.classList.add('hidden');
+    if (formErrors) {
+      formErrors.textContent = '';
+      formErrors.classList.add('hidden');
+    }
 
-    if (loginMode) {
-      nameField.classList.add('hidden');
-      adminOrgFields.classList.add('hidden');
-      employeeOrgFields.classList.add('hidden');
-      googleLoginBtn.style.display = '';
+    // Portal Tabs UI
+    if (portalScope === 'personal') {
+      portalPersonalBtn?.classList.add('active');
+      portalOrgBtn?.classList.remove('active');
+      roleSelector?.classList.add('hidden');
+      adminOrgFields?.classList.add('hidden');
+      employeeOrgFields?.classList.add('hidden');
     } else {
-      nameField.classList.remove('hidden');
-      googleLoginBtn.style.display = 'none';
+      portalOrgBtn?.classList.add('active');
+      portalPersonalBtn?.classList.remove('active');
+      roleSelector?.classList.remove('hidden');
 
-      if (selectedRole === 'admin') {
-        adminOrgFields.classList.remove('hidden');
-        employeeOrgFields.classList.add('hidden');
+      if (!loginMode) {
+        if (orgRole === 'admin') {
+          adminOrgFields?.classList.remove('hidden');
+          employeeOrgFields?.classList.add('hidden');
+        } else {
+          adminOrgFields?.classList.add('hidden');
+          employeeOrgFields?.classList.remove('hidden');
+          populateOrgDropdown();
+        }
       } else {
-        adminOrgFields.classList.add('hidden');
-        employeeOrgFields.classList.remove('hidden');
-        populateOrgDropdown();
+        adminOrgFields?.classList.add('hidden');
+        employeeOrgFields?.classList.add('hidden');
       }
+    }
+
+    // Login vs Signup mode UI
+    if (loginMode) {
+      nameField?.classList.add('hidden');
+      adminOrgFields?.classList.add('hidden');
+      employeeOrgFields?.classList.add('hidden');
+      if (googleLoginBtn) googleLoginBtn.style.display = '';
+
+      if (panelTitle) panelTitle.textContent = portalScope === 'personal' ? 'Welcome Back' : `Welcome Back (${orgRole.toUpperCase()})`;
+      if (authSubtitle) authSubtitle.textContent = portalScope === 'personal' ? 'Log into your personal workspace' : `Log into your ${orgRole} team portal`;
+      if (switchText) switchText.textContent = "Don't have an account?";
+      if (toggleModeBtn) toggleModeBtn.textContent = 'Sign up';
+      if (submitBtn) submitBtn.textContent = 'Log In';
+    } else {
+      nameField?.classList.remove('hidden');
+      if (googleLoginBtn) googleLoginBtn.style.display = 'none';
+
+      if (panelTitle) panelTitle.textContent = portalScope === 'personal' ? 'Create Personal Account' : `Create ${orgRole === 'admin' ? 'Organization' : 'Employee'} Account`;
+      if (authSubtitle) authSubtitle.textContent = portalScope === 'personal' ? 'Start managing your personal tasks & heatmap' : 'Join or create your company workspace';
+      if (switchText) switchText.textContent = 'Already have an account?';
+      if (toggleModeBtn) toggleModeBtn.textContent = 'Log in';
+      if (submitBtn) submitBtn.textContent = 'Sign Up';
     }
   }
 
   function toggleMode() {
     loginMode = !loginMode;
-    if (loginMode) {
-      panelTitle.textContent = 'Welcome Back';
-      authSubtitle.textContent = 'Enter your details to access your account.';
-      switchText.textContent = "Don't have an account?";
-      toggleModeBtn.textContent = 'Sign up';
-      submitBtn.textContent = 'Log In';
-    } else {
-      panelTitle.textContent = 'Create an Account';
-      authSubtitle.textContent = 'Sign up to start managing your tasks efficiently.';
-      switchText.textContent = 'Already have an account?';
-      toggleModeBtn.textContent = 'Log in';
-      submitBtn.textContent = 'Sign Up';
-    }
     updateFormVisibility();
   }
 
   function showError(msg) {
-    formErrors.textContent = msg;
-    formErrors.classList.remove('hidden');
+    if (formErrors) {
+      formErrors.textContent = msg;
+      formErrors.classList.remove('hidden');
+    }
   }
 
-  roleAdminBtn.addEventListener('click', (e) => {
+  // Portal Switcher Listeners
+  portalPersonalBtn?.addEventListener('click', (e) => {
     e.preventDefault();
-    selectedRole = 'admin';
+    portalScope = 'personal';
+    updateFormVisibility();
+  });
+
+  portalOrgBtn?.addEventListener('click', (e) => {
+    e.preventDefault();
+    portalScope = 'organization';
+    updateFormVisibility();
+  });
+
+  // Org Role Switcher Listeners
+  roleAdminBtn?.addEventListener('click', (e) => {
+    e.preventDefault();
+    orgRole = 'admin';
     roleAdminBtn.classList.add('active');
     roleEmployeeBtn.classList.remove('active');
     updateFormVisibility();
   });
 
-  roleEmployeeBtn.addEventListener('click', (e) => {
+  roleEmployeeBtn?.addEventListener('click', (e) => {
     e.preventDefault();
-    selectedRole = 'employee';
+    orgRole = 'employee';
     roleEmployeeBtn.classList.add('active');
     roleAdminBtn.classList.remove('active');
     updateFormVisibility();
   });
 
-  orgSelect.addEventListener('change', () => {
+  orgSelect?.addEventListener('change', () => {
     const selectedOpt = orgSelect.options[orgSelect.selectedIndex];
     if (selectedOpt && selectedOpt.dataset.visibility === 'private') {
-      employeeKeyField.classList.remove('hidden');
+      employeeKeyField?.classList.remove('hidden');
     } else {
-      employeeKeyField.classList.add('hidden');
+      employeeKeyField?.classList.add('hidden');
     }
   });
 
-  toggleModeBtn.addEventListener('click', (e) => {
+  toggleModeBtn?.addEventListener('click', (e) => {
     e.preventDefault();
     toggleMode();
   });
 
-  loginForm.addEventListener('submit', async (e) => {
+  loginForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    formErrors.classList.add('hidden');
+    if (formErrors) formErrors.classList.add('hidden');
 
     const email = emailInput.value.trim();
     const password = passwordInput.value;
+    const role = getEffectiveRole();
 
     if (loginMode) {
-      const { valid, errors } = helpers.validateLoginFields({ email, password, role: selectedRole });
+      const { valid, errors } = helpers.validateLoginFields({ email, password, role });
       if (!valid) {
         showError(errors[0]);
         return;
       }
 
-      const res = await api.login({ email, password, role: selectedRole });
+      const res = await api.login({ email, password, role });
       if (res.success) {
         window.location.href = 'dashboard.html';
       } else {
@@ -147,14 +197,14 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } else {
       const formData = {
-        name: signupName.value,
+        name: signupName ? signupName.value : '',
         email,
         password,
-        role: selectedRole,
-        orgName: orgName.value,
-        orgKey: selectedRole === 'admin' ? orgKey.value : employeeOrgKey.value,
-        orgVisibility: orgVisibility.value,
-        orgId: orgSelect.value
+        role,
+        orgName: orgName ? orgName.value : '',
+        orgKey: role === 'admin' ? (orgKey ? orgKey.value : '') : (employeeOrgKey ? employeeOrgKey.value : ''),
+        orgVisibility: orgVisibility ? orgVisibility.value : 'public',
+        orgId: orgSelect ? orgSelect.value : ''
       };
 
       const { valid, errors } = helpers.validateSignupFields(formData);
@@ -172,9 +222,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  googleLoginBtn.addEventListener('click', () => {
-    showError('Google login is mock implemented via standard auth for now.');
+  googleLoginBtn?.addEventListener('click', async () => {
+    const mockEmail = `user.${Math.floor(Math.random() * 1000)}@gmail.com`;
+    const mockName = 'Google Developer';
+    const res = await api.signup({
+      name: mockName,
+      email: mockEmail,
+      password: 'google_oauth_pass',
+      role: 'personal'
+    });
+    if (res.success) {
+      window.location.href = 'dashboard.html';
+    } else {
+      showError(res.error || 'Google login failed');
+    }
   });
-  
+
   updateFormVisibility();
 });

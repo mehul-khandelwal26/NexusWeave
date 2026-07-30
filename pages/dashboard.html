@@ -110,6 +110,134 @@
         <div class="dashboard-shell">
 
           <!-- ══════════════════════════════════════════
+               PERSONAL DASHBOARD VIEW (INDIVIDUAL DEVELOPER)
+          ══════════════════════════════════════════ -->
+          <div id="personalDashboardView" class="hidden">
+            
+            <!-- Personal Hero Card -->
+            <section class="welcome-card glass-panel" style="margin-bottom: 1.2rem;">
+              <div class="employee-hero-left">
+                <h2 id="personalWelcomeTitle">Welcome back, Developer</h2>
+                <p>Track your daily focus, completed milestones, and personal contribution heatmap.</p>
+              </div>
+              <div class="quick-action-buttons" style="margin-top:0.4rem;">
+                <a href="create.html" class="primary-btn" style="text-decoration:none;text-align:center;">+ New Task</a>
+                <a href="focus.html" class="ghost-btn" style="text-decoration:none;text-align:center;">⏱ Focus Session</a>
+                <a href="board.html" class="ghost-btn" style="text-decoration:none;text-align:center;">📊 Personal Board</a>
+              </div>
+            </section>
+
+            <!-- Personal Contribution Activity Heatmap Card -->
+            <section class="panel glass-card heatmap-card" style="margin-bottom: 1.2rem;">
+              <div class="heatmap-header">
+                <div>
+                  <h2>🔥 Daily Contribution & Activity Heatmap</h2>
+                  <p class="text-soft">Your 365-day productivity log & completed milestones</p>
+                </div>
+                <div class="heatmap-stats-strip">
+                  <div class="streak-badge">
+                    <span>🔥 Streak:</span>
+                    <strong id="personalCurrentStreak">0 Days</strong>
+                  </div>
+                  <div class="streak-badge">
+                    <span>⚡ Longest:</span>
+                    <strong id="personalLongestStreak">0 Days</strong>
+                  </div>
+                  <div class="streak-badge">
+                    <span>✅ Total Completed:</span>
+                    <strong id="personalTotalContributions">0</strong>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 52-Week Matrix Grid -->
+              <div class="heatmap-grid-scroll">
+                <div id="personalHeatmapGrid" class="heatmap-grid">
+                  <!-- Generated via JS -->
+                </div>
+              </div>
+
+              <div class="heatmap-legend">
+                <span>Less</span>
+                <span class="legend-swatch level-0"></span>
+                <span class="legend-swatch level-1"></span>
+                <span class="legend-swatch level-2"></span>
+                <span class="legend-swatch level-3"></span>
+                <span class="legend-swatch level-4"></span>
+                <span>More</span>
+              </div>
+            </section>
+
+            <!-- Personal Stats Grid -->
+            <section class="stats-grid" style="margin-bottom: 1.2rem;">
+              <article class="stat-card glass-card">
+                <div class="stat-card-head">
+                  <span class="stat-icon">🏆</span>
+                  <span class="stat-trend positive">Total</span>
+                </div>
+                <h3 id="personalCompletedTasksCount">0</h3>
+                <p>Completed Tasks</p>
+              </article>
+
+              <article class="stat-card glass-card">
+                <div class="stat-card-head">
+                  <span class="stat-icon">📂</span>
+                </div>
+                <h3 id="personalActiveProjectsCount">0</h3>
+                <p>Active Projects</p>
+              </article>
+
+              <article class="stat-card glass-card">
+                <div class="stat-card-head">
+                  <span class="stat-icon">⏱️</span>
+                  <span class="stat-trend positive">Focus</span>
+                </div>
+                <h3 id="personalFocusHoursCount">0h</h3>
+                <p>Focus Session Hours</p>
+              </article>
+
+              <article class="stat-card glass-card">
+                <div class="stat-card-head">
+                  <span class="stat-icon">⚡</span>
+                </div>
+                <h3 id="personalTaskVelocity">0/wk</h3>
+                <p>Weekly Completion Rate</p>
+              </article>
+            </section>
+
+            <!-- Personal Grid Split: Productivity Chart & Recent Tasks -->
+            <div class="dashboard-grid-split">
+              <!-- Personal Focus & Velocity Chart -->
+              <section class="panel glass-card">
+                <div class="panel-head">
+                  <div>
+                    <h2>Personal Focus & Task Completion</h2>
+                    <p class="text-soft">Daily completion rate across current sprint</p>
+                  </div>
+                </div>
+                <div style="position:relative;height:240px;width:100%;">
+                  <canvas id="personalProductivityChart"></canvas>
+                </div>
+              </section>
+
+              <!-- Personal Tasks Quick Feed -->
+              <section class="panel glass-card">
+                <div class="panel-head">
+                  <div>
+                    <h2>Active Personal Tasks</h2>
+                    <p class="text-soft">Tasks pending your immediate focus</p>
+                  </div>
+                  <a href="tasks.html" class="ghost-btn" style="font-size:0.82rem;padding:0.3rem 0.7rem;text-decoration:none;">View All →</a>
+                </div>
+                <div id="personalTasksList" class="deadlines-list">
+                  <div class="empty-inline">Loading personal tasks...</div>
+                </div>
+              </section>
+            </div>
+
+          </div>
+
+          <!-- ══════════════════════════════════════════
                ADMIN DASHBOARD VIEW
           ══════════════════════════════════════════ -->
           <div id="adminDashboardView" class="hidden">

@@ -26,7 +26,7 @@
     if (user && user.role) {
       const badge = document.createElement('span');
       badge.className = `profile-role-badge role-${user.role}`;
-      badge.textContent = user.role === 'admin' ? '🛡️ Admin' : '👤 Employee';
+      badge.textContent = user.role === 'personal' ? '👤 Personal' : user.role === 'admin' ? '🛡️ Admin' : '👤 Employee';
       const meta = trigger.querySelector('.profile-meta');
       if (meta) meta.appendChild(badge);
     }
