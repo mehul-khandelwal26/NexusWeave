@@ -405,7 +405,7 @@ function handleCreateLabel() {
   renderLabelOptions();
 }
 
-function handleTaskSubmit(event) {
+async function handleTaskSubmit(event) {
   event.preventDefault();
   const values = getTaskFormValues();
   const validationError = validateTaskForm(values);
@@ -416,6 +416,20 @@ function handleTaskSubmit(event) {
   }
 
   const task = buildTaskObject(values);
+
+  // Call Backend API to store in MongoDB Atlas
+  if (window.NexusAPI && window.NexusAPI.createBackendTask) {
+    const createdBt = await window.NexusAPI.createBackendTask({
+      title: task.title,
+      description: task.description,
+      priority: task.priority
+    });
+    if (createdBt) {
+      task._id = createdBt._id;
+      task.id = createdBt._id;
+    }
+  }
+
   tasks = [task, ...tasks];
   saveTasks();
   pushActivity(`Created task "${task.title}".`);
