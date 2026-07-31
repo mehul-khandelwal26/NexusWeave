@@ -48,7 +48,7 @@
     localStorage.removeItem('authProvider');
   }
 
-  const API_BASE = 'http://localhost:5000/api';
+  const API_BASE = 'http://localhost:4000/api';
 
   async function tryBackendRequest(endpoint, options = {}) {
     try {

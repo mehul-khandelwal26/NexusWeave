@@ -1,3 +1,10 @@
+const dns = require('dns');
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1']);
+} catch (e) {
+  // Ignore DNS set error if not allowed
+}
+
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -35,13 +42,13 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/nexusw
 mongoose
   .connect(MONGODB_URI)
   .then(() => {
-    console.log('✅ Connected to MongoDB Atlas / Local Database');
+    console.log('✅ Connected to MongoDB Atlas Database');
     app.listen(PORT, () => {
       console.log(`🚀 NexusWeave Backend Server running on http://localhost:${PORT}`);
     });
   })
   .catch((err) => {
-    console.warn('⚠️ MongoDB Connection Notice:', err.message);
-    console.log(`🚀 NexusWeave Server starting on http://localhost:${PORT} (waiting for DB connect...)`);
+    console.warn('⚠️ MongoDB Connection Error:', err.message);
+    console.log(`🚀 NexusWeave Server starting on http://localhost:${PORT}`);
     app.listen(PORT);
   });

@@ -15,8 +15,9 @@ function signToken(user) {
   );
 }
 
-router.post('/signup', async (req, res) => {
-  const { name, email, password, role = 'personal', orgName, orgKey, orgVisibility, orgId } = req.body;
+router.post(['/signup', '/register'], async (req, res) => {
+  const { name, username, email, password, role = 'personal', orgName, orgKey, orgVisibility, orgId } = req.body;
+  const userName = name || username;
 
   if (!email || !EMAIL_RE.test(email)) {
     return res.status(400).json({ errors: ['Please enter a valid email address.'] });
@@ -68,7 +69,7 @@ router.post('/signup', async (req, res) => {
     }
 
     const user = await User.create({
-      name: name || normalizedEmail.split('@')[0],
+      name: userName || normalizedEmail.split('@')[0],
       email: normalizedEmail,
       password,
       role,
