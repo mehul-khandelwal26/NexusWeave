@@ -21,7 +21,7 @@
     fabBtn.className = 'ai-fab-btn';
     fabBtn.type = 'button';
     fabBtn.innerHTML = `
-      <span>✨ AI Assistant</span>
+      <span style="font-size: 1.25rem; line-height: 1;">✨</span>
     `;
     document.body.appendChild(fabBtn);
 

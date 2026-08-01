@@ -193,43 +193,47 @@
 /* ── Realtime Chat Floating Button & Drawer ── */
 .chat-fab-trigger {
   position: fixed;
-  bottom: 1.5rem;
+  bottom: calc(20vh + 58px);
   left: 1.5rem;
   z-index: 9980;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.7rem 1.1rem;
-  border-radius: 999px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
   background: var(--accent);
   color: white;
   border: 0;
-  font-weight: 600;
-  font-size: 0.9rem;
-  box-shadow: 0 8px 24px rgba(91, 33, 182, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 24px rgba(91, 33, 182, 0.4);
   cursor: pointer;
   transition: transform 0.25s ease, box-shadow 0.25s ease;
+  padding: 0;
 }
 
 .chat-fab-trigger:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 32px rgba(91, 33, 182, 0.45);
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 12px 32px rgba(91, 33, 182, 0.55);
 }
 
 .chat-unread-badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
   background: var(--danger, #ef4444);
   color: white;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 800;
-  padding: 0.1rem 0.45rem;
+  padding: 0.15rem 0.4rem;
   border-radius: 999px;
   line-height: 1;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);
 }
 
 /* Chat Drawer Modal */
 .chat-drawer {
   position: fixed;
-  bottom: 1.5rem;
+  bottom: calc(25vh + 60px);
   left: 1.5rem;
   width: min(380px, 92vw);
   height: 520px;

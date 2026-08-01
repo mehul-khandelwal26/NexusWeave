@@ -191,30 +191,45 @@
   }
 
   function sortTasks(tasks) {
-    const sorted = [...tasks].sort((left, right) => {
-      const direction = state.filters.sortDirection === 'asc' ? 1 : -1;
-      const sortBy = state.filters.sortBy;
-      const priorityRank = (val) => ({ Urgent: 4, High: 3, Medium: 2, Low: 1 })[val] || 0;
+    let sortBy = state.filters.sortBy || 'updatedAt';
+    let sortDirection = state.filters.sortDirection || 'desc';
 
+    if (sortBy.includes('|')) {
+      const parts = sortBy.split('|');
+      sortBy = parts[0];
+      sortDirection = parts[1];
+    }
+
+    const isAsc = sortDirection === 'asc';
+
+    return [...tasks].sort((left, right) => {
       if (sortBy === 'priority') {
-        return (priorityRank(right.priority) - priorityRank(left.priority)) * direction;
+        const priorityRank = (val) => ({ Urgent: 4, High: 3, Medium: 2, Low: 1 })[val] || 0;
+        const diff = priorityRank(left.priority) - priorityRank(right.priority);
+        return isAsc ? diff : -diff;
       }
-      if (sortBy === 'deadline') {
-        const leftDate = left.dueDate ? new Date(left.dueDate).getTime() : Number.POSITIVE_INFINITY;
-        const rightDate = right.dueDate ? new Date(right.dueDate).getTime() : Number.POSITIVE_INFINITY;
-        return (leftDate - rightDate) * direction;
+
+      if (sortBy === 'deadline' || sortBy === 'dueDate') {
+        const leftDate = left.dueDate ? new Date(left.dueDate).getTime() : (isAsc ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY);
+        const rightDate = right.dueDate ? new Date(right.dueDate).getTime() : (isAsc ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY);
+        const diff = leftDate - rightDate;
+        return isAsc ? diff : -diff;
       }
+
       if (sortBy === 'title') {
-        return left.title.localeCompare(right.title) * direction;
+        const diff = (left.title || '').localeCompare(right.title || '');
+        return isAsc ? diff : -diff;
       }
-      if (sortBy === 'updatedAt') {
-        const leftValue = left.updatedAt || left.createdAt || '';
-        const rightValue = right.updatedAt || right.createdAt || '';
-        return (leftValue > rightValue ? 1 : -1) * direction;
+
+      if (sortBy === 'updatedAt' || sortBy === 'createdAt') {
+        const leftVal = new Date(left.updatedAt || left.createdAt || 0).getTime();
+        const rightVal = new Date(right.updatedAt || right.createdAt || 0).getTime();
+        const diff = leftVal - rightVal;
+        return isAsc ? diff : -diff;
       }
+
       return 0;
     });
-    return sorted;
   }
 
   function getProjectName(projectId) {
@@ -265,6 +280,15 @@
     const labels = Array.from(new Set((state.currentUser.tasks || []).flatMap((t) => t.labels || [])));
     if (labelFilter) {
       labelFilter.innerHTML = `<option value="All">All labels</option>${labels.map((l) => `<option value="${l}" ${state.filters.label === l ? 'selected' : ''}>${l}</option>`).join('')}`;
+    }
+
+    if (sortSelect) {
+      const targetVal = `${state.filters.sortBy}|${state.filters.sortDirection}`;
+      if (sortSelect.querySelector(`option[value="${targetVal}"]`)) {
+        sortSelect.value = targetVal;
+      } else if (sortSelect.querySelector(`option[value="${state.filters.sortBy}"]`)) {
+        sortSelect.value = state.filters.sortBy;
+      }
     }
   }
 
@@ -542,12 +566,18 @@
       taskDescriptionInput.value = task.description || '';
       taskPriorityInput.value = task.priority || 'Medium';
       taskDueDateInput.value = task.dueDate || '';
+      if (document.getElementById('taskDueTime')) document.getElementById('taskDueTime').value = task.dueTime || '';
+      if (document.getElementById('taskReminderDate')) document.getElementById('taskReminderDate').value = task.reminderDate || '';
+      if (document.getElementById('taskReminderTime')) document.getElementById('taskReminderTime').value = task.reminderTime || '';
       taskStatusInput.value = task.status || 'Todo';
       taskModalTitle.textContent = 'Edit task';
       taskSubmitButton.textContent = 'Save changes';
     } else {
       taskForm.reset();
       taskIdInput.value = '';
+      if (document.getElementById('taskDueTime')) document.getElementById('taskDueTime').value = '';
+      if (document.getElementById('taskReminderDate')) document.getElementById('taskReminderDate').value = '';
+      if (document.getElementById('taskReminderTime')) document.getElementById('taskReminderTime').value = '';
       taskModalTitle.textContent = 'Create task';
       taskSubmitButton.textContent = 'Create task';
     }
@@ -557,6 +587,9 @@
   function closeTaskModal() {
     modalEl.classList.add('hidden');
     taskForm.reset();
+    if (window.NexusDateTimePicker && window.NexusDateTimePicker.resetForm) {
+      window.NexusDateTimePicker.resetForm(taskForm);
+    }
   }
 
   function openDeleteModal(taskId) {
@@ -576,6 +609,9 @@
     const description = taskDescriptionInput.value.trim();
     const priority = taskPriorityInput.value;
     const dueDate = taskDueDateInput.value;
+    const dueTime = document.getElementById('taskDueTime')?.value || '';
+    const reminderDate = document.getElementById('taskReminderDate')?.value || '';
+    const reminderTime = document.getElementById('taskReminderTime')?.value || '';
     const status = taskStatusInput.value;
 
     if (editingId) {
@@ -586,6 +622,9 @@
         task.description = description;
         task.priority = priority;
         task.dueDate = dueDate;
+        task.dueTime = dueTime;
+        task.reminderDate = reminderDate;
+        task.reminderTime = reminderTime;
         task.status = status;
         task.updatedAt = new Date().toISOString();
 
@@ -608,6 +647,9 @@
         assigneeName: createdTask?.assignedUser?.username || currentUser.name,
         priority,
         dueDate,
+        dueTime,
+        reminderDate,
+        reminderTime,
         status,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -654,7 +696,15 @@
 
   if (sortSelect) {
     sortSelect.addEventListener('change', (e) => {
-      state.filters.sortBy = e.target.value;
+      const val = e.target.value;
+      if (val.includes('|')) {
+        const parts = val.split('|');
+        state.filters.sortBy = parts[0];
+        state.filters.sortDirection = parts[1];
+      } else {
+        state.filters.sortBy = val;
+      }
+      state.filters.currentPage = 1;
       saveViewState();
       renderAll();
     });

@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="../styles/sidebar.css" />
   <link rel="stylesheet" href="../styles/realtime.css" />
   <link rel="stylesheet" href="../styles/ai.css" />
+  <link rel="stylesheet" href="../styles/datetime-picker.css" />
 </head>
 <body class="app-body">
   <div class="app-shell">
@@ -211,10 +212,20 @@
               <option value="Low">Low</option>
             </select>
           </label>
-          <label class="field-row">
-            <span>Due date</span>
-            <input id="taskDueDate" type="date" />
-          </label>
+          <div class="field-row" style="grid-column: span 2;">
+            <span style="display:block;margin-bottom:0.3rem;font-weight:600;font-size:0.88rem;">Deadline (Date & Time)</span>
+            <div class="field">
+              <input id="taskDueDate" type="date" />
+              <input id="taskDueTime" type="time" />
+            </div>
+          </div>
+          <div class="field-row" style="grid-column: span 2;">
+            <span style="display:block;margin-bottom:0.3rem;font-weight:600;font-size:0.88rem;">Reminder (Date & Time)</span>
+            <div class="field">
+              <input id="taskReminderDate" type="date" />
+              <input id="taskReminderTime" type="time" />
+            </div>
+          </div>
           <label class="field-row">
             <span>Status</span>
             <select id="taskStatus">
@@ -291,6 +302,7 @@
   <script src="../scripts/shared/theme.js"></script>
   <script src="../scripts/shared/app-helpers.js"></script>
   <script src="../scripts/shared/profile-menu.js"></script>
+  <script src="../scripts/shared/datetime-picker.js"></script>
   <script src="../scripts/shared/task-board.js"></script>
 </body>
 </html>

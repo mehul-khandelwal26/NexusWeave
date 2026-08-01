@@ -295,6 +295,9 @@ function buildTaskObject(values) {
     priority: priority,
     status: status,
     dueDate: values.deadlineDate || '',
+    dueTime: values.deadlineTime || '',
+    reminderDate: values.reminderDate || '',
+    reminderTime: values.reminderTime || '',
     labels: [...selectedLabels],
     attachments: selectedAttachments.map(a => a.name),
     createdAt: new Date().toISOString(),
@@ -311,6 +314,9 @@ function buildTaskObject(values) {
 function resetTaskForm() {
   if (!taskForm) return;
   taskForm.reset();
+  if (window.NexusDateTimePicker && window.NexusDateTimePicker.resetForm) {
+    window.NexusDateTimePicker.resetForm(taskForm);
+  }
   selectedLabels = [];
   selectedAttachments = [];
   renderSelectedLabels();

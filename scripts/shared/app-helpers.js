@@ -214,24 +214,43 @@
   }
 
   function sortTasks(tasks, sortKey = 'updatedAt', direction = 'desc') {
-    const sorted = [...tasks].sort((left, right) => {
-      const leftValue = left[sortKey] || '';
-      const rightValue = right[sortKey] || '';
+    let key = sortKey;
+    let dir = direction;
+    if (key.includes('|')) {
+      const parts = key.split('|');
+      key = parts[0];
+      dir = parts[1];
+    }
+    const isAsc = dir === 'asc';
 
-      if (sortKey === 'dueDate') {
-        const leftDate = leftValue ? new Date(leftValue).getTime() : Number.POSITIVE_INFINITY;
-        const rightDate = rightValue ? new Date(rightValue).getTime() : Number.POSITIVE_INFINITY;
-        return leftDate - rightDate;
+    return [...tasks].sort((left, right) => {
+      if (key === 'priority') {
+        const rank = (val) => ({ Urgent: 4, High: 3, Medium: 2, Low: 1 })[val] || 0;
+        const diff = rank(left.priority) - rank(right.priority);
+        return isAsc ? diff : -diff;
       }
 
-      if (typeof leftValue === 'string' && typeof rightValue === 'string') {
-        return leftValue.localeCompare(rightValue);
+      if (key === 'deadline' || key === 'dueDate') {
+        const leftDate = left.dueDate ? new Date(left.dueDate).getTime() : (isAsc ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY);
+        const rightDate = right.dueDate ? new Date(right.dueDate).getTime() : (isAsc ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY);
+        const diff = leftDate - rightDate;
+        return isAsc ? diff : -diff;
       }
 
-      return (leftValue > rightValue ? 1 : -1);
+      if (key === 'title') {
+        const diff = (left.title || '').localeCompare(right.title || '');
+        return isAsc ? diff : -diff;
+      }
+
+      if (key === 'updatedAt' || key === 'createdAt') {
+        const leftVal = new Date(left.updatedAt || left.createdAt || 0).getTime();
+        const rightVal = new Date(right.updatedAt || right.createdAt || 0).getTime();
+        const diff = leftVal - rightVal;
+        return isAsc ? diff : -diff;
+      }
+
+      return 0;
     });
-
-    return direction === 'desc' ? sorted.reverse() : sorted;
   }
 
   function getDueSoonTasks(tasks) {

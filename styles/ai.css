@@ -5,26 +5,26 @@
 /* ── Floating FAB Button ── */
 .ai-fab-btn {
   position: fixed;
-  bottom: 1.5rem;
-  right: 1.5rem;
+  bottom: 20vh;
+  left: 1.5rem;
   z-index: 9970;
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  padding: 0.75rem 1.25rem;
-  border-radius: 999px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
   background: linear-gradient(135deg, var(--accent), var(--accent-strong));
   color: white;
   border: 0;
-  font-weight: 700;
-  font-size: 0.92rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   box-shadow: 0 10px 30px rgba(91, 33, 182, 0.4);
   cursor: pointer;
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
+  padding: 0;
 }
 
 .ai-fab-btn:hover {
-  transform: translateY(-3px) scale(1.03);
+  transform: translateY(-2px) scale(1.05);
   box-shadow: 0 14px 38px rgba(91, 33, 182, 0.55);
 }
 
