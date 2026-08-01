@@ -53,7 +53,7 @@
   async function tryBackendRequest(endpoint, options = {}) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      const timeoutId = setTimeout(() => controller.abort(), 800);
       const res = await fetch(`${API_BASE}${endpoint}`, {
         ...options,
         signal: controller.signal,
@@ -96,6 +96,23 @@
       let token = null;
       if (backendRes && !backendRes._error && backendRes.token) {
         token = backendRes.token;
+      }
+
+      if (role === 'admin' && orgName) {
+        const orgs = getOrgs();
+        const newOrgId = generateId('org');
+        const newOrg = {
+          id: newOrgId,
+          name: orgName,
+          orgKey: orgKey || Math.random().toString(36).substr(2, 6),
+          visibility: orgVisibility || 'private',
+          adminEmail: email,
+          members: [email],
+          createdAt: Date.now()
+        };
+        orgs.push(newOrg);
+        saveOrgs(orgs);
+        orgId = newOrgId;
       }
 
       const users = getUsers();
@@ -275,6 +292,139 @@
         return false;
       }
       return true;
+    },
+
+    /* ── Organization API ── */
+    getPublicOrganizations() {
+      const orgs = getOrgs();
+      return orgs.filter(o => o.visibility === 'public').map(o => ({ id: o.id, name: o.name, visibility: o.visibility }));
+    },
+
+    getOrganization(orgId) {
+      if (!orgId) return null;
+      const orgs = getOrgs();
+      const org = orgs.find(o => o.id === orgId);
+      if (!org) return null;
+      return { id: org.id, name: org.name, visibility: org.visibility };
+    },
+
+    getOrgFull(orgId) {
+      if (!orgId) return null;
+      const orgs = getOrgs();
+      return orgs.find(o => o.id === orgId) || null;
+    },
+
+    getAllUsersInOrg(orgId) {
+      if (!orgId) return [];
+      const users = getUsers();
+      return Object.values(users).filter(u => u.organizationId === orgId);
+    },
+
+    searchOrganizations(query = '') {
+      const orgs = getOrgs();
+      const q = (query || '').toLowerCase().trim();
+      return orgs
+        .filter(o => !q || o.name.toLowerCase().includes(q))
+        .map(o => ({ id: o.id, name: o.name, visibility: o.visibility, memberCount: (o.members || []).length }));
+    },
+
+    joinOrganization({ orgId, orgKey }) {
+      const orgs = getOrgs();
+      const org = orgs.find(o => o.id === orgId);
+      if (!org) return { success: false, error: 'Organization not found.' };
+
+      if (org.visibility === 'private' && org.orgKey !== orgKey) {
+        return { success: false, error: 'Invalid organization key.' };
+      }
+
+      const email = localStorage.getItem('session');
+      if (!email) return { success: false, error: 'Not authenticated.' };
+
+      if (!org.members) org.members = [];
+      if (!org.members.includes(email)) {
+        org.members.push(email);
+        saveOrgs(orgs);
+      }
+
+      const users = getUsers();
+      if (users[email]) {
+        users[email].organizationId = orgId;
+        users[email].role = 'employee';
+        saveUsers(users);
+      }
+
+      return { success: true, orgName: org.name };
+    },
+
+    leaveOrganization() {
+      const email = localStorage.getItem('session');
+      if (!email) return { success: false, error: 'Not authenticated.' };
+
+      const users = getUsers();
+      const user = users[email];
+      if (!user || !user.organizationId) return { success: false, error: 'Not in an organization.' };
+
+      const orgs = getOrgs();
+      const org = orgs.find(o => o.id === user.organizationId);
+      if (org) {
+        org.members = (org.members || []).filter(m => m !== email);
+        saveOrgs(orgs);
+      }
+
+      user.organizationId = null;
+      user.role = 'personal';
+      saveUsers(users);
+
+      return { success: true };
+    },
+
+    removeMemberFromOrg(orgId, emailToRemove) {
+      const orgs = getOrgs();
+      const org = orgs.find(o => o.id === orgId);
+      if (!org) return { success: false, error: 'Organization not found.' };
+
+      org.members = (org.members || []).filter(m => m !== emailToRemove);
+      saveOrgs(orgs);
+
+      const users = getUsers();
+      if (users[emailToRemove]) {
+        users[emailToRemove].organizationId = null;
+        users[emailToRemove].role = 'personal';
+        saveUsers(users);
+      }
+
+      return { success: true };
+    },
+
+    promoteToAdmin(orgId, emailToPromote) {
+      const users = getUsers();
+      if (!users[emailToPromote]) return { success: false, error: 'User not found.' };
+
+      users[emailToPromote].role = 'admin';
+      saveUsers(users);
+      return { success: true };
+    },
+
+    regenerateOrgKey(orgId) {
+      const orgs = getOrgs();
+      const org = orgs.find(o => o.id === orgId);
+      if (!org) return { success: false, error: 'Organization not found.' };
+
+      const newKey = Math.random().toString(36).substr(2, 6) + Date.now().toString(36).substr(-2);
+      org.orgKey = newKey;
+      saveOrgs(orgs);
+      return { success: true, newKey };
+    },
+
+    updateOrgSettings(orgId, { name, visibility }) {
+      const orgs = getOrgs();
+      const org = orgs.find(o => o.id === orgId);
+      if (!org) return { success: false, error: 'Organization not found.' };
+
+      if (name) org.name = name;
+      if (visibility) org.visibility = visibility;
+      saveOrgs(orgs);
+      return { success: true };
     }
   };
 })(window);

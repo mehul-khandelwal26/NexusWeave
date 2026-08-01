@@ -804,17 +804,21 @@
   }
 
   /* ── Automatic Live Updates ── */
+  function refreshActiveDashboard() {
+    const freshUser = api.getMe();
+    if (!freshUser) return;
+    Object.assign(currentUser, freshUser);
+    if (isAdmin) initAdminDashboard();
+    else if (isPersonal) initPersonalDashboard();
+    else initEmployeeDashboard();
+  }
+
+  window.addEventListener('nexus:tasks-updated', refreshActiveDashboard);
+  window.addEventListener('storage', refreshActiveDashboard);
+
   const socket = window.NexusSocket;
   if (socket) {
-    socket.on('presence:update', () => {
-      if (isAdmin) initAdminDashboard();
-      else if (isPersonal) initPersonalDashboard();
-    });
-
-    socket.on('attendance:marked', () => {
-      if (isAdmin) initAdminDashboard();
-      else if (isPersonal) initPersonalDashboard();
-      else initEmployeeDashboard();
-    });
+    socket.on('presence:update', refreshActiveDashboard);
+    socket.on('attendance:marked', refreshActiveDashboard);
   }
 })();

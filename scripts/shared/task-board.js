@@ -186,12 +186,7 @@
 
   function getVisibleTasks() {
     const taskList = Array.isArray(state.currentUser.tasks) ? state.currentUser.tasks : [];
-    const visibleProjects = taskList.filter((task) => {
-      if (!state.selectedProjectId) return true;
-      return task.projectId === state.selectedProjectId;
-    });
-
-    const filtered = helpers.filterTasks(visibleProjects, state.filters, state.currentUser.projects || []);
+    const filtered = helpers.filterTasks(taskList, state.filters, state.currentUser.projects || []);
     return sortTasks(filtered);
   }
 
