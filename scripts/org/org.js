@@ -9,6 +9,7 @@
 
   /* ── Auth Guard ── */
   const currentUser = api.getMe();
+  let searchDebounceTimer = null;
   if (!currentUser) {
     window.location.href = 'index.html';
     return;
@@ -401,8 +402,8 @@
       });
       orgSearchInput.addEventListener('input', () => {
         // Live search with debounce
-        clearTimeout(orgSearchInput._debounce);
-        orgSearchInput._debounce = setTimeout(() => searchOrgs(orgSearchInput.value.trim()), 300);
+        clearTimeout(searchDebounceTimer);
+        searchDebounceTimer = setTimeout(() => searchOrgs(orgSearchInput.value.trim()), 300);
       });
     }
 

@@ -191,45 +191,9 @@
   }
 
   function sortTasks(tasks) {
-    let sortBy = state.filters.sortBy || 'updatedAt';
-    let sortDirection = state.filters.sortDirection || 'desc';
-
-    if (sortBy.includes('|')) {
-      const parts = sortBy.split('|');
-      sortBy = parts[0];
-      sortDirection = parts[1];
-    }
-
-    const isAsc = sortDirection === 'asc';
-
-    return [...tasks].sort((left, right) => {
-      if (sortBy === 'priority') {
-        const priorityRank = (val) => ({ Urgent: 4, High: 3, Medium: 2, Low: 1 })[val] || 0;
-        const diff = priorityRank(left.priority) - priorityRank(right.priority);
-        return isAsc ? diff : -diff;
-      }
-
-      if (sortBy === 'deadline' || sortBy === 'dueDate') {
-        const leftDate = left.dueDate ? new Date(left.dueDate).getTime() : (isAsc ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY);
-        const rightDate = right.dueDate ? new Date(right.dueDate).getTime() : (isAsc ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY);
-        const diff = leftDate - rightDate;
-        return isAsc ? diff : -diff;
-      }
-
-      if (sortBy === 'title') {
-        const diff = (left.title || '').localeCompare(right.title || '');
-        return isAsc ? diff : -diff;
-      }
-
-      if (sortBy === 'updatedAt' || sortBy === 'createdAt') {
-        const leftVal = new Date(left.updatedAt || left.createdAt || 0).getTime();
-        const rightVal = new Date(right.updatedAt || right.createdAt || 0).getTime();
-        const diff = leftVal - rightVal;
-        return isAsc ? diff : -diff;
-      }
-
-      return 0;
-    });
+    const sortKey = state.filters.sortBy || 'updatedAt';
+    const sortDir = state.filters.sortDirection || 'desc';
+    return helpers.sortTasks(tasks, sortKey, sortDir);
   }
 
   function getProjectName(projectId) {
@@ -514,10 +478,14 @@
 
     // Call Backend API update
     if (api && api.updateBackendTask && task._id) {
-      await api.updateBackendTask(task._id, {
-        status: targetColumn,
-        version: task.version || 1
-      });
+      try {
+        await api.updateBackendTask(task._id, {
+          status: targetColumn,
+          version: task.version || 1
+        });
+      } catch (err) {
+        console.warn('Backend task status update failed:', err);
+      }
     }
 
     renderAll();
@@ -629,14 +597,22 @@
         task.updatedAt = new Date().toISOString();
 
         if (api && api.updateBackendTask && task._id) {
-          await api.updateBackendTask(task._id, { title, description, priority, status });
+          try {
+            await api.updateBackendTask(task._id, { title, description, priority, status });
+          } catch (err) {
+            console.warn('Backend task update failed:', err);
+          }
         }
       }
     } else {
       // Backend API Create
       let createdTask = null;
       if (api && api.createBackendTask) {
-        createdTask = await api.createBackendTask({ title, description, priority });
+        try {
+          createdTask = await api.createBackendTask({ title, description, priority });
+        } catch (err) {
+          console.warn('Backend task creation failed:', err);
+        }
       }
 
       const newTask = {
@@ -670,7 +646,11 @@
       state.currentUser.tasks = state.currentUser.tasks.filter(t => t.id !== taskId);
 
       if (api && api.deleteBackendTask) {
-        await api.deleteBackendTask(taskId);
+        try {
+          await api.deleteBackendTask(taskId);
+        } catch (err) {
+          console.warn('Backend task deletion failed:', err);
+        }
       }
 
       persistUser();

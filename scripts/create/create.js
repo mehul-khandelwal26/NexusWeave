@@ -170,7 +170,7 @@ function handleProjectSubmit(event) {
   const validationError = validateProjectForm(values);
 
   if (validationError) {
-    showFeedback(validationError, 'error');
+    showFeedback(validationError, 'error', projectFeedback);
     return;
   }
 
@@ -206,7 +206,7 @@ function handleProjectSubmit(event) {
   projects = [project, ...projects];
   saveProjects();
   pushActivity(`Created project "${project.name}" with ${selectedTasksForNewProject.length} tasks.`);
-  showFeedback('Project created successfully.', 'success');
+  showFeedback('Project created successfully.', 'success', projectFeedback);
   showToast('Project created successfully.');
   
   selectedTasksForNewProject = [];
@@ -235,8 +235,8 @@ function syncTimeInputStates() {
   });
 }
 
-function showFeedback(message, type = 'success') {
-  const feedbackTarget = projectFeedback || taskFeedback;
+function showFeedback(message, type = 'success', target = null) {
+  const feedbackTarget = target || taskFeedback || projectFeedback;
   if (!feedbackTarget) return;
   feedbackTarget.textContent = message;
   feedbackTarget.className = message ? `form-message ${type}` : 'form-message';
@@ -417,7 +417,7 @@ async function handleTaskSubmit(event) {
   const validationError = validateTaskForm(values);
 
   if (validationError) {
-    showFeedback(validationError, 'error');
+    showFeedback(validationError, 'error', taskFeedback);
     return;
   }
 
@@ -425,21 +425,25 @@ async function handleTaskSubmit(event) {
 
   // Call Backend API to store in MongoDB Atlas
   if (window.NexusAPI && window.NexusAPI.createBackendTask) {
-    const createdBt = await window.NexusAPI.createBackendTask({
-      title: task.title,
-      description: task.description,
-      priority: task.priority
-    });
-    if (createdBt) {
-      task._id = createdBt._id;
-      task.id = createdBt._id;
+    try {
+      const createdBt = await window.NexusAPI.createBackendTask({
+        title: task.title,
+        description: task.description,
+        priority: task.priority
+      });
+      if (createdBt) {
+        task._id = createdBt._id;
+        task.id = createdBt._id;
+      }
+    } catch (err) {
+      console.warn('Backend task creation failed, continuing with local storage:', err);
     }
   }
 
   tasks = [task, ...tasks];
   saveTasks();
   pushActivity(`Created task "${task.title}".`);
-  showFeedback('Task created successfully.', 'success');
+  showFeedback('Task created successfully.', 'success', taskFeedback);
   showToast('Task created successfully.');
   resetTaskForm();
 }

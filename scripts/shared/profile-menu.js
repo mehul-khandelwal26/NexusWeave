@@ -50,8 +50,13 @@
       if (action === 'change-photo' || action === 'settings') {
         window.location.href = 'profile.html';
       } else if (action === 'copy-link') {
-        navigator.clipboard?.writeText(window.location.origin + '/pages/profile.html');
-        window.alert('Public profile link copied!');
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(window.location.origin + '/pages/profile.html')
+            .then(() => window.alert('Public profile link copied!'))
+            .catch(() => window.alert('Failed to copy link to clipboard.'));
+        } else {
+          window.alert('Clipboard is not available in this browser.');
+        }
       } else if (action === 'logout') {
         localStorage.removeItem('session');
         localStorage.removeItem('jwt');

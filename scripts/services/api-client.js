@@ -51,9 +51,9 @@
   const API_BASE = 'http://localhost:4000/api';
 
   async function tryBackendRequest(endpoint, options = {}) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 800);
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 800);
       const res = await fetch(`${API_BASE}${endpoint}`, {
         ...options,
         signal: controller.signal,
@@ -63,7 +63,6 @@
           ...(options.headers || {})
         }
       });
-      clearTimeout(timeoutId);
       if (res.ok) {
         return await res.json();
       }
@@ -72,6 +71,8 @@
     } catch (e) {
       // Backend offline or timeout
       return null;
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 

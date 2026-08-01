@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Focus Timer - Pomodoro-style deep work sessions in NexusWeave" />
   <title>Focus Mode | NexusWeave</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -108,7 +109,7 @@
             <div class="focus-timer" id="timerDisplay">25:00</div>
             <div style="margin: 0.5rem 0 1rem 0; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
               <span class="meta" style="color: var(--text-soft); font-size: 0.9rem;">Duration:</span>
-              <input id="customMinutes" type="number" min="1" max="180" value="25" style="width: 75px; text-align: center; border: 1px solid var(--border); background: var(--surface); border-radius: 8px; padding: 0.4rem 0.6rem; color: inherit; font-weight: 600;" />
+              <input id="customMinutes" type="number" min="1" max="180" value="25" aria-label="Custom focus duration in minutes" style="width: 75px; text-align: center; border: 1px solid var(--border); background: var(--surface); border-radius: 8px; padding: 0.4rem 0.6rem; color: inherit; font-weight: 600;" />
               <span class="meta" style="color: var(--text-soft); font-size: 0.9rem;">minutes</span>
             </div>
             <p id="timerStatus" class="focus-status">Ready to focus</p>

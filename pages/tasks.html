@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Task Management - View, filter, and manage all your tasks in NexusWeave" />
   <title>Tasks | NexusWeave</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -165,7 +166,7 @@
               <button type="button" id="prevPageBtn" class="ghost-btn" style="padding:0.4rem 0.8rem;font-size:0.85rem;">← Prev</button>
               <span id="currentPageIndicator" style="font-size:0.88rem;font-weight:600;padding:0 0.4rem;">Page 1 of 1</span>
               <button type="button" id="nextPageBtn" class="ghost-btn" style="padding:0.4rem 0.8rem;font-size:0.85rem;">Next →</button>
-              <select id="itemsPerPageSelect" style="margin-left:0.5rem;padding:0.35rem 0.6rem;border-radius:10px;border:1px solid var(--border);font-size:0.85rem;background:var(--surface);color:inherit;">
+              <select id="itemsPerPageSelect" aria-label="Items per page" style="margin-left:0.5rem;padding:0.35rem 0.6rem;border-radius:10px;border:1px solid var(--border);font-size:0.85rem;background:var(--surface);color:inherit;">
                 <option value="6">6 per page</option>
                 <option value="12" selected>12 per page</option>
                 <option value="24">24 per page</option>
@@ -184,7 +185,7 @@
           <p class="eyebrow">Task workspace</p>
           <h3 id="taskModalTitle">Create task</h3>
         </div>
-        <button type="button" id="closeTaskModal" class="ghost-btn">×</button>
+        <button type="button" id="closeTaskModal" class="ghost-btn" aria-label="Close">×</button>
       </div>
       <form id="taskForm" class="task-form">
         <input type="hidden" id="taskId" />
@@ -284,7 +285,7 @@
           <p class="eyebrow">Task details</p>
           <h3 id="drawerTitle">Task</h3>
         </div>
-        <button type="button" id="closeDrawer" class="ghost-btn">×</button>
+        <button type="button" id="closeDrawer" class="ghost-btn" aria-label="Close">×</button>
       </div>
       <p id="drawerMeta" class="text-soft"></p>
       <p id="drawerDescription" class="drawer-description"></p>

@@ -157,12 +157,12 @@
 }
 
 /* ── Danger ghost button ── */
-.danger-ghost {
-  color: var(--danger, #ef4444) !important;
-  border-color: rgba(239, 68, 68, 0.3) !important;
+.ghost-btn.danger-ghost {
+  color: var(--danger, #ef4444);
+  border-color: rgba(239, 68, 68, 0.3);
 }
-.danger-ghost:hover {
-  background: rgba(239, 68, 68, 0.06) !important;
+.ghost-btn.danger-ghost:hover {
+  background: rgba(239, 68, 68, 0.06);
 }
 
 /* ── Member List ── */
@@ -309,9 +309,10 @@
   font-size: 0.82rem;
 }
 
-.org-join-btn {
-  padding: 0.5rem 1.1rem !important;
-  font-size: 0.87rem !important;
+.primary-btn.org-join-btn,
+.ghost-btn.org-join-btn {
+  padding: 0.5rem 1.1rem;
+  font-size: 0.87rem;
   white-space: nowrap;
 }
 

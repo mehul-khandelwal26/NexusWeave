@@ -144,14 +144,19 @@
     if (typing) typing.classList.remove('hidden');
     stream.scrollTop = stream.scrollHeight;
 
-    // Get Response from NexusAI Service
-    const aiResponse = await nexusAI.ask(promptText);
+    try {
+      // Get Response from NexusAI Service
+      const aiResponse = await nexusAI.ask(promptText);
 
-    // Hide Typing Indicator
-    if (typing) typing.classList.add('hidden');
-
-    // Append AI Message
-    appendMessage('assistant', 'NexusAI', aiResponse);
+      // Append AI Message
+      appendMessage('assistant', 'NexusAI', aiResponse);
+    } catch (err) {
+      console.error('NexusAI error:', err);
+      appendMessage('assistant', 'NexusAI', 'Sorry, I encountered an error processing your request. Please try again.');
+    } finally {
+      // Hide Typing Indicator
+      if (typing) typing.classList.add('hidden');
+    }
     stream.scrollTop = stream.scrollHeight;
   }
 

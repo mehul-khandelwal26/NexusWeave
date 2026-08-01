@@ -39,6 +39,9 @@ router.post('/join', requireAuth, async (req, res) => {
       await org.save();
     }
 
+    const user = await User.findOne({ email: userEmail });
+    if (!user) return res.status(404).json({ errors: ['User account not found.'] });
+
     await User.findOneAndUpdate({ email: userEmail }, { organizationId: org._id.toString(), role: 'employee' });
 
     res.json({ success: true, orgName: org.name });

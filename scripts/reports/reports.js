@@ -1,7 +1,6 @@
 (function () {
   const DB_KEY = 'users';
   const SESSION_KEY = 'session';
-  const JWT_KEY = 'jwt';
   const helpers = window.AppHelpers;
 
   const sessionEmail = localStorage.getItem(SESSION_KEY);

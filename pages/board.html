@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="NexusWeave Task Board - Kanban-style task management with drag and drop" />
   <title>Board | NexusWeave</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -163,7 +164,7 @@
           <p class="eyebrow">Task workspace</p>
           <h3 id="taskModalTitle">Create task</h3>
         </div>
-        <button type="button" id="closeTaskModal" class="ghost-btn">×</button>
+        <button type="button" id="closeTaskModal" class="ghost-btn" aria-label="Close">×</button>
       </div>
       <form id="taskForm" class="task-form">
         <input type="hidden" id="taskId" />
@@ -263,7 +264,7 @@
           <p class="eyebrow">Task details</p>
           <h3 id="drawerTitle">Task</h3>
         </div>
-        <button type="button" id="closeDrawer" class="ghost-btn">×</button>
+        <button type="button" id="closeDrawer" class="ghost-btn" aria-label="Close">×</button>
       </div>
       <p id="drawerMeta" class="text-soft"></p>
       <p id="drawerDescription" class="drawer-description"></p>
@@ -284,17 +285,17 @@
         <p class="meta" style="margin-bottom: 1.2rem; color: var(--ink-soft); font-size: 0.9rem;">Choose a background style for your Kanban board workspace.</p>
         
         <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; max-height: 280px; overflow-y: auto; padding-right: 0.2rem;">
-          <div class="bg-option" data-bg-value="none" style="height: 75px; border-radius: 12px; border: 2px solid var(--border); background: var(--paper-raised); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: var(--ink-soft); transition: transform 0.2s ease;">
+          <div class="bg-option bg-none" data-bg-value="none">
             None
           </div>
-          <div class="bg-option" data-bg-value="linear-gradient(135deg, #09090e 0%, #1f1d36 100%)" style="height: 75px; border-radius: 12px; background: linear-gradient(135deg, #09090e 0%, #1f1d36 100%); cursor: pointer; border: 2px solid transparent; transition: transform 0.2s ease;"></div>
-          <div class="bg-option" data-bg-value="linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)" style="height: 75px; border-radius: 12px; background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%); cursor: pointer; border: 2px solid transparent; transition: transform 0.2s ease;"></div>
-          <div class="bg-option" data-bg-value="linear-gradient(135deg, #a78bfa 0%, #5b21b6 100%)" style="height: 75px; border-radius: 12px; background: linear-gradient(135deg, #a78bfa 0%, #5b21b6 100%); cursor: pointer; border: 2px solid transparent; transition: transform 0.2s ease;"></div>
+          <div class="bg-option" data-bg-value="linear-gradient(135deg, #09090e 0%, #1f1d36 100%)" style="background: linear-gradient(135deg, #09090e 0%, #1f1d36 100%);"></div>
+          <div class="bg-option" data-bg-value="linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)" style="background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);"></div>
+          <div class="bg-option" data-bg-value="linear-gradient(135deg, #a78bfa 0%, #5b21b6 100%)" style="background: linear-gradient(135deg, #a78bfa 0%, #5b21b6 100%);"></div>
           
-          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?q=80&w=800')" style="height: 75px; border-radius: 12px; background: url('https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?q=80&w=800') center/cover no-repeat; cursor: pointer; border: 2px solid transparent; transition: transform 0.2s ease;"></div>
-          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=800')" style="height: 75px; border-radius: 12px; background: url('https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=800') center/cover no-repeat; cursor: pointer; border: 2px solid transparent; transition: transform 0.2s ease;"></div>
-          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800')" style="height: 75px; border-radius: 12px; background: url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800') center/cover no-repeat; cursor: pointer; border: 2px solid transparent; transition: transform 0.2s ease;"></div>
-          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1464802686167-b939a6910659?q=80&w=800')" style="height: 75px; border-radius: 12px; background: url('https://images.unsplash.com/photo-1464802686167-b939a6910659?q=80&w=800') center/cover no-repeat; cursor: pointer; border: 2px solid transparent; transition: transform 0.2s ease;"></div>
+          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?q=80&w=800')" style="background: url('https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?q=80&w=800') center/cover no-repeat;"></div>
+          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=800')" style="background: url('https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=800') center/cover no-repeat;"></div>
+          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800')" style="background: url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800') center/cover no-repeat;"></div>
+          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1464802686167-b939a6910659?q=80&w=800')" style="background: url('https://images.unsplash.com/photo-1464802686167-b939a6910659?q=80&w=800') center/cover no-repeat;"></div>
         </div>
       </div>
     </div>

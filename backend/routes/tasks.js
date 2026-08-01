@@ -55,7 +55,15 @@ router.put('/:id', requireAuth, async (req, res) => {
     const task = await Task.findById(req.params.id);
     if (!task) return res.status(404).json({ errors: ['Task not found.'] });
 
-    if (title) task.title = title.trim();
+    // Ownership check
+    if (task.userEmail !== req.user.email && task.organizationId !== req.user.orgId) {
+      return res.status(403).json({ errors: ['You do not have permission to update this task.'] });
+    }
+
+    if (title !== undefined) {
+      if (!title.trim()) return res.status(400).json({ errors: ['Task title cannot be empty.'] });
+      task.title = title.trim();
+    }
     if (description !== undefined) task.description = description;
     if (priority) task.priority = priority;
     if (status) {
@@ -80,6 +88,14 @@ router.put('/:id', requireAuth, async (req, res) => {
 // Delete Task
 router.delete('/:id', requireAuth, async (req, res) => {
   try {
+    const task = await Task.findById(req.params.id);
+    if (!task) return res.status(404).json({ errors: ['Task not found.'] });
+
+    // Ownership check
+    if (task.userEmail !== req.user.email && task.organizationId !== req.user.orgId) {
+      return res.status(403).json({ errors: ['You do not have permission to delete this task.'] });
+    }
+
     await Task.findByIdAndDelete(req.params.id);
     res.json({ success: true });
   } catch (err) {

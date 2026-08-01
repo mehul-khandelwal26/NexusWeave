@@ -13,10 +13,6 @@ const activitySchema = new mongoose.Schema(
     text: {
       type: String,
       required: true
-    },
-    time: {
-      type: String,
-      default: 'Just now'
     }
   },
   { timestamps: true }
