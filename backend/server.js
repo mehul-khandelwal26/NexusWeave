@@ -1,10 +1,3 @@
-const dns = require('dns');
-try {
-  dns.setServers(['8.8.8.8', '1.1.1.1']);
-} catch (e) {
-  // Ignore DNS set error if not allowed
-}
-
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -36,6 +29,12 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Global error handler
+app.use((err, req, res, _next) => {
+  console.error('Unhandled error:', err.message);
+  res.status(500).json({ errors: ['An unexpected server error occurred.'] });
+});
+
 const PORT = process.env.PORT || 4000;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/nexusweave';
 
@@ -48,7 +47,7 @@ mongoose
     });
   })
   .catch((err) => {
-    console.warn('⚠️ MongoDB Connection Error:', err.message);
-    console.log(`🚀 NexusWeave Server starting on http://localhost:${PORT}`);
-    app.listen(PORT);
+    console.error('❌ MongoDB Connection Error:', err.message);
+    console.error('Server cannot start without a database connection. Exiting.');
+    process.exit(1);
   });
