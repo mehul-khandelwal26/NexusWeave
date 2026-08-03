@@ -67,7 +67,8 @@
         return await res.json();
       }
       const errData = await res.json().catch(() => ({}));
-      return { _error: true, status: res.status, message: errData.message || errData.error || 'Server error' };
+      const errorMsg = (errData.errors && errData.errors[0]) || errData.message || errData.error || 'Server error';
+      return { _error: true, status: res.status, message: errorMsg };
     } catch (e) {
       // Backend offline or timeout
       return null;
@@ -91,7 +92,7 @@
       // Try To-Do_Board backend register endpoint (/api/auth/register)
       const backendRes = await tryBackendRequest('/auth/register', {
         method: 'POST',
-        body: JSON.stringify({ username, email, password })
+        body: JSON.stringify({ name: username, email, password, role, orgName, orgKey, orgVisibility, orgId })
       });
 
       let token = null;
@@ -147,7 +148,7 @@
       // Try To-Do_Board backend login endpoint (/api/auth/login)
       const backendRes = await tryBackendRequest('/auth/login', {
         method: 'POST',
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password, role })
       });
 
       let token = null;
