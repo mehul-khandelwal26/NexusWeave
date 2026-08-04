@@ -25,6 +25,18 @@ const taskSchema = new mongoose.Schema(
       type: String,
       default: ''
     },
+    dueTime: {
+      type: String,
+      default: ''
+    },
+    reminderDate: {
+      type: String,
+      default: ''
+    },
+    reminderTime: {
+      type: String,
+      default: ''
+    },
     completedAt: {
       type: Date,
       default: null
@@ -48,6 +60,14 @@ const taskSchema = new mongoose.Schema(
     attachments: {
       type: [String],
       default: []
+    },
+    assignedUserEmail: {
+      type: String,
+      default: null
+    },
+    isOrgTask: {
+      type: Boolean,
+      default: false
     }
   },
   { timestamps: true }

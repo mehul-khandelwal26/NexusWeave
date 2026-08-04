@@ -152,6 +152,13 @@
                   </div>
                 </div>
                 <div class="form-grid two-up">
+                  <div class="field" style="grid-column: span 2;">
+                    <label for="taskAssignee">Assignee</label>
+                    <input type="text" id="taskAssignee" name="taskAssignee" list="assigneeList" placeholder="Search employee email/name..." autocomplete="off">
+                    <datalist id="assigneeList">
+                      <option value="">Myself (Unassigned)</option>
+                    </datalist>
+                  </div>
                   <div class="field">
                     <label for="task-priority">Priority</label>
                     <select id="task-priority" name="task-priority">

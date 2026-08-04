@@ -5,6 +5,19 @@ const requireAuth = require('../middleware/auth');
 
 const router = express.Router();
 
+// Get Users in Organization
+router.get('/users', requireAuth, async (req, res) => {
+  if (!req.user.orgId) {
+    return res.status(400).json({ errors: ['You are not part of an organization.'] });
+  }
+  try {
+    const users = await User.find({ organizationId: req.user.orgId }, 'name email role');
+    res.json({ users });
+  } catch (err) {
+    res.status(500).json({ errors: ['Failed to fetch organization users.'] });
+  }
+});
+
 // Get list of public organizations
 router.get('/public', async (req, res) => {
   try {

@@ -200,9 +200,10 @@
         <div class="field-grid">
           <label class="field-row">
             <span>Assignee</span>
-            <select id="taskAssignee">
+            <input type="text" id="taskAssignee" name="taskAssignee" list="assigneeList" placeholder="Search employee email/name..." autocomplete="off">
+            <datalist id="assigneeList">
               <option value="">Myself (Unassigned)</option>
-            </select>
+            </datalist>
           </label>
           <label class="field-row">
             <span>Priority</span>

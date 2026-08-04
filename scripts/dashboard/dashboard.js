@@ -7,7 +7,7 @@
   const helpers = window.AppHelpers;
 
   /* ── Auth Check ── */
-  const currentUser = api.getMe();
+  let currentUser = api.getMe();
   if (!currentUser) {
     window.location.href = 'index.html';
     return;
@@ -24,31 +24,42 @@
   const dashboardHeading = document.getElementById('dashboardHeading');
   const dashboardEyebrow = document.getElementById('dashboardEyebrow');
 
-  // Set topbar header info
-  if (roleBadgeHeader) {
-    roleBadgeHeader.textContent = isPersonal ? '👤 Personal' : isAdmin ? '🛡️ Admin' : '👤 Employee';
-    roleBadgeHeader.className = `profile-role-badge role-${isPersonal ? 'personal' : isAdmin ? 'admin' : 'employee'}`;
-  }
-  if (dashboardEyebrow) dashboardEyebrow.textContent = isPersonal ? 'Personal Focus Hub' : isAdmin ? 'Admin Command Center' : 'Team Workspace';
-  if (dashboardHeading) dashboardHeading.textContent = isPersonal ? 'Personal Dashboard' : isAdmin ? 'Executive Dashboard' : 'Employee Dashboard';
+  async function init() {
+    // Fetch data from backend
+    const data = await api.getUserData();
+    if (data) {
+      currentUser.tasks = data.tasks || [];
+      currentUser.projects = data.projects || [];
+    }
 
-  // Toggle View
-  if (isPersonal) {
-    personalView?.classList.remove('hidden');
-    adminView?.classList.add('hidden');
-    employeeView?.classList.add('hidden');
-    initPersonalDashboard();
-  } else if (isAdmin) {
-    personalView?.classList.add('hidden');
-    adminView?.classList.remove('hidden');
-    employeeView?.classList.add('hidden');
-    initAdminDashboard();
-  } else {
-    personalView?.classList.add('hidden');
-    adminView?.classList.add('hidden');
-    employeeView?.classList.remove('hidden');
-    initEmployeeDashboard();
+    // Set topbar header info
+    if (roleBadgeHeader) {
+      roleBadgeHeader.textContent = isPersonal ? '👤 Personal' : isAdmin ? '🛡️ Admin' : '👤 Employee';
+      roleBadgeHeader.className = `profile-role-badge role-${isPersonal ? 'personal' : isAdmin ? 'admin' : 'employee'}`;
+    }
+    if (dashboardEyebrow) dashboardEyebrow.textContent = isPersonal ? 'Personal Focus Hub' : isAdmin ? 'Admin Command Center' : 'Team Workspace';
+    if (dashboardHeading) dashboardHeading.textContent = isPersonal ? 'Personal Dashboard' : isAdmin ? 'Executive Dashboard' : 'Employee Dashboard';
+
+    // Toggle View
+    if (isPersonal) {
+      personalView?.classList.remove('hidden');
+      adminView?.classList.add('hidden');
+      employeeView?.classList.add('hidden');
+      initPersonalDashboard();
+    } else if (isAdmin) {
+      personalView?.classList.add('hidden');
+      adminView?.classList.remove('hidden');
+      employeeView?.classList.add('hidden');
+      initAdminDashboard();
+    } else {
+      personalView?.classList.add('hidden');
+      adminView?.classList.add('hidden');
+      employeeView?.classList.remove('hidden');
+      initEmployeeDashboard();
+    }
   }
+
+  init();
 
   /* ─────────────────────────────────────────────
      ADMIN DASHBOARD IMPLEMENTATION
@@ -663,8 +674,9 @@
     // Create Map of completed dates: 'YYYY-MM-DD' -> count
     const completionMap = {};
     tasks.forEach(t => {
-      if (t.status === 'Done' && t.completedAt) {
-        const dateKey = new Date(t.completedAt).toISOString().split('T')[0];
+      if (t.status === 'Done' && (t.completedAt || t.updatedAt || t.createdAt)) {
+        const dateString = t.completedAt || t.updatedAt || t.createdAt;
+        const dateKey = new Date(dateString).toISOString().split('T')[0];
         completionMap[dateKey] = (completionMap[dateKey] || 0) + 1;
       }
     });

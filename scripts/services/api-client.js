@@ -127,13 +127,9 @@
         role,
         organizationId: orgId || null,
         theme: 'light',
-        projects: [
-          { id: 'proj-1', name: 'General', description: 'Default project', deadline: '', timeline: 'Execution', createdAt: now.toISOString() }
-        ],
+        projects: [],
         tasks: [],
-        activity: [
-          { id: 'act-1', text: 'Created workspace account.', time: 'Just now', createdAt: new Date().toISOString() }
-        ],
+        activity: [],
         createdAt: Date.now()
       };
 
@@ -170,7 +166,7 @@
           email: userData.email,
           password,
           role: role || 'personal',
-          projects: [{ id: 'proj-1', name: 'General', description: 'Default project', deadline: '', timeline: 'Execution', createdAt: new Date().toISOString() }],
+          projects: [],
           tasks: [],
           activity: []
         };
@@ -233,7 +229,17 @@
         body: JSON.stringify({
           title: taskData.title,
           description: taskData.description || '',
-          priority: taskData.priority === 'Urgent' ? 'High' : (taskData.priority || 'Medium')
+          priority: taskData.priority,
+          status: taskData.status,
+          dueDate: taskData.dueDate,
+          dueTime: taskData.dueTime,
+          reminderDate: taskData.reminderDate,
+          reminderTime: taskData.reminderTime,
+          projectId: taskData.projectId,
+          assignedUserEmail: taskData.assignedUserEmail,
+          isOrgTask: taskData.isOrgTask,
+          labels: taskData.labels,
+          attachments: taskData.attachments
         })
       });
       if (res && !res._error && res.task) {
@@ -263,14 +269,53 @@
       return false;
     },
 
-    /* ── Local Users / Orgs Helpers ── */
-    getUserData() {
+    /* ── Backend API Direct Project Integration ── */
+    async fetchBackendProjects() {
+      const res = await tryBackendRequest('/projects', { method: 'GET' });
+      if (res && !res._error && res.projects) {
+        return res.projects;
+      }
+      return [];
+    },
+
+    async createBackendProject(projectData) {
+      const res = await tryBackendRequest('/projects', {
+        method: 'POST',
+        body: JSON.stringify(projectData)
+      });
+      if (res && !res._error && res.project) {
+        return res.project;
+      }
+      return null;
+    },
+
+    /* ── Backend API Direct Organization Integration ── */
+    async fetchBackendOrgUsers() {
+      const res = await tryBackendRequest('/orgs/users', { method: 'GET' });
+      if (res && !res._error && res.users) {
+        return res.users;
+      }
+      return [];
+    },
+
+    /* ── Fetch Combined Data ── */
+    async getUserData() {
       const email = localStorage.getItem('session');
       if (!email) return null;
-      const users = getUsers();
-      const user = users[email];
-      if (!user) return null;
-      return { projects: user.projects || [], tasks: user.tasks || [], activity: user.activity || [] };
+      
+      const [tasksRes, projectsRes] = await Promise.all([
+        tryBackendRequest('/tasks', { method: 'GET' }),
+        tryBackendRequest('/projects', { method: 'GET' })
+      ]);
+      
+      const tasks = (tasksRes && !tasksRes._error && tasksRes.tasks) ? tasksRes.tasks : [];
+      const projects = (projectsRes && !projectsRes._error && projectsRes.projects) ? projectsRes.projects : [];
+      
+      // Map _id to id for frontend compatibility
+      tasks.forEach(t => t.id = t._id);
+      projects.forEach(p => p.id = p._id);
+      
+      return { projects, tasks, activity: [] };
     },
 
     saveUserData({ projects, tasks, activity }) {

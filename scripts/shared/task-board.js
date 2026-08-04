@@ -44,6 +44,8 @@
     itemsPerPage: 12
   };
 
+  let orgUsers = [];
+
   const state = {
     currentUser: normalizeUser(currentUser, sessionEmail),
     selectedProjectId: currentUser.projects?.[0]?.id || null,
@@ -140,29 +142,43 @@
     notifyTaskSync();
   }
 
-  /* ── Sync tasks from To-Do_Board Backend API ── */
+  /* ── Sync tasks and projects from To-Do_Board Backend API ── */
   async function syncFromBackend() {
-    if (api && api.fetchBackendTasks) {
-      const backendTasks = await api.fetchBackendTasks();
-      if (backendTasks && Array.isArray(backendTasks)) {
-        const mapped = backendTasks.map(bt => ({
-          id: bt._id || bt.id,
-          _id: bt._id,
-          title: bt.title,
-          description: bt.description || '',
-          status: bt.status || 'Todo',
-          priority: bt.priority || 'Medium',
-          version: bt.version || 1,
-          assigneeName: bt.assignedUser?.username || '',
-          createdAt: bt.createdAt || new Date().toISOString(),
-          updatedAt: bt.updatedAt || new Date().toISOString()
-        }));
-        
-        // Merge backend tasks
-        if (mapped.length > 0) {
-          state.currentUser.tasks = mapped;
-          persistUser();
+    if (api && api.getUserData) {
+      const data = await api.getUserData();
+      if (data) {
+        if (data.tasks) {
+          const mappedTasks = data.tasks.map(bt => ({
+            id: bt._id || bt.id,
+            _id: bt._id,
+            title: bt.title,
+            description: bt.description || '',
+            status: bt.status || 'Todo',
+            priority: bt.priority || 'Medium',
+            dueDate: bt.dueDate || '',
+            dueTime: bt.dueTime || '',
+            reminderDate: bt.reminderDate || '',
+            reminderTime: bt.reminderTime || '',
+            projectId: bt.projectId || null,
+            labels: bt.labels || [],
+            attachments: bt.attachments || [],
+            version: bt.version || 1,
+            assigneeName: bt.assignedUser?.username || '',
+            createdAt: bt.createdAt || new Date().toISOString(),
+            updatedAt: bt.updatedAt || new Date().toISOString()
+          }));
+          state.currentUser.tasks = mappedTasks;
         }
+        if (data.projects) {
+          state.currentUser.projects = data.projects;
+        }
+        
+        // Fetch org users if admin
+        if (state.currentUser.role === 'admin' && api.fetchBackendOrgUsers) {
+           orgUsers = await api.fetchBackendOrgUsers();
+        }
+        
+        persistUser();
       }
     }
   }
@@ -254,6 +270,23 @@
         sortSelect.value = state.filters.sortBy;
       }
     }
+    
+    // Populate Assignee Dropdown if Admin
+    if (state.currentUser && state.currentUser.role === 'admin' && api.fetchBackendOrgUsers) {
+      async function updateOrgUsers() {
+        orgUsers = await api.fetchBackendOrgUsers();
+        const assigneeList = document.getElementById('assigneeList');
+        if (assigneeList) {
+          let optionsHTML = `<option value="">Myself (Unassigned)</option>`;
+          optionsHTML += `<option value="ORG_TASK">Entire Organization</option>`;
+          orgUsers.forEach(u => {
+            optionsHTML += `<option value="${u.email}">${u.name} (${u.email})</option>`;
+          });
+          assigneeList.innerHTML = optionsHTML;
+        }
+      }
+      updateOrgUsers();
+    }
   }
 
   function renderPagination(totalItems) {
@@ -307,11 +340,23 @@
     taskGroupsEl.innerHTML = Object.entries(groups).map(([label, groupTasks]) => {
       const renderedRows = groupTasks.length ? groupTasks.map((task) => {
         const labelsPills = (task.labels || []).map(l => `<span class="filter-chip" style="font-size:0.7rem;padding:0.1rem 0.4rem;">${l}</span>`).join(' ');
-        const assigneeBadge = task.assigneeName ? `<span class="org-badge badge-employee" style="font-size:0.72rem;">👤 ${task.assigneeName}</span>` : '';
+        
+        let assigneeBadge = '';
+        if (task.isOrgTask) {
+          assigneeBadge = `<span class="org-badge badge-employee" style="font-size:0.72rem;">🌐 Org Task</span>`;
+        } else if (task.assignedUserEmail) {
+           const assignedUser = orgUsers.find(u => u.email === task.assignedUserEmail) || { name: task.assigneeName || task.assignedUserEmail.split('@')[0] };
+           assigneeBadge = `<span class="org-badge badge-employee" style="font-size:0.72rem;">👤 ${assignedUser.name}</span>`;
+        } else if (task.assigneeName) {
+           assigneeBadge = `<span class="org-badge badge-employee" style="font-size:0.72rem;">👤 ${task.assigneeName}</span>`;
+        }
+
+        const canComplete = canModifyTask(task);
+        const checkDisabled = !canComplete ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : '';
 
         return `
           <article class="task-row ${task.status === 'Done' ? 'is-complete' : ''}" data-task-id="${task.id}">
-            <button class="task-check" type="button" data-toggle-task="${task.id}" aria-label="Mark ${task.title} complete">
+            <button class="task-check" type="button" data-toggle-task="${task.id}" aria-label="Mark ${task.title} complete" ${checkDisabled}>
               ${task.status === 'Done' ? '✓' : ''}
             </button>
             <div class="task-main">
@@ -373,8 +418,22 @@
         <div class="board-card-list">
           ${columnTasks.length ? columnTasks.map((task) => {
             const progressPct = task.progress || (task.status === 'Done' ? 100 : 0);
+            
+            let assigneeBadge = '';
+            if (task.isOrgTask) {
+              assigneeBadge = `<span class="org-badge badge-employee" style="font-size:0.7rem;">🌐 Org Task</span>`;
+            } else if (task.assignedUserEmail) {
+               const assignedUser = orgUsers.find(u => u.email === task.assignedUserEmail) || { name: task.assigneeName || task.assignedUserEmail.split('@')[0] };
+               assigneeBadge = `<span class="org-badge badge-employee" style="font-size:0.7rem;">👤 ${assignedUser.name.split(' ')[0]}</span>`;
+            } else if (task.assigneeName) {
+               assigneeBadge = `<span class="org-badge badge-employee" style="font-size:0.7rem;">👤 ${task.assigneeName.split(' ')[0]}</span>`;
+            }
+
+            const canComplete = canModifyTask(task);
+            const dragAttr = canComplete ? 'draggable="true"' : '';
+
             return `
-              <article class="board-card" draggable="true" data-task-id="${task.id}">
+              <article class="board-card" ${dragAttr} data-task-id="${task.id}">
                 <div class="board-card-top">
                   <strong>${task.title}</strong>
                   <span class="priority-pill ${helpers.getPriorityTone(task.priority)}">${task.priority}</span>
@@ -393,7 +452,7 @@
 
                 <div class="board-card-foot">
                   <span>${helpers.formatDisplayDate(task.dueDate)}</span>
-                  ${task.assigneeName ? `<span class="org-badge badge-employee" style="font-size:0.7rem;">👤 ${task.assigneeName.split(' ')[0]}</span>` : ''}
+                  ${assigneeBadge}
                   <div class="task-row-actions">
                     <button class="icon-btn" type="button" data-open-drawer="${task.id}">↗</button>
                     <button class="icon-btn danger" type="button" data-delete-task="${task.id}">🗑</button>
@@ -408,6 +467,10 @@
 
     boardColumnsEl.querySelectorAll('.board-card').forEach((card) => {
       card.addEventListener('dragstart', (event) => {
+        if (card.getAttribute('draggable') !== 'true') {
+           event.preventDefault();
+           return;
+        }
         event.dataTransfer.setData('text/plain', card.dataset.taskId);
         card.classList.add('is-dragging');
       });
@@ -461,11 +524,25 @@
     });
   }
 
+  function canModifyTask(task) {
+    if (state.currentUser.role === 'admin') return true;
+    if (task.isOrgTask) return true; // Anyone in org can mark it complete
+    if (task.assignedUserEmail === state.currentUser.email) return true; // Assigned user
+    if (!task.assignedUserEmail && !task.isOrgTask) return true; // Personal task or legacy task
+    return false;
+  }
+
   async function moveTaskToColumn(taskId, targetColumn) {
     const taskIdx = state.currentUser.tasks.findIndex(t => t.id === taskId);
     if (taskIdx === -1) return;
 
     const task = state.currentUser.tasks[taskIdx];
+    
+    if (!canModifyTask(task)) {
+       console.warn("Permission denied to modify this task");
+       return;
+    }
+
     task.status = targetColumn;
     task.updatedAt = new Date().toISOString();
 
@@ -533,6 +610,18 @@
       taskTitleInput.value = task.title;
       taskDescriptionInput.value = task.description || '';
       taskPriorityInput.value = task.priority || 'Medium';
+
+      const assigneeInput = document.getElementById('taskAssignee');
+      if (assigneeInput) {
+        if (task.isOrgTask) {
+          assigneeInput.value = 'ORG_TASK';
+        } else if (task.assignedUserEmail) {
+          assigneeInput.value = task.assignedUserEmail;
+        } else {
+          assigneeInput.value = '';
+        }
+      }
+
       taskDueDateInput.value = task.dueDate || '';
       if (document.getElementById('taskDueTime')) document.getElementById('taskDueTime').value = task.dueTime || '';
       if (document.getElementById('taskReminderDate')) document.getElementById('taskReminderDate').value = task.reminderDate || '';
@@ -581,6 +670,15 @@
     const reminderDate = document.getElementById('taskReminderDate')?.value || '';
     const reminderTime = document.getElementById('taskReminderTime')?.value || '';
     const status = taskStatusInput.value;
+    
+    const assigneeSelectValue = document.getElementById('taskAssignee')?.value || '';
+    let isOrgTask = false;
+    let assignedUserEmail = null;
+    if (assigneeSelectValue === 'ORG_TASK') {
+       isOrgTask = true;
+    } else if (assigneeSelectValue) {
+       assignedUserEmail = assigneeSelectValue;
+    }
 
     if (editingId) {
       const idx = state.currentUser.tasks.findIndex(t => t.id === editingId);
@@ -594,11 +692,18 @@
         task.reminderDate = reminderDate;
         task.reminderTime = reminderTime;
         task.status = status;
+        if (state.currentUser.role === 'admin') {
+           task.isOrgTask = isOrgTask;
+           task.assignedUserEmail = assignedUserEmail;
+        }
         task.updatedAt = new Date().toISOString();
 
         if (api && api.updateBackendTask && task._id) {
           try {
-            await api.updateBackendTask(task._id, { title, description, priority, status });
+            await api.updateBackendTask(task._id, { 
+              title, description, priority, status, dueDate, dueTime, reminderDate, reminderTime,
+              isOrgTask: task.isOrgTask, assignedUserEmail: task.assignedUserEmail
+            });
           } catch (err) {
             console.warn('Backend task update failed:', err);
           }
@@ -609,7 +714,10 @@
       let createdTask = null;
       if (api && api.createBackendTask) {
         try {
-          createdTask = await api.createBackendTask({ title, description, priority });
+          createdTask = await api.createBackendTask({ 
+            title, description, priority, dueDate, dueTime, reminderDate, reminderTime, status,
+            isOrgTask, assignedUserEmail
+          });
         } catch (err) {
           console.warn('Backend task creation failed:', err);
         }
@@ -775,4 +883,42 @@
   syncFromBackend().then(() => {
     renderAll();
   });
+
+  init();
+
+  const changeBoardBgBtn = document.getElementById('changeBoardBgBtn');
+  const boardBgModal = document.getElementById('boardBgModal');
+  const closeBoardBgModal = document.getElementById('closeBoardBgModal');
+
+  if (changeBoardBgBtn && boardBgModal) {
+    changeBoardBgBtn.addEventListener('click', () => {
+      boardBgModal.classList.add('is-open');
+    });
+
+    if (closeBoardBgModal) {
+      closeBoardBgModal.addEventListener('click', () => {
+        boardBgModal.classList.remove('is-open');
+      });
+    }
+
+    boardBgModal.addEventListener('click', (e) => {
+      if (e.target === boardBgModal) {
+        boardBgModal.classList.remove('is-open');
+      }
+      
+      const option = e.target.closest('.bg-option');
+      if (option) {
+        const bgVal = option.dataset.bgValue;
+        if (bgVal === 'none') {
+          document.body.style.backgroundImage = 'none';
+        } else {
+          document.body.style.backgroundImage = `url('${bgVal}')`;
+          document.body.style.backgroundSize = 'cover';
+          document.body.style.backgroundPosition = 'center';
+          document.body.style.backgroundAttachment = 'fixed';
+        }
+        boardBgModal.classList.remove('is-open');
+      }
+    });
+  }
 })();

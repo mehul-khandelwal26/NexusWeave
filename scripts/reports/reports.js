@@ -3,22 +3,7 @@
   const SESSION_KEY = 'session';
   const helpers = window.AppHelpers;
 
-  const sessionEmail = localStorage.getItem(SESSION_KEY);
-  let database = JSON.parse(localStorage.getItem(DB_KEY) || '{}');
-
-  function normalizeUser(user, fallbackEmail = sessionEmail) {
-    const resolvedEmail = fallbackEmail || user?.email || 'demo@nexusweave.app';
-    return {
-      ...(user || {}),
-      email: resolvedEmail,
-      theme: user?.theme || localStorage.getItem('nexus-theme') || 'light',
-      projects: Array.isArray(user?.projects) ? user.projects : [],
-      tasks: Array.isArray(user?.tasks) ? user.tasks : [],
-      activity: Array.isArray(user?.activity) ? user.activity : []
-    };
-  }
-
-  let currentUser = sessionEmail ? normalizeUser(database[sessionEmail], sessionEmail) : null;
+  let currentUser = window.NexusAPI ? window.NexusAPI.getMe() : null;
 
   if (!currentUser) {
     window.location.href = 'index.html';
@@ -131,23 +116,27 @@
   }
 
   // Handle external storage changes
-  window.addEventListener('storage', (event) => {
-    if (!event.key || event.key === DB_KEY || event.key === SESSION_KEY) {
-      const storedUsers = JSON.parse(localStorage.getItem(DB_KEY) || '{}');
-      if (sessionEmail && storedUsers[sessionEmail]) {
-        currentUser = normalizeUser(storedUsers[sessionEmail], sessionEmail);
-        calculateAndRender();
+  window.addEventListener('nexus:tasks-updated', async () => {
+    if (window.NexusAPI) {
+      const data = await window.NexusAPI.getUserData();
+      if (data) {
+        currentUser.tasks = data.tasks || [];
+        currentUser.projects = data.projects || [];
       }
-    }
-  });
-
-  window.addEventListener('nexus:tasks-updated', () => {
-    const storedUsers = JSON.parse(localStorage.getItem(DB_KEY) || '{}');
-    if (sessionEmail && storedUsers[sessionEmail]) {
-      currentUser = normalizeUser(storedUsers[sessionEmail], sessionEmail);
       calculateAndRender();
     }
   });
 
-  calculateAndRender();
+  async function init() {
+    if (window.NexusAPI) {
+      const data = await window.NexusAPI.getUserData();
+      if (data) {
+        currentUser.tasks = data.tasks || [];
+        currentUser.projects = data.projects || [];
+      }
+    }
+    calculateAndRender();
+  }
+
+  init();
 })();

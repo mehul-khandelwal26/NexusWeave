@@ -29,30 +29,18 @@ const JWT_KEY = 'jwt';
 const DEFAULT_LABELS = ['Work', 'College', 'Personal', 'Urgent', 'Meeting'];
 
 const sessionEmail = localStorage.getItem(SESSION_KEY);
-let database = JSON.parse(localStorage.getItem(DB_KEY) || '{}');
 
-function normalizeUser(user, fallbackEmail = sessionEmail) {
-  const resolvedEmail = fallbackEmail || user?.email || 'demo@nexusweave.app';
-  return {
-    ...(user || {}),
-    email: resolvedEmail,
-    theme: user?.theme || localStorage.getItem('nexus-theme') || 'light',
-    projects: Array.isArray(user?.projects) ? user.projects : [],
-    tasks: Array.isArray(user?.tasks) ? user.tasks : [],
-    activity: Array.isArray(user?.activity) ? user.activity : []
-  };
-}
-
-let currentUser = sessionEmail ? normalizeUser(database[sessionEmail], sessionEmail) : null;
+let currentUser = window.NexusAPI ? window.NexusAPI.getMe() : null;
 
 // Auth Redirect
 if (!currentUser) {
   window.location.href = 'index.html';
 }
 
-let tasks = currentUser ? currentUser.tasks : [];
-let projects = currentUser ? currentUser.projects : [];
-let labels = currentUser && currentUser.labels ? currentUser.labels : [...DEFAULT_LABELS];
+let tasks = [];
+let projects = [];
+let labels = [...DEFAULT_LABELS];
+let orgUsers = [];
 
 let selectedLabels = [];
 let selectedAttachments = [];
@@ -61,23 +49,8 @@ let aiSuggestedTasks = null;
 let aiSuggestedBg = null;
 let toastTimer = null;
 
-function saveUser() {
-  if (!currentUser || !sessionEmail) return;
-  currentUser.tasks = tasks;
-  currentUser.projects = projects;
-  currentUser.labels = labels;
-  database[sessionEmail] = currentUser;
-  localStorage.setItem(DB_KEY, JSON.stringify(database));
-  window.dispatchEvent(new CustomEvent('nexus:tasks-updated'));
-}
-
 function pushActivity(message) {
-  if (!currentUser) return;
-  currentUser.activity = [
-    { id: `activity-${Date.now()}`, message, createdAt: new Date().toISOString() },
-    ...(currentUser.activity || [])
-  ].slice(0, 6);
-  saveUser();
+  // Activity tracking removed or ignored for backend refactor
 }
 
 function setActiveEntity(targetKey) {
@@ -120,15 +93,15 @@ function closeLabelModal() {
 }
 
 function saveTasks() {
-  saveUser();
+  window.dispatchEvent(new CustomEvent('nexus:tasks-updated'));
 }
 
 function saveLabels() {
-  saveUser();
+  window.dispatchEvent(new CustomEvent('nexus:tasks-updated'));
 }
 
 function saveProjects() {
-  saveUser();
+  window.dispatchEvent(new CustomEvent('nexus:tasks-updated'));
 }
 
 function getProjectFormValues() {
@@ -164,7 +137,7 @@ function resetProjectForm() {
   showFeedback('');
 }
 
-function handleProjectSubmit(event) {
+async function handleProjectSubmit(event) {
   event.preventDefault();
   const values = getProjectFormValues();
   const validationError = validateProjectForm(values);
@@ -175,37 +148,69 @@ function handleProjectSubmit(event) {
   }
 
   const project = buildProjectObject(values);
+  let createdProject = project;
+
+  if (window.NexusAPI && window.NexusAPI.createBackendProject) {
+    try {
+      const p = await window.NexusAPI.createBackendProject(project);
+      if (p) {
+        createdProject = p;
+        createdProject.id = p._id;
+      }
+    } catch(e) {
+      console.warn("Failed to create project in backend", e);
+    }
+  }
 
   if (aiSuggestedTasks) {
-    aiSuggestedTasks.forEach((title, idx) => {
-      tasks.unshift({
-        id: `task-${Date.now()}-${idx}`,
+    for (let i = 0; i < aiSuggestedTasks.length; i++) {
+      const title = aiSuggestedTasks[i];
+      const taskData = {
         title,
-        priority: idx === 0 ? 'High' : idx <= 2 ? 'Medium' : 'Low',
-        dueDate: new Date(Date.now() + (idx + 1) * 86400000).toISOString().slice(0, 10),
-        status: idx === 3 ? 'In Progress' : 'Todo',
+        priority: i === 0 ? 'High' : i <= 2 ? 'Medium' : 'Low',
+        dueDate: new Date(Date.now() + (i + 1) * 86400000).toISOString().slice(0, 10),
+        status: i === 3 ? 'In Progress' : 'Todo',
         description: 'AI-suggested workspace task breakdown.',
-        projectId: project.id,
+        projectId: createdProject.id,
         labels: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      });
-    });
+        attachments: []
+      };
+      
+      let createdTask = taskData;
+      if (window.NexusAPI && window.NexusAPI.createBackendTask) {
+        try {
+          const t = await window.NexusAPI.createBackendTask(taskData);
+          if (t) {
+            createdTask = t;
+            createdTask.id = t._id;
+          }
+        } catch(e) {
+           console.warn("Failed to create AI task in backend", e);
+        }
+      }
+      tasks.unshift(createdTask);
+    }
     aiSuggestedTasks = null;
   }
   aiSuggestedBg = null;
 
   // Link selected tasks to this project
-  selectedTasksForNewProject.forEach((taskId) => {
+  for (let i = 0; i < selectedTasksForNewProject.length; i++) {
+    const taskId = selectedTasksForNewProject[i];
     const task = tasks.find(t => t.id === taskId);
     if (task) {
-      task.projectId = project.id;
+      task.projectId = createdProject.id;
+      if (window.NexusAPI && window.NexusAPI.updateBackendTask) {
+        try {
+          await window.NexusAPI.updateBackendTask(taskId, { projectId: createdProject.id });
+        } catch(e) {}
+      }
     }
-  });
+  }
 
-  projects = [project, ...projects];
+  projects = [createdProject, ...projects];
   saveProjects();
-  pushActivity(`Created project "${project.name}" with ${selectedTasksForNewProject.length} tasks.`);
+  pushActivity(`Created project "${createdProject.name}" with ${selectedTasksForNewProject.length} tasks.`);
   showFeedback('Project created successfully.', 'success', projectFeedback);
   showToast('Project created successfully.');
   
@@ -257,6 +262,7 @@ function getTaskFormValues() {
     project: taskForm?.querySelector('#task-project')?.value || '',
     priority: taskForm?.querySelector('#task-priority')?.value || 'none',
     status: taskForm?.querySelector('#task-status')?.value || 'todo',
+    assignee: taskForm?.querySelector('#taskAssignee')?.value || '',
     deadlineDate: taskForm?.querySelector('#task-deadline-date')?.value || '',
     deadlineTime: taskForm?.querySelector('#task-deadline-time')?.value || '',
     reminderDate: taskForm?.querySelector('#task-reminder-date')?.value || '',
@@ -287,6 +293,14 @@ function buildTaskObject(values) {
   if (values.status === 'in-progress') status = 'In Progress';
   if (values.status === 'done') status = 'Done';
 
+  let isOrgTask = false;
+  let assignedUserEmail = null;
+  if (values.assignee === 'ORG_TASK') {
+     isOrgTask = true;
+  } else if (values.assignee) {
+     assignedUserEmail = values.assignee;
+  }
+
   const taskObj = {
     id: `task-${Date.now()}`,
     title: values.title.trim(),
@@ -298,6 +312,8 @@ function buildTaskObject(values) {
     dueTime: values.deadlineTime || '',
     reminderDate: values.reminderDate || '',
     reminderTime: values.reminderTime || '',
+    isOrgTask: isOrgTask,
+    assignedUserEmail: assignedUserEmail,
     labels: [...selectedLabels],
     attachments: selectedAttachments.map(a => a.name),
     createdAt: new Date().toISOString(),
@@ -426,11 +442,7 @@ async function handleTaskSubmit(event) {
   // Call Backend API to store in MongoDB Atlas
   if (window.NexusAPI && window.NexusAPI.createBackendTask) {
     try {
-      const createdBt = await window.NexusAPI.createBackendTask({
-        title: task.title,
-        description: task.description,
-        priority: task.priority
-      });
+      const createdBt = await window.NexusAPI.createBackendTask(task);
       if (createdBt) {
         task._id = createdBt._id;
         task.id = createdBt._id;
@@ -680,9 +692,32 @@ attachmentInput?.addEventListener('change', (event) => {
 });
 
 // Init page
-syncTimeInputStates();
-renderSelectedLabels();
-renderAttachments();
-setActiveEntity('task');
-populateProjectDropdown();
-updateSelectedTasksCount();
+async function init() {
+  if (window.NexusAPI) {
+    const data = await window.NexusAPI.getUserData();
+    if (data) {
+      tasks = data.tasks || [];
+      projects = data.projects || [];
+    }
+    if (currentUser && currentUser.role === 'admin' && window.NexusAPI.fetchBackendOrgUsers) {
+      orgUsers = await window.NexusAPI.fetchBackendOrgUsers();
+      const assigneeList = document.getElementById('assigneeList');
+      if (assigneeList) {
+        let optionsHTML = `<option value="">Myself (Unassigned)</option>`;
+        optionsHTML += `<option value="ORG_TASK">Entire Organization</option>`;
+        orgUsers.forEach(u => {
+          optionsHTML += `<option value="${u.email}">${u.name} (${u.email})</option>`;
+        });
+        assigneeList.innerHTML = optionsHTML;
+      }
+    }
+  }
+
+  syncTimeInputStates();
+  renderSelectedLabels();
+  renderAttachments();
+  setActiveEntity('task');
+  populateProjectDropdown();
+  updateSelectedTasksCount();
+}
+init();
