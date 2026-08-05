@@ -66,9 +66,9 @@
   ───────────────────────────────────────────── */
   let adminChartInstance = null;
 
-  function initAdminDashboard() {
+  async function initAdminDashboard() {
     const orgId = currentUser.organizationId;
-    const orgUsers = orgId ? api.getAllUsersInOrg(orgId) : [currentUser];
+    const orgUsers = orgId ? await api.getAllUsersInOrg(orgId) : [currentUser];
     const orgInfo = orgId ? api.getOrganization(orgId) : null;
 
     // Title
@@ -547,7 +547,7 @@
     const container = document.getElementById('empDeadlinesList');
     if (!container) return;
 
-    const pending = tasks.filter(t => t.status !== 'Done' && t.dueDate).sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+    const pending = tasks.filter(t => t.status !== 'Done' && t.dueDate && !isNaN(new Date(t.dueDate).getTime())).sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
 
     if (!pending.length) {
       container.innerHTML = `<div class="empty-inline">No upcoming deadlines. You are all caught up! 🎉</div>`;

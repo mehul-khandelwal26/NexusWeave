@@ -13,11 +13,21 @@ const app = express();
 app.use(cors({ origin: process.env.CLIENT_ORIGIN || '*' }));
 app.use(express.json());
 
+const path = require('path');
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/orgs', orgRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);
+
+// Serve Static Frontend Files
+app.use(express.static(path.join(__dirname, '../')));
+
+// Fallback for SPA routing if needed (optional, typically index.html)
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../pages/index.html'));
+});
 
 // Health Check
 app.get('/api/health', (req, res) => {

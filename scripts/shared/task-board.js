@@ -374,6 +374,7 @@
               <div>${getProjectName(task.projectId)}</div>
               <div>${helpers.formatDisplayDate(task.dueDate)}</div>
               <div class="task-row-actions">
+                <button class="icon-btn" type="button" data-edit-task="${task.id}">✎</button>
                 <button class="icon-btn" type="button" data-open-drawer="${task.id}">↗</button>
                 <button class="icon-btn danger" type="button" data-delete-task="${task.id}">🗑</button>
               </div>
@@ -454,6 +455,7 @@
                   <span>${helpers.formatDisplayDate(task.dueDate)}</span>
                   ${assigneeBadge}
                   <div class="task-row-actions">
+                    <button class="icon-btn" type="button" data-edit-task="${task.id}">✎</button>
                     <button class="icon-btn" type="button" data-open-drawer="${task.id}">↗</button>
                     <button class="icon-btn danger" type="button" data-delete-task="${task.id}">🗑</button>
                   </div>
@@ -498,6 +500,7 @@
         if (e.target.closest('[data-toggle-task]')) return;
         if (e.target.closest('[data-delete-task]')) return;
         if (e.target.closest('[data-open-drawer]')) return;
+        if (e.target.closest('[data-edit-task]')) return;
         openDrawer(card.dataset.taskId);
       });
     });
@@ -520,6 +523,13 @@
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         openDrawer(btn.dataset.openDrawer);
+      });
+    });
+
+    container.querySelectorAll('[data-edit-task]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openTaskModal(btn.dataset.editTask);
       });
     });
   }
@@ -910,9 +920,9 @@
       if (option) {
         const bgVal = option.dataset.bgValue;
         if (bgVal === 'none') {
-          document.body.style.backgroundImage = 'none';
+          document.body.style.background = 'none';
         } else {
-          document.body.style.backgroundImage = `url('${bgVal}')`;
+          document.body.style.background = bgVal;
           document.body.style.backgroundSize = 'cover';
           document.body.style.backgroundPosition = 'center';
           document.body.style.backgroundAttachment = 'fixed';
