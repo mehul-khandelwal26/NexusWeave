@@ -451,6 +451,31 @@
       });
       if (res && !res._error) return { success: true };
       return { success: false, error: res ? res.message : 'Failed to update settings' };
+    },
+
+    /* ── Messaging REST API ── */
+    async fetchConversationMessages(targetUserId) {
+      const res = await tryBackendRequest(`/messages/${encodeURIComponent(targetUserId)}`, { method: 'GET' });
+      if (res && !res._error && res.messages) {
+        return res;
+      }
+      return null;
+    },
+
+    async markMessagesAsRead(targetUserId) {
+      const res = await tryBackendRequest(`/messages/read/${encodeURIComponent(targetUserId)}`, { method: 'PATCH' });
+      if (res && !res._error) {
+        return true;
+      }
+      return false;
+    },
+
+    async fetchUnreadCounts() {
+      const res = await tryBackendRequest('/messages/unread', { method: 'GET' });
+      if (res && !res._error) {
+        return res;
+      }
+      return { total: 0, bySender: {} };
     }
   };
 })(window);
