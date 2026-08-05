@@ -90,4 +90,92 @@ router.post('/leave', requireAuth, async (req, res) => {
   }
 });
 
+// Update Org Settings
+router.patch('/:id', requireAuth, async (req, res) => {
+  if (req.user.role !== 'admin' || req.user.orgId !== req.params.id) {
+    return res.status(403).json({ errors: ['Unauthorized.'] });
+  }
+  const { name, visibility } = req.body;
+  try {
+    const org = await Organization.findById(req.params.id);
+    if (!org) return res.status(404).json({ errors: ['Organization not found.'] });
+
+    if (name) org.name = name;
+    if (visibility) org.visibility = visibility;
+    await org.save();
+    res.json({ success: true, org: { id: org._id.toString(), name: org.name, visibility: org.visibility } });
+  } catch (err) {
+    res.status(500).json({ errors: ['Failed to update organization.'] });
+  }
+});
+
+// Regenerate Org Key
+router.post('/:id/regen-key', requireAuth, async (req, res) => {
+  if (req.user.role !== 'admin' || req.user.orgId !== req.params.id) {
+    return res.status(403).json({ errors: ['Unauthorized.'] });
+  }
+  try {
+    const org = await Organization.findById(req.params.id);
+    if (!org) return res.status(404).json({ errors: ['Organization not found.'] });
+
+    const newKey = Math.random().toString(36).substr(2, 6) + Date.now().toString(36).substr(-2);
+    org.orgKey = newKey;
+    await org.save();
+    res.json({ success: true, newKey });
+  } catch (err) {
+    res.status(500).json({ errors: ['Failed to regenerate key.'] });
+  }
+});
+
+// Promote Member to Admin
+router.post('/:id/promote', requireAuth, async (req, res) => {
+  if (req.user.role !== 'admin' || req.user.orgId !== req.params.id) {
+    return res.status(403).json({ errors: ['Unauthorized.'] });
+  }
+  const { emailToPromote } = req.body;
+  try {
+    const user = await User.findOne({ email: emailToPromote, organizationId: req.params.id });
+    if (!user) return res.status(404).json({ errors: ['User not found in organization.'] });
+
+    user.role = 'admin';
+    await user.save();
+
+    const org = await Organization.findById(req.params.id);
+    if (org && !org.admins.includes(emailToPromote)) {
+      org.admins.push(emailToPromote);
+      await org.save();
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ errors: ['Failed to promote member.'] });
+  }
+});
+
+// Remove Member
+router.delete('/:id/members/:email', requireAuth, async (req, res) => {
+  if (req.user.role !== 'admin' || req.user.orgId !== req.params.id) {
+    return res.status(403).json({ errors: ['Unauthorized.'] });
+  }
+  const emailToRemove = req.params.email;
+  try {
+    const org = await Organization.findById(req.params.id);
+    if (!org) return res.status(404).json({ errors: ['Organization not found.'] });
+
+    org.members = org.members.filter(m => m !== emailToRemove);
+    org.admins = org.admins.filter(a => a !== emailToRemove);
+    await org.save();
+
+    const user = await User.findOne({ email: emailToRemove, organizationId: req.params.id });
+    if (user) {
+      user.organizationId = null;
+      user.role = 'personal';
+      await user.save();
+    }
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ errors: ['Failed to remove member.'] });
+  }
+});
+
 module.exports = router;

@@ -52,7 +52,7 @@
 
   async function tryBackendRequest(endpoint, options = {}) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 800);
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
     try {
       const res = await fetch(`${API_BASE}${endpoint}`, {
         ...options,
@@ -95,37 +95,44 @@
         body: JSON.stringify({ name: username, email, password, role, orgName, orgKey, orgVisibility, orgId })
       });
 
-      let token = null;
-      if (backendRes && !backendRes._error && backendRes.token) {
-        token = backendRes.token;
+      if (!backendRes) {
+        return { success: false, error: 'Backend offline. Please try again later.' };
       }
+
+      if (backendRes._error) {
+        return { success: false, error: backendRes.message || 'Failed to sign up.' };
+      }
+
+      const token = backendRes.token;
+      const userData = backendRes.user;
+      const backendOrgId = userData.organizationId;
 
       if (role === 'admin' && orgName) {
         const orgs = getOrgs();
-        const newOrgId = generateId('org');
-        const newOrg = {
-          id: newOrgId,
-          name: orgName,
-          orgKey: orgKey || Math.random().toString(36).substr(2, 6),
-          visibility: orgVisibility || 'private',
-          adminEmail: email,
-          members: [email],
-          createdAt: Date.now()
-        };
-        orgs.push(newOrg);
-        saveOrgs(orgs);
-        orgId = newOrgId;
+        // Check if we need to mirror it locally
+        if (!orgs.find(o => o.id === backendOrgId)) {
+          const newOrg = {
+            id: backendOrgId,
+            name: orgName,
+            orgKey: orgKey || Math.random().toString(36).substr(2, 6),
+            visibility: orgVisibility || 'private',
+            adminEmail: email,
+            members: [email],
+            createdAt: Date.now()
+          };
+          orgs.push(newOrg);
+          saveOrgs(orgs);
+        }
       }
 
       const users = getUsers();
-      const now = new Date();
       const newUser = {
-        id: backendRes?.user?.id || generateId('user'),
-        name: username,
+        id: userData.id,
+        name: userData.name || username,
         email,
         password,
-        role,
-        organizationId: orgId || null,
+        role: userData.role || role,
+        organizationId: backendOrgId || null,
         theme: 'light',
         projects: [],
         tasks: [],
@@ -147,38 +154,43 @@
         body: JSON.stringify({ email, password, role })
       });
 
-      let token = null;
-      let userData = null;
-
-      if (backendRes && !backendRes._error && backendRes.token) {
-        token = backendRes.token;
-        userData = backendRes.user;
+      if (!backendRes) {
+        return { success: false, error: 'Backend offline. Please try again later.' };
       }
+
+      if (backendRes._error) {
+        return { success: false, error: backendRes.message || 'Invalid email or password.' };
+      }
+
+      const token = backendRes.token;
+      const userData = backendRes.user;
 
       const users = getUsers();
       let user = users[email];
 
-      if (!user && userData) {
+      if (!user) {
         // Create local record if logged in from backend
         user = {
           id: userData.id,
-          name: userData.username || email.split('@')[0],
+          name: userData.name || email.split('@')[0],
           email: userData.email,
           password,
-          role: role || 'personal',
+          role: userData.role || role || 'personal',
+          organizationId: userData.organizationId || null,
           projects: [],
           tasks: [],
           activity: []
         };
-        users[email] = user;
-        saveUsers(users);
-      } else if (!user) {
-        // Fallback local check if backend returned error or unavailable
-        if (backendRes && backendRes._error) {
-          return { success: false, error: backendRes.message || 'Invalid email or password.' };
-        }
-        return { success: false, error: 'Account not found. Please register.' };
+      } else {
+        // Sync local record
+        user.id = userData.id;
+        user.name = userData.name || user.name;
+        user.role = userData.role || user.role;
+        user.organizationId = userData.organizationId || null;
       }
+      
+      users[email] = user;
+      saveUsers(users);
 
       setSession(user, 'email', token);
       return { success: true, token: localStorage.getItem('jwt'), user: sanitizeUser(user) };
@@ -217,8 +229,8 @@
     /* ── Backend API Direct Task Integration ── */
     async fetchBackendTasks() {
       const res = await tryBackendRequest('/tasks', { method: 'GET' });
-      if (res && !res._error && Array.isArray(res)) {
-        return res;
+      if (res && !res._error && res.tasks && Array.isArray(res.tasks)) {
+        return res.tasks;
       }
       return null;
     },
@@ -342,9 +354,10 @@
     },
 
     /* ── Organization API ── */
-    getPublicOrganizations() {
-      const orgs = getOrgs();
-      return orgs.filter(o => o.visibility === 'public').map(o => ({ id: o.id, name: o.name, visibility: o.visibility }));
+    async getPublicOrganizations() {
+      const res = await tryBackendRequest('/orgs/public', { method: 'GET' });
+      if (res && res.orgs) return res.orgs;
+      return [];
     },
 
     getOrganization(orgId) {
@@ -361,117 +374,83 @@
       return orgs.find(o => o.id === orgId) || null;
     },
 
-    getAllUsersInOrg(orgId) {
-      if (!orgId) return [];
-      const users = getUsers();
-      return Object.values(users).filter(u => u.organizationId === orgId);
+    async getAllUsersInOrg(orgId) {
+      const res = await tryBackendRequest('/orgs/users', { method: 'GET' });
+      if (res && !res._error && res.users) {
+        return res.users;
+      }
+      return [];
     },
 
-    searchOrganizations(query = '') {
-      const orgs = getOrgs();
+    async searchOrganizations(query = '') {
+      const orgs = await this.getPublicOrganizations();
       const q = (query || '').toLowerCase().trim();
       return orgs
         .filter(o => !q || o.name.toLowerCase().includes(q))
-        .map(o => ({ id: o.id, name: o.name, visibility: o.visibility, memberCount: (o.members || []).length }));
+        .map(o => ({ id: o.id, name: o.name, visibility: o.visibility, memberCount: o.memberCount || 0 }));
     },
 
-    joinOrganization({ orgId, orgKey }) {
-      const orgs = getOrgs();
-      const org = orgs.find(o => o.id === orgId);
-      if (!org) return { success: false, error: 'Organization not found.' };
-
-      if (org.visibility === 'private' && org.orgKey !== orgKey) {
-        return { success: false, error: 'Invalid organization key.' };
+    async joinOrganization({ orgId, orgKey }) {
+      const res = await tryBackendRequest('/orgs/join', {
+        method: 'POST',
+        body: JSON.stringify({ orgId, orgKey })
+      });
+      if (res && !res._error) {
+        const users = getUsers();
+        const email = localStorage.getItem('session');
+        if (users[email]) {
+          users[email].organizationId = orgId;
+          users[email].role = 'employee';
+          saveUsers(users);
+        }
+        return { success: true, orgName: res.orgName };
       }
+      return { success: false, error: res ? res.message : 'Failed to join organization' };
+    },
 
-      const email = localStorage.getItem('session');
-      if (!email) return { success: false, error: 'Not authenticated.' };
-
-      if (!org.members) org.members = [];
-      if (!org.members.includes(email)) {
-        org.members.push(email);
-        saveOrgs(orgs);
+    async leaveOrganization() {
+      const res = await tryBackendRequest('/orgs/leave', { method: 'POST' });
+      if (res && !res._error) {
+        const users = getUsers();
+        const email = localStorage.getItem('session');
+        if (users[email]) {
+          users[email].organizationId = null;
+          users[email].role = 'personal';
+          saveUsers(users);
+        }
+        return { success: true };
       }
-
-      const users = getUsers();
-      if (users[email]) {
-        users[email].organizationId = orgId;
-        users[email].role = 'employee';
-        saveUsers(users);
-      }
-
-      return { success: true, orgName: org.name };
+      return { success: false, error: res ? res.message : 'Failed to leave organization' };
     },
 
-    leaveOrganization() {
-      const email = localStorage.getItem('session');
-      if (!email) return { success: false, error: 'Not authenticated.' };
-
-      const users = getUsers();
-      const user = users[email];
-      if (!user || !user.organizationId) return { success: false, error: 'Not in an organization.' };
-
-      const orgs = getOrgs();
-      const org = orgs.find(o => o.id === user.organizationId);
-      if (org) {
-        org.members = (org.members || []).filter(m => m !== email);
-        saveOrgs(orgs);
-      }
-
-      user.organizationId = null;
-      user.role = 'personal';
-      saveUsers(users);
-
-      return { success: true };
+    async removeMemberFromOrg(orgId, emailToRemove) {
+      const res = await tryBackendRequest(`/orgs/${orgId}/members/${encodeURIComponent(emailToRemove)}`, { method: 'DELETE' });
+      if (res && !res._error) return { success: true };
+      return { success: false, error: res ? res.message : 'Failed to remove member' };
     },
 
-    removeMemberFromOrg(orgId, emailToRemove) {
-      const orgs = getOrgs();
-      const org = orgs.find(o => o.id === orgId);
-      if (!org) return { success: false, error: 'Organization not found.' };
-
-      org.members = (org.members || []).filter(m => m !== emailToRemove);
-      saveOrgs(orgs);
-
-      const users = getUsers();
-      if (users[emailToRemove]) {
-        users[emailToRemove].organizationId = null;
-        users[emailToRemove].role = 'personal';
-        saveUsers(users);
-      }
-
-      return { success: true };
+    async promoteToAdmin(orgId, emailToPromote) {
+      const res = await tryBackendRequest(`/orgs/${orgId}/promote`, {
+        method: 'POST',
+        body: JSON.stringify({ emailToPromote })
+      });
+      if (res && !res._error) return { success: true };
+      return { success: false, error: res ? res.message : 'Failed to promote member' };
     },
 
-    promoteToAdmin(orgId, emailToPromote) {
-      const users = getUsers();
-      if (!users[emailToPromote]) return { success: false, error: 'User not found.' };
-
-      users[emailToPromote].role = 'admin';
-      saveUsers(users);
-      return { success: true };
+    async regenerateOrgKey(orgId) {
+      const res = await tryBackendRequest(`/orgs/${orgId}/regen-key`, { method: 'POST' });
+      if (res && !res._error && res.newKey) return { success: true, newKey: res.newKey };
+      return { success: false, error: res ? res.message : 'Failed to regenerate key' };
     },
 
-    regenerateOrgKey(orgId) {
-      const orgs = getOrgs();
-      const org = orgs.find(o => o.id === orgId);
-      if (!org) return { success: false, error: 'Organization not found.' };
-
-      const newKey = Math.random().toString(36).substr(2, 6) + Date.now().toString(36).substr(-2);
-      org.orgKey = newKey;
-      saveOrgs(orgs);
-      return { success: true, newKey };
-    },
-
-    updateOrgSettings(orgId, { name, visibility }) {
-      const orgs = getOrgs();
-      const org = orgs.find(o => o.id === orgId);
-      if (!org) return { success: false, error: 'Organization not found.' };
-
-      if (name) org.name = name;
-      if (visibility) org.visibility = visibility;
-      saveOrgs(orgs);
-      return { success: true };
+    async updateOrgSettings(orgId, { name, visibility }) {
+      const res = await tryBackendRequest(`/orgs/${orgId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ name, visibility })
+      });
+      if (res && !res._error) return { success: true };
+      return { success: false, error: res ? res.message : 'Failed to update settings' };
     }
   };
 })(window);

@@ -48,8 +48,8 @@ document.addEventListener('DOMContentLoaded', () => {
     return orgRole;
   }
 
-  function populateOrgDropdown() {
-    const orgs = api.getPublicOrganizations();
+  async function populateOrgDropdown() {
+    const orgs = await api.getPublicOrganizations();
     if (!orgSelect) return;
     orgSelect.innerHTML = '<option value="">Select Organization</option>';
     orgs.forEach(org => {

@@ -100,10 +100,10 @@
     }
 
     // Render member list
-    function renderMembers(org, filter = '') {
+    async function renderMembers(org, filter = '') {
       if (!memberList) return;
 
-      const allUsers = api.getAllUsersInOrg(org.id);
+      const allUsers = await api.getAllUsersInOrg(org.id);
       const filtered = filter
         ? allUsers.filter(u =>
             u.name.toLowerCase().includes(filter.toLowerCase()) ||
@@ -151,9 +151,9 @@
     }
 
     // Remove member
-    function handleRemoveMember(email) {
+    async function handleRemoveMember(email) {
       if (!confirm(`Remove ${email} from the organization?`)) return;
-      const result = api.removeMemberFromOrg(currentUser.organizationId, email);
+      const result = await api.removeMemberFromOrg(currentUser.organizationId, email);
       if (result.success) {
         showNotif(`${email} has been removed from the organization.`, 'success');
         loadAdminOrg();
@@ -163,9 +163,9 @@
     }
 
     // Promote member to admin
-    function handlePromoteMember(email) {
+    async function handlePromoteMember(email) {
       if (!confirm(`Promote ${email} to Admin? They will gain full org management access.`)) return;
-      const result = api.promoteToAdmin(currentUser.organizationId, email);
+      const result = await api.promoteToAdmin(currentUser.organizationId, email);
       if (result.success) {
         showNotif(`${email} has been promoted to Admin.`, 'success');
         loadAdminOrg();
@@ -198,9 +198,9 @@
 
     // Regenerate key
     if (regenKeyBtn) {
-      regenKeyBtn.addEventListener('click', () => {
+      regenKeyBtn.addEventListener('click', async () => {
         if (!confirm('Regenerate the organization key? Employees with the old key will not be able to join with it.')) return;
-        const result = api.regenerateOrgKey(currentUser.organizationId);
+        const result = await api.regenerateOrgKey(currentUser.organizationId);
         if (result.success) {
           if (orgKeyValue) orgKeyValue.value = result.newKey;
           showNotif('Organization key regenerated successfully!', 'success');
@@ -212,12 +212,12 @@
 
     // Save org settings
     if (saveOrgBtn) {
-      saveOrgBtn.addEventListener('click', () => {
+      saveOrgBtn.addEventListener('click', async () => {
         const newName = editOrgNameInput?.value.trim();
         const newVisibility = editOrgVisibilityInput?.value;
         if (!newName) { showNotif('Organization name cannot be empty.', 'error'); return; }
 
-        const result = api.updateOrgSettings(currentUser.organizationId, { name: newName, visibility: newVisibility });
+        const result = await api.updateOrgSettings(currentUser.organizationId, { name: newName, visibility: newVisibility });
         if (result.success) {
           showNotif('Organization settings saved!', 'success');
           loadAdminOrg();
@@ -283,8 +283,8 @@
     }
 
     // Search organizations
-    function searchOrgs(query = '') {
-      const all = api.searchOrganizations(query);
+    async function searchOrgs(query = '') {
+      const all = await api.searchOrganizations(query);
       if (!orgResultsList) return;
 
       if (!all.length) {
@@ -409,9 +409,9 @@
 
     // Leave org
     if (leaveOrgBtn) {
-      leaveOrgBtn.addEventListener('click', () => {
+      leaveOrgBtn.addEventListener('click', async () => {
         if (!confirm('Leave your current organization? You can re-join later.')) return;
-        const result = api.leaveOrganization();
+        const result = await api.leaveOrganization();
         if (result.success) {
           showNotif('You have left the organization.', 'info');
           currentUser.organizationId = null;
