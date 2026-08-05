@@ -52,6 +52,34 @@
     return { valid: errors.length === 0, errors };
   }
 
+  function validateSignupFields({ name, email, password, role, orgName, orgKey, orgVisibility, orgId }) {
+    const errors = [];
+    if (!name || !name.trim()) errors.push('Full name is required.');
+    if (!email || !email.trim()) errors.push('Email is required.');
+    else if (!isValidEmail(email)) errors.push('Please enter a valid email address.');
+    if (!password || !password.trim()) errors.push('Password is required.');
+    else if (password.length < 6) errors.push('Password must be at least 6 characters.');
+    if (!role) errors.push('Please select a role.');
+    if (role === 'admin') {
+      if (!orgName || !orgName.trim()) errors.push('Organization name is required.');
+      if (!orgKey || !orgKey.trim()) errors.push('Organization key is required.');
+      else if (orgKey.trim().length < 4) errors.push('Organization key must be at least 4 characters.');
+    }
+    if (role === 'employee') {
+      if (!orgId) errors.push('Please select an organization.');
+    }
+    return { valid: errors.length === 0, errors };
+  }
+
+  function validateLoginFields({ email, password, role }) {
+    const errors = [];
+    if (!email || !email.trim()) errors.push('Email is required.');
+    else if (!isValidEmail(email)) errors.push('Please enter a valid email address.');
+    if (!password || !password.trim()) errors.push('Password is required.');
+    if (!role) errors.push('Please select a role.');
+    return { valid: errors.length === 0, errors };
+  }
+
   function createUserProfile(email, password) {
     return {
       email,
@@ -142,7 +170,16 @@
 
     return tasks.filter((task) => {
       const normalizedTask = normalizeTask(task);
-      const matchesQuery = !search || [normalizedTask.title, normalizedTask.description, normalizedTask.priority, normalizedTask.status, ...(normalizedTask.labels || []), projectLookup.get(normalizedTask.projectId)?.name || '']
+      const matchesQuery = !search || [
+        normalizedTask.title,
+        normalizedTask.description,
+        normalizedTask.priority,
+        normalizedTask.status,
+        normalizedTask.assigneeName,
+        normalizedTask.assigneeEmail,
+        ...(normalizedTask.labels || []),
+        projectLookup.get(normalizedTask.projectId)?.name || ''
+      ]
         .join(' ')
         .toLowerCase()
         .includes(search);
@@ -177,24 +214,43 @@
   }
 
   function sortTasks(tasks, sortKey = 'updatedAt', direction = 'desc') {
-    const sorted = [...tasks].sort((left, right) => {
-      const leftValue = left[sortKey] || '';
-      const rightValue = right[sortKey] || '';
+    let key = sortKey;
+    let dir = direction;
+    if (key.includes('|')) {
+      const parts = key.split('|');
+      key = parts[0];
+      dir = parts[1];
+    }
+    const isAsc = dir === 'asc';
 
-      if (sortKey === 'dueDate') {
-        const leftDate = leftValue ? new Date(leftValue).getTime() : Number.POSITIVE_INFINITY;
-        const rightDate = rightValue ? new Date(rightValue).getTime() : Number.POSITIVE_INFINITY;
-        return leftDate - rightDate;
+    return [...tasks].sort((left, right) => {
+      if (key === 'priority') {
+        const rank = (val) => ({ Urgent: 4, High: 3, Medium: 2, Low: 1 })[val] || 0;
+        const diff = rank(left.priority) - rank(right.priority);
+        return isAsc ? diff : -diff;
       }
 
-      if (typeof leftValue === 'string' && typeof rightValue === 'string') {
-        return leftValue.localeCompare(rightValue);
+      if (key === 'deadline' || key === 'dueDate') {
+        const leftDate = left.dueDate ? new Date(left.dueDate).getTime() : (isAsc ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY);
+        const rightDate = right.dueDate ? new Date(right.dueDate).getTime() : (isAsc ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY);
+        const diff = leftDate - rightDate;
+        return isAsc ? diff : -diff;
       }
 
-      return (leftValue > rightValue ? 1 : -1);
+      if (key === 'title') {
+        const diff = (left.title || '').localeCompare(right.title || '');
+        return isAsc ? diff : -diff;
+      }
+
+      if (key === 'updatedAt' || key === 'createdAt') {
+        const leftVal = new Date(left.updatedAt || left.createdAt || 0).getTime();
+        const rightVal = new Date(right.updatedAt || right.createdAt || 0).getTime();
+        const diff = leftVal - rightVal;
+        return isAsc ? diff : -diff;
+      }
+
+      return 0;
     });
-
-    return direction === 'desc' ? sorted.reverse() : sorted;
   }
 
   function getDueSoonTasks(tasks) {
@@ -246,9 +302,25 @@
     }));
   }
 
+  // Keyboard Navigation & Accessibility: Global ESC key handling
+  if (typeof window !== 'undefined') {
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        document.querySelectorAll('.modal-backdrop:not(.hidden)').forEach(m => m.classList.add('hidden'));
+        document.querySelectorAll('.task-drawer.is-open').forEach(d => d.classList.remove('is-open'));
+        document.querySelectorAll('.chat-drawer.is-open').forEach(c => c.classList.remove('is-open'));
+        document.querySelectorAll('.ai-sidebar-drawer.is-open').forEach(a => a.classList.remove('is-open'));
+        document.querySelectorAll('.notif-dropdown.is-open').forEach(n => n.classList.remove('is-open'));
+        document.querySelectorAll('.profile-menu.is-open').forEach(p => p.classList.remove('is-open'));
+      }
+    });
+  }
+
   return {
     isValidEmail,
     validateAuthFields,
+    validateSignupFields,
+    validateLoginFields,
     createUserProfile,
     buildTaskSuggestions,
     normalizeTask,

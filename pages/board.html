@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="NexusWeave Task Board - Kanban-style task management with drag and drop" />
   <title>Board | NexusWeave</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -10,6 +11,9 @@
   <link rel="stylesheet" href="../styles/product.css" />
   <link rel="stylesheet" href="../styles/dashboard.css" />
   <link rel="stylesheet" href="../styles/sidebar.css" />
+  <link rel="stylesheet" href="../styles/realtime.css" />
+  <link rel="stylesheet" href="../styles/ai.css" />
+  <link rel="stylesheet" href="../styles/datetime-picker.css" />
 </head>
 <body class="app-body">
   <div class="app-shell">
@@ -53,6 +57,12 @@
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M7 14l3-3 2 2 5-6"></path></svg>
           </span>
           <span>Reports</span>
+        </a>
+        <a class="nav-item" href="org.html">
+          <span class="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          </span>
+          <span>Organization</span>
         </a>
       </nav>
 
@@ -154,7 +164,7 @@
           <p class="eyebrow">Task workspace</p>
           <h3 id="taskModalTitle">Create task</h3>
         </div>
-        <button type="button" id="closeTaskModal" class="ghost-btn">×</button>
+        <button type="button" id="closeTaskModal" class="ghost-btn" aria-label="Close">×</button>
       </div>
       <form id="taskForm" class="task-form">
         <input type="hidden" id="taskId" />
@@ -168,26 +178,58 @@
         </label>
         <div class="field-grid">
           <label class="field-row">
+            <span>Assignee</span>
+            <input type="text" id="taskAssignee" name="taskAssignee" list="assigneeList" placeholder="Search employee email/name..." autocomplete="off">
+            <datalist id="assigneeList">
+              <option value="">Myself (Unassigned)</option>
+            </datalist>
+          </label>
+          <label class="field-row">
             <span>Priority</span>
             <select id="taskPriority">
+              <option value="Urgent">Urgent 🔥</option>
               <option value="High">High</option>
               <option value="Medium" selected>Medium</option>
               <option value="Low">Low</option>
             </select>
           </label>
-          <label class="field-row">
-            <span>Due date</span>
-            <input id="taskDueDate" type="date" />
-          </label>
+          <div class="field-row" style="grid-column: span 2;">
+            <span style="display:block;margin-bottom:0.3rem;font-weight:600;font-size:0.88rem;">Deadline (Date & Time)</span>
+            <div class="field">
+              <input id="taskDueDate" type="date" />
+              <input id="taskDueTime" type="time" />
+            </div>
+          </div>
+          <div class="field-row" style="grid-column: span 2;">
+            <span style="display:block;margin-bottom:0.3rem;font-weight:600;font-size:0.88rem;">Reminder (Date & Time)</span>
+            <div class="field">
+              <input id="taskReminderDate" type="date" />
+              <input id="taskReminderTime" type="time" />
+            </div>
+          </div>
           <label class="field-row">
             <span>Status</span>
             <select id="taskStatus">
               <option value="Todo">Todo</option>
               <option value="In Progress">In Progress</option>
+              <option value="Review">Review</option>
               <option value="Done">Done</option>
             </select>
           </label>
           <label class="field-row">
+            <span>Recurring</span>
+            <select id="taskRecurring">
+              <option value="None" selected>None</option>
+              <option value="Daily">Daily</option>
+              <option value="Weekly">Weekly</option>
+              <option value="Monthly">Monthly</option>
+            </select>
+          </label>
+          <label class="field-row">
+            <span>Labels</span>
+            <input id="taskLabels" type="text" placeholder="Frontend, Bug, Design" />
+          </label>
+          <label class="field-row" style="grid-column: span 2;">
             <span>Attachments</span>
             <input id="taskAttachments" type="text" placeholder="brief.pdf, design.png" />
           </label>
@@ -223,7 +265,7 @@
           <p class="eyebrow">Task details</p>
           <h3 id="drawerTitle">Task</h3>
         </div>
-        <button type="button" id="closeDrawer" class="ghost-btn">×</button>
+        <button type="button" id="closeDrawer" class="ghost-btn" aria-label="Close">×</button>
       </div>
       <p id="drawerMeta" class="text-soft"></p>
       <p id="drawerDescription" class="drawer-description"></p>
@@ -244,25 +286,33 @@
         <p class="meta" style="margin-bottom: 1.2rem; color: var(--ink-soft); font-size: 0.9rem;">Choose a background style for your Kanban board workspace.</p>
         
         <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; max-height: 280px; overflow-y: auto; padding-right: 0.2rem;">
-          <div class="bg-option" data-bg-value="none" style="height: 75px; border-radius: 12px; border: 2px solid var(--border); background: var(--paper-raised); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: var(--ink-soft); transition: transform 0.2s ease;">
+          <div class="bg-option bg-none" data-bg-value="none">
             None
           </div>
-          <div class="bg-option" data-bg-value="linear-gradient(135deg, #09090e 0%, #1f1d36 100%)" style="height: 75px; border-radius: 12px; background: linear-gradient(135deg, #09090e 0%, #1f1d36 100%); cursor: pointer; border: 2px solid transparent; transition: transform 0.2s ease;"></div>
-          <div class="bg-option" data-bg-value="linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)" style="height: 75px; border-radius: 12px; background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%); cursor: pointer; border: 2px solid transparent; transition: transform 0.2s ease;"></div>
-          <div class="bg-option" data-bg-value="linear-gradient(135deg, #a78bfa 0%, #5b21b6 100%)" style="height: 75px; border-radius: 12px; background: linear-gradient(135deg, #a78bfa 0%, #5b21b6 100%); cursor: pointer; border: 2px solid transparent; transition: transform 0.2s ease;"></div>
+          <div class="bg-option" data-bg-value="linear-gradient(135deg, #09090e 0%, #1f1d36 100%)" style="background: linear-gradient(135deg, #09090e 0%, #1f1d36 100%);"></div>
+          <div class="bg-option" data-bg-value="linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)" style="background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);"></div>
+          <div class="bg-option" data-bg-value="linear-gradient(135deg, #a78bfa 0%, #5b21b6 100%)" style="background: linear-gradient(135deg, #a78bfa 0%, #5b21b6 100%);"></div>
           
-          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?q=80&w=800')" style="height: 75px; border-radius: 12px; background: url('https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?q=80&w=800') center/cover no-repeat; cursor: pointer; border: 2px solid transparent; transition: transform 0.2s ease;"></div>
-          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=800')" style="height: 75px; border-radius: 12px; background: url('https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=800') center/cover no-repeat; cursor: pointer; border: 2px solid transparent; transition: transform 0.2s ease;"></div>
-          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800')" style="height: 75px; border-radius: 12px; background: url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800') center/cover no-repeat; cursor: pointer; border: 2px solid transparent; transition: transform 0.2s ease;"></div>
-          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1464802686167-b939a6910659?q=80&w=800')" style="height: 75px; border-radius: 12px; background: url('https://images.unsplash.com/photo-1464802686167-b939a6910659?q=80&w=800') center/cover no-repeat; cursor: pointer; border: 2px solid transparent; transition: transform 0.2s ease;"></div>
+          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?q=80&w=800')" style="background: url('https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?q=80&w=800') center/cover no-repeat;"></div>
+          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=800')" style="background: url('https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=800') center/cover no-repeat;"></div>
+          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800')" style="background: url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800') center/cover no-repeat;"></div>
+          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1464802686167-b939a6910659?q=80&w=800')" style="background: url('https://images.unsplash.com/photo-1464802686167-b939a6910659?q=80&w=800') center/cover no-repeat;"></div>
         </div>
       </div>
     </div>
   </div>
 
+  <script src="../scripts/services/api-client.js"></script>
+  <script src="../scripts/services/socket-service.js"></script>
+  <script src="../scripts/services/productivity-tracker.js"></script>
+  <script src="../scripts/services/ai-service.js"></script>
+  <script src="../scripts/shared/ai-assistant.js"></script>
+  <script src="../scripts/shared/notification-system.js"></script>
+  <script src="../scripts/shared/chat-widget.js"></script>
   <script src="../scripts/shared/theme.js"></script>
   <script src="../scripts/shared/app-helpers.js"></script>
   <script src="../scripts/shared/profile-menu.js"></script>
+  <script src="../scripts/shared/datetime-picker.js"></script>
   <script src="../scripts/shared/task-board.js"></script>
 </body>
 </html>

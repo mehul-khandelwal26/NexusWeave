@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="NexusWeave - Modern productivity and task management platform for teams and individuals" />
   <title>NexusWeave | Calm workspace</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -79,23 +80,89 @@
 
         <section class="auth-panel" id="auth">
           <div class="panel-card">
+            <!-- HackerRank Style Dual Portal Switcher -->
+            <div class="portal-tabs" role="tablist" aria-label="Account scope selector">
+              <button type="button" class="portal-tab active" id="portalPersonalBtn" role="tab" aria-selected="true">
+                <span>👤 For Individuals</span>
+                <span class="portal-tab-subtitle">Personal tasks & Heatmap</span>
+              </button>
+              <button type="button" class="portal-tab" id="portalOrgBtn" role="tab" aria-selected="false">
+                <span>🏢 For Organizations</span>
+                <span class="portal-tab-subtitle">Teams & Company workspace</span>
+              </button>
+            </div>
+
             <h2 id="panelTitle">Welcome back</h2>
-            <p id="authSubtitle">Log into your workspace</p>
+            <p id="authSubtitle">Log into your personal workspace</p>
             <div id="formErrors" class="form-errors" aria-live="polite"></div>
+
+            <div class="role-selector hidden" id="roleSelector">
+              <button type="button" class="role-btn active" data-role="admin" id="roleAdminBtn">
+                <span class="role-icon">🛡️</span>
+                <span>Admin</span>
+              </button>
+              <button type="button" class="role-btn" data-role="employee" id="roleEmployeeBtn">
+                <span class="role-icon">👤</span>
+                <span>Employee</span>
+              </button>
+            </div>
+
             <form id="loginForm">
+              <label class="field hidden" id="nameField">
+                <span>Full Name</span>
+                <input type="text" id="signupName" placeholder="John Doe" autocomplete="name" />
+              </label>
               <label class="field">
                 <span>Email</span>
-                <input type="email" id="email" placeholder="you@example.com" />
+                <input type="email" id="email" placeholder="you@example.com" autocomplete="email" />
               </label>
               <label class="field">
                 <span>Password</span>
-                <input type="password" id="password" placeholder="••••••••" />
+                <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" />
               </label>
+
+              <div id="adminOrgFields" class="org-fields hidden">
+                <div class="org-fields-header">
+                  <span class="eyebrow">Organization Setup</span>
+                </div>
+                <label class="field">
+                  <span>Organization Name</span>
+                  <input type="text" id="orgName" placeholder="Acme Corporation" />
+                </label>
+                <label class="field">
+                  <span>Organization Key <small>(secret)</small></span>
+                  <input type="text" id="orgKey" placeholder="Enter a secret key for your org" />
+                </label>
+                <label class="field">
+                  <span>Visibility</span>
+                  <select id="orgVisibility">
+                    <option value="public">Public — anyone can join</option>
+                    <option value="private" selected>Private — key required to join</option>
+                  </select>
+                </label>
+              </div>
+
+              <div id="employeeOrgFields" class="org-fields hidden">
+                <div class="org-fields-header">
+                  <span class="eyebrow">Join Organization</span>
+                </div>
+                <label class="field">
+                  <span>Organization</span>
+                  <select id="orgSelect">
+                    <option value="">Select an organization</option>
+                  </select>
+                </label>
+                <label class="field hidden" id="employeeKeyField">
+                  <span>Organization Key</span>
+                  <input type="text" id="employeeOrgKey" placeholder="Enter the organization key" />
+                </label>
+              </div>
+
               <button class="login-btn" type="submit">Login</button>
               <button class="google-btn" type="button" id="googleLoginBtn">Continue with Google</button>
             </form>
             <div class="switch-row">
-              <span id="switchText">Don’t have an account?</span>
+              <span id="switchText">Don't have an account?</span>
               <a href="#" id="toggleMode">Sign up</a>
             </div>
           </div>
@@ -125,6 +192,7 @@
 
   <script src="../scripts/shared/app-helpers.js"></script>
   <script src="../scripts/shared/theme.js"></script>
+  <script src="../scripts/services/api-client.js"></script>
   <script src="../scripts/auth/auth.js"></script>
 </body>
 </html>

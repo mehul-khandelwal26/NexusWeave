@@ -10,9 +10,7 @@
   const resetButton = document.getElementById('resetTimer');
   const customMinutesInput = document.getElementById('customMinutes');
 
-  const sessionEmail = localStorage.getItem(SESSION_KEY);
-  const database = JSON.parse(localStorage.getItem(DB_KEY) || '{}');
-  const currentUser = sessionEmail ? database[sessionEmail] : null;
+  let currentUser = window.NexusAPI ? window.NexusAPI.getMe() : null;
 
   if (!currentUser) {
     window.location.href = 'index.html';
@@ -59,10 +57,16 @@
     if (remainingSeconds <= 0) {
       clearInterval(timerId);
       isRunning = false;
-      timerStatus.textContent = 'Session complete';
+      timerStatus.textContent = 'Session complete 🎉';
       if (customMinutesInput) {
         customMinutesInput.disabled = false;
       }
+
+      // Log Focus Activity (Mocked for now as we don't save activity to backend yet)
+      const focusMins = customMinutesInput ? (parseInt(customMinutesInput.value, 10) || 25) : 25;
+      console.log(`Completed a ${focusMins}-minute Focus Sprint! ⏱️`);
+      window.dispatchEvent(new CustomEvent('nexus:tasks-updated'));
+
       clearTimerState();
       return;
     }
