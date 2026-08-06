@@ -1,5 +1,6 @@
 /* ============================================================
    NexusWeave — Custom Calendar & Clock DateTime Picker CSS
+   Theme-aware for light + dark modes
    ============================================================ */
 
 /* Trigger Buttons in Forms */
@@ -21,10 +22,10 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.65rem 0.9rem;
-  background: var(--surface-muted, rgba(255, 255, 255, 0.05));
-  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
   border-radius: 12px;
-  color: var(--ink, #ffffff);
+  color: var(--ink);
   font-family: inherit;
   font-size: 0.9rem;
   font-weight: 500;
@@ -34,17 +35,19 @@
 }
 
 .datetime-trigger-btn:hover:not(:disabled) {
-  border-color: var(--accent, #a78bfa);
-  background: rgba(167, 139, 250, 0.08);
+  border-color: var(--accent);
+  background: rgba(91, 33, 182, 0.08);
   transform: translateY(-1px);
+}
+
+:root[data-theme='dark'] .datetime-trigger-btn:hover:not(:disabled) {
+  background: rgba(167, 139, 250, 0.12);
 }
 
 .datetime-trigger-btn:disabled,
 .datetime-trigger-btn.is-locked {
   opacity: 0.45;
   cursor: not-allowed;
-  border-color: var(--border, rgba(255, 255, 255, 0.08));
-  background: rgba(0, 0, 0, 0.15);
 }
 
 .datetime-trigger-btn .trigger-icon {
@@ -58,11 +61,12 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: var(--ink);
 }
 
 .datetime-trigger-btn .trigger-clear {
   font-size: 0.9rem;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft);
   padding: 2px 6px;
   border-radius: 50%;
   margin-left: 0.3rem;
@@ -82,11 +86,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.65);
+  background: rgba(15, 23, 42, 0.45);
   backdrop-filter: blur(8px);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.25s ease;
+}
+
+:root[data-theme='dark'] .dt-picker-modal {
+  background: rgba(0, 0, 0, 0.7);
 }
 
 .dt-picker-modal.is-open {
@@ -97,14 +105,21 @@
 .dt-picker-card {
   width: 100%;
   max-width: 360px;
-  background: var(--surface-raised, #181825);
-  border: 1px solid var(--border, rgba(255, 255, 255, 0.15));
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 20px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 40px var(--shadow);
   padding: 1.25rem;
   transform: scale(0.92);
   transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-  color: var(--ink, #ffffff);
+  color: var(--ink);
+}
+
+:root[data-theme='dark'] .dt-picker-card {
+  background: #1e293b;
+  border-color: #334155;
+  color: #f8fafc;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.55);
 }
 
 .dt-picker-modal.is-open .dt-picker-card {
@@ -124,15 +139,16 @@
   display: flex;
   align-items: center;
   gap: 0.4rem;
+  color: inherit;
 }
 
 .dt-picker-nav-btn {
   width: 32px;
   height: 32px;
   border-radius: 10px;
-  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
-  background: var(--surface-muted, rgba(255, 255, 255, 0.05));
-  color: inherit;
+  border: 1px solid var(--border);
+  background: var(--surface-muted);
+  color: var(--ink);
   font-size: 1rem;
   cursor: pointer;
   display: flex;
@@ -141,10 +157,16 @@
   transition: all 0.15s ease;
 }
 
+:root[data-theme='dark'] .dt-picker-nav-btn {
+  background: #0f172a;
+  border-color: #334155;
+  color: #f8fafc;
+}
+
 .dt-picker-nav-btn:hover {
-  background: var(--accent, #a78bfa);
+  background: var(--accent);
   color: #ffffff;
-  border-color: var(--accent, #a78bfa);
+  border-color: var(--accent);
 }
 
 /* Calendar Month Header */
@@ -159,7 +181,11 @@
 .cal-month-label {
   font-weight: 700;
   font-size: 0.95rem;
-  color: var(--accent-light, #c4b5fd);
+  color: var(--accent);
+}
+
+:root[data-theme='dark'] .cal-month-label {
+  color: #c4b5fd;
 }
 
 /* Days Header */
@@ -169,10 +195,14 @@
   text-align: center;
   font-size: 0.75rem;
   font-weight: 700;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft);
   margin-bottom: 0.5rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+:root[data-theme='dark'] .cal-weekdays {
+  color: #94a3b8;
 }
 
 /* Calendar Days Grid */
@@ -189,33 +219,58 @@
   justify-content: center;
   border-radius: 10px;
   font-size: 0.88rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
   border: 1px solid transparent;
-  color: var(--ink, #ffffff);
+  color: var(--ink);
+  background: transparent;
+}
+
+:root[data-theme='dark'] .cal-day-cell {
+  color: #f1f5f9;
+}
+
+.cal-day-cell.empty {
+  cursor: default;
+  pointer-events: none;
 }
 
 .cal-day-cell:hover:not(.empty):not(.disabled) {
-  background: rgba(167, 139, 250, 0.2);
-  border-color: var(--accent, #a78bfa);
+  background: rgba(91, 33, 182, 0.12);
+  border-color: var(--accent);
+  color: var(--ink);
+}
+
+:root[data-theme='dark'] .cal-day-cell:hover:not(.empty):not(.disabled) {
+  background: rgba(167, 139, 250, 0.22);
   color: #ffffff;
 }
 
 .cal-day-cell.other-month {
-  opacity: 0.3;
+  opacity: 0.35;
+  color: var(--ink-soft);
+}
+
+:root[data-theme='dark'] .cal-day-cell.other-month {
+  color: #64748b;
 }
 
 .cal-day-cell.today {
-  border-color: var(--accent, #a78bfa);
+  border-color: var(--accent);
   font-weight: 700;
 }
 
 .cal-days-grid .cal-day-cell.selected {
-  background: var(--accent, #a78bfa);
-  color: #ffffff;
+  background: var(--accent);
+  color: #ffffff !important;
   font-weight: 700;
-  box-shadow: 0 4px 12px rgba(167, 139, 250, 0.4);
+  box-shadow: 0 4px 12px rgba(91, 33, 182, 0.35);
+}
+
+:root[data-theme='dark'] .cal-days-grid .cal-day-cell.selected {
+  background: #a78bfa;
+  box-shadow: 0 4px 12px rgba(167, 139, 250, 0.45);
 }
 
 /* ── Clock Time Picker ── */
@@ -230,26 +285,41 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background: rgba(0, 0, 0, 0.25);
+  background: var(--surface-muted);
   padding: 0.5rem 1.25rem;
   border-radius: 14px;
-  border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+  border: 1px solid var(--border);
+}
+
+:root[data-theme='dark'] .clock-display-banner {
+  background: #0f172a;
+  border-color: #334155;
 }
 
 .clock-time-val {
   font-size: 1.5rem;
   font-weight: 700;
   font-family: 'Space Grotesk', monospace;
-  color: var(--accent-light, #c4b5fd);
+  color: var(--accent);
   letter-spacing: 0.05em;
+}
+
+:root[data-theme='dark'] .clock-time-val {
+  color: #c4b5fd;
 }
 
 .clock-ampm-toggle {
   display: flex;
   gap: 3px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--surface);
   padding: 3px;
   border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+:root[data-theme='dark'] .clock-ampm-toggle {
+  background: #1e293b;
+  border-color: #334155;
 }
 
 .ampm-btn {
@@ -257,7 +327,7 @@
   border-radius: 7px;
   border: none;
   background: transparent;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft);
   font-size: 0.78rem;
   font-weight: 700;
   cursor: pointer;
@@ -265,11 +335,10 @@
 }
 
 .ampm-btn.active {
-  background: var(--accent, #a78bfa);
+  background: var(--accent);
   color: #ffffff;
 }
 
-/* Clock Step Indicator & Title */
 .clock-step-header {
   display: flex;
   align-items: center;
@@ -281,20 +350,25 @@
 .clock-step-title {
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--ink-soft, #94a3b8);
+  color: var(--ink-soft);
 }
 
-/* Circular Clock Face */
 .clock-face {
   position: relative;
   width: 220px;
   height: 220px;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.3);
-  border: 2px solid var(--border, rgba(255, 255, 255, 0.12));
+  background: var(--surface-muted);
+  border: 2px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: inset 0 0 16px rgba(15, 23, 42, 0.06);
+}
+
+:root[data-theme='dark'] .clock-face {
+  background: #0f172a;
+  border-color: #334155;
   box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.4);
 }
 
@@ -302,9 +376,9 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: var(--accent, #a78bfa);
+  background: var(--accent);
   z-index: 2;
-  box-shadow: 0 0 8px var(--accent, #a78bfa);
+  box-shadow: 0 0 8px rgba(91, 33, 182, 0.4);
 }
 
 .clock-hand {
@@ -313,7 +387,7 @@
   left: calc(50% - 1.5px);
   width: 3px;
   height: 75px;
-  background: var(--accent, #a78bfa);
+  background: var(--accent);
   transform-origin: bottom center;
   transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
   border-radius: 3px;
@@ -328,8 +402,7 @@
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: var(--accent, #a78bfa);
-  box-shadow: 0 0 10px var(--accent, #a78bfa);
+  background: var(--accent);
 }
 
 .clock-num {
@@ -343,22 +416,31 @@
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  color: var(--ink, #ffffff);
+  color: var(--ink);
   transition: all 0.15s ease;
   z-index: 3;
 }
 
+:root[data-theme='dark'] .clock-num {
+  color: #f1f5f9;
+}
+
 .clock-num:hover {
-  background: rgba(167, 139, 250, 0.3);
-  color: #ffffff;
+  background: rgba(91, 33, 182, 0.18);
+  color: var(--ink);
   transform: scale(1.15);
 }
 
+:root[data-theme='dark'] .clock-num:hover {
+  background: rgba(167, 139, 250, 0.3);
+  color: #ffffff;
+}
+
 .clock-num.selected {
-  background: var(--accent, #a78bfa);
+  background: var(--accent);
   color: #ffffff;
   font-weight: 700;
-  box-shadow: 0 0 12px var(--accent, #a78bfa);
+  box-shadow: 0 0 12px rgba(91, 33, 182, 0.35);
 }
 
 /* Modal Actions */
@@ -369,5 +451,25 @@
   gap: 0.5rem;
   margin-top: 1.25rem;
   padding-top: 0.75rem;
-  border-top: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  border-top: 1px solid var(--border);
+}
+
+:root[data-theme='dark'] .dt-picker-actions {
+  border-top-color: #334155;
+}
+
+.dt-picker-actions .ghost-btn {
+  color: var(--ink);
+  border: 1px solid var(--border);
+  background: var(--surface-muted);
+}
+
+:root[data-theme='dark'] .dt-picker-actions .ghost-btn {
+  color: #f8fafc;
+  background: #0f172a;
+  border-color: #334155;
+}
+
+.dt-picker-actions .primary-btn {
+  color: #ffffff;
 }
