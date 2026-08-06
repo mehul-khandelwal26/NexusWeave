@@ -1,6 +1,7 @@
 /**
  * Interactive Background Canvas Animation for NexusWeave
  * Creates floating particles with interactive cursor tracking and connecting lines.
+ * Supports dynamic light and dark theme adaptation.
  */
 
 (function () {
@@ -8,9 +9,15 @@
   let particles = [];
   let mouse = { x: null, y: null, radius: 180 };
   let animationFrameId;
+  let isDarkMode = true;
 
   const PARTICLE_COUNT = 60;
   const CONNECT_DISTANCE = 130;
+
+  function updateThemeState() {
+    const theme = document.documentElement.getAttribute('data-theme') || 'dark';
+    isDarkMode = theme === 'dark';
+  }
 
   function initCanvas() {
     canvas = document.getElementById('bgCanvas');
@@ -27,6 +34,7 @@
       document.body.prepend(canvas);
     }
     ctx = canvas.getContext('2d');
+    updateThemeState();
     resizeCanvas();
     createParticles();
   }
@@ -55,13 +63,11 @@
       this.x += this.vx;
       this.y += this.vy;
 
-      // Wrap around edges
       if (this.x < 0) this.x = canvas.width;
       if (this.x > canvas.width) this.x = 0;
       if (this.y < 0) this.y = canvas.height;
       if (this.y > canvas.height) this.y = 0;
 
-      // Mouse repulsion / attraction effect
       if (mouse.x !== null && mouse.y !== null) {
         const dx = mouse.x - this.x;
         const dy = mouse.y - this.y;
@@ -78,7 +84,9 @@
     draw() {
       ctx.beginPath();
       ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(167, 139, 250, ${this.alpha})`;
+      ctx.fillStyle = isDarkMode
+        ? `rgba(167, 139, 250, ${this.alpha})`
+        : `rgba(124, 58, 237, ${this.alpha * 0.7})`;
       ctx.fill();
     }
   }
@@ -93,7 +101,6 @@
   function animate() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Draw connecting lines between particles
     for (let i = 0; i < particles.length; i++) {
       particles[i].update();
       particles[i].draw();
@@ -104,27 +111,30 @@
         const dist = Math.sqrt(dx * dx + dy * dy);
 
         if (dist < CONNECT_DISTANCE) {
-          const opacity = (1 - dist / CONNECT_DISTANCE) * 0.25;
+          const opacity = (1 - dist / CONNECT_DISTANCE) * (isDarkMode ? 0.25 : 0.18);
           ctx.beginPath();
           ctx.moveTo(particles[i].x, particles[i].y);
           ctx.lineTo(particles[j].x, particles[j].y);
-          ctx.strokeStyle = `rgba(124, 58, 237, ${opacity})`;
+          ctx.strokeStyle = isDarkMode
+            ? `rgba(124, 58, 237, ${opacity})`
+            : `rgba(109, 40, 217, ${opacity})`;
           ctx.lineWidth = 0.8;
           ctx.stroke();
         }
       }
 
-      // Draw glowing lines to mouse cursor
       if (mouse.x !== null && mouse.y !== null) {
         const dx = particles[i].x - mouse.x;
         const dy = particles[i].y - mouse.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
         if (dist < mouse.radius) {
-          const opacity = (1 - dist / mouse.radius) * 0.4;
+          const opacity = (1 - dist / mouse.radius) * (isDarkMode ? 0.4 : 0.3);
           ctx.beginPath();
           ctx.moveTo(particles[i].x, particles[i].y);
           ctx.lineTo(mouse.x, mouse.y);
-          ctx.strokeStyle = `rgba(192, 132, 252, ${opacity})`;
+          ctx.strokeStyle = isDarkMode
+            ? `rgba(192, 132, 252, ${opacity})`
+            : `rgba(147, 51, 234, ${opacity})`;
           ctx.lineWidth = 1;
           ctx.stroke();
         }
@@ -146,6 +156,10 @@
 
   window.addEventListener('resize', () => {
     resizeCanvas();
+  });
+
+  window.addEventListener('themechange', () => {
+    updateThemeState();
   });
 
   window.addEventListener('DOMContentLoaded', () => {

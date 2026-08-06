@@ -5,6 +5,26 @@
   }
   root.AppHelpers = api;
 
+  // Automatic Page Loader Progress & Smooth Dismissal
+  document.addEventListener('DOMContentLoaded', () => {
+    const loader = document.getElementById('appLoader');
+    const fill = document.getElementById('loaderBarFill');
+    if (!loader) return;
+
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += Math.random() * 25 + 15;
+      if (fill) fill.style.width = Math.min(progress, 90) + '%';
+      if (progress >= 90) {
+        clearInterval(interval);
+        if (fill) fill.style.width = '100%';
+        setTimeout(() => {
+          loader.classList.add('loaded');
+        }, 300);
+      }
+    }, 70);
+  });
+
   document.addEventListener('keydown', (event) => {
     const activeEl = document.activeElement;
     if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable)) {

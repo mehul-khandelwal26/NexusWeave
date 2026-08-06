@@ -2,11 +2,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const helpers = window.AppHelpers;
   const api = window.NexusAPI;
 
-  if (api.isAuthenticated()) {
-    window.location.href = 'dashboard.html';
-    return;
-  }
-
   const loginForm = document.getElementById('loginForm');
   const emailInput = document.getElementById('email');
   const passwordInput = document.getElementById('password');
@@ -14,9 +9,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const authSubtitle = document.getElementById('authSubtitle');
   const formErrors = document.getElementById('formErrors');
   const googleLoginBtn = document.getElementById('googleLoginBtn');
+  const demoLoginBtn = document.getElementById('demoLoginBtn');
+
+  // Toggle Password Visibility
   const togglePasswordBtn = document.getElementById('togglePasswordBtn');
   if (togglePasswordBtn && passwordInput) {
-    togglePasswordBtn.addEventListener('click', () => {
+    togglePasswordBtn.addEventListener('click', (e) => {
+      e.preventDefault();
       const isPassword = passwordInput.getAttribute('type') === 'password';
       passwordInput.setAttribute('type', isPassword ? 'text' : 'password');
       const eyeShow = togglePasswordBtn.querySelector('.eye-show');
@@ -26,6 +25,48 @@ document.addEventListener('DOMContentLoaded', () => {
         eyeHide.classList.toggle('hidden', !isPassword);
       }
     });
+  }
+
+  // Gmail Auto-Fill Button
+  const gmailAppendBtn = document.getElementById('gmailAppendBtn');
+  if (gmailAppendBtn && emailInput) {
+    gmailAppendBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      let val = emailInput.value.trim();
+      if (!val) {
+        emailInput.value = 'user@gmail.com';
+      } else if (val.includes('@')) {
+        emailInput.value = val.split('@')[0] + '@gmail.com';
+      } else {
+        emailInput.value = val + '@gmail.com';
+      }
+      emailInput.focus({ preventScroll: true });
+    });
+  }
+
+  // Pixel-Perfect Top Scroll Calculator for Sign In Card
+  function scrollToSignIn() {
+    const panelCard = document.querySelector('.panel-card');
+    const navbar = document.querySelector('.site-header');
+    const navHeight = navbar ? navbar.offsetHeight + 16 : 80;
+    if (panelCard) {
+      const targetY = panelCard.getBoundingClientRect().top + window.pageYOffset - navHeight;
+      window.scrollTo({ top: Math.max(0, targetY), behavior: 'smooth' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+
+  // Bind to all Sign In links and hash targets
+  document.querySelectorAll('a[href="#auth"], a[href="#hero"], a[href="#loginForm"]').forEach((link) => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      scrollToSignIn();
+    });
+  });
+
+  if (window.location.hash === '#auth' || window.location.hash === '#hero') {
+    setTimeout(scrollToSignIn, 150);
   }
 
   // Dual Portal Tabs
@@ -48,6 +89,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const orgSelect = document.getElementById('orgSelect');
   const employeeKeyField = document.getElementById('employeeKeyField');
   const employeeOrgKey = document.getElementById('employeeOrgKey');
+
+  const toggleModeBtn = document.getElementById('toggleMode');
+  const switchText = document.getElementById('switchText');
+  const submitBtn = document.querySelector('.login-btn');
 
   let loginMode = true;
   let portalScope = 'personal'; // 'personal' | 'organization'
@@ -184,12 +229,11 @@ document.addEventListener('DOMContentLoaded', () => {
     toggleMode();
   });
 
-  loginForm?.addEventListener('submit', async (e) => {
-    e.preventDefault();
+  async function handleAuthSubmission() {
     if (formErrors) formErrors.classList.add('hidden');
 
-    const email = emailInput.value.trim();
-    const password = passwordInput.value;
+    const email = emailInput ? emailInput.value.trim() : '';
+    const password = passwordInput ? passwordInput.value : '';
     const role = getEffectiveRole();
 
     if (loginMode) {
@@ -230,6 +274,21 @@ document.addEventListener('DOMContentLoaded', () => {
         showError(res.error || 'Signup failed');
       }
     }
+  }
+
+  loginForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await handleAuthSubmission();
+  });
+
+  // Demo Quick Login Button
+  demoLoginBtn?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    if (emailInput) emailInput.value = 'demo@nexusweave.com';
+    if (passwordInput) passwordInput.value = 'password123';
+    loginMode = true;
+    updateFormVisibility();
+    await handleAuthSubmission();
   });
 
   googleLoginBtn?.addEventListener('click', (e) => {
