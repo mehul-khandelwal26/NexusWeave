@@ -316,7 +316,30 @@
     });
   }
 
+  function escapeHTML(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function sanitizeMarkdown(rawText) {
+    if (!rawText) return '';
+    let safe = escapeHTML(rawText);
+    safe = safe.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+    safe = safe.replace(/`([^`]+)`/g, '<code>$1</code>');
+    safe = safe.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    safe = safe.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+    safe = safe.replace(/\n/g, '<br>');
+    return safe;
+  }
+
   return {
+    escapeHTML,
+    sanitizeMarkdown,
     isValidEmail,
     validateAuthFields,
     validateSignupFields,

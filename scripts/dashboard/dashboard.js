@@ -241,16 +241,16 @@
       return;
     }
 
-    const rankIcons = ['🥇', '🥈', '🥉'];
+    const esc = (s) => (typeof AppHelpers !== 'undefined' && AppHelpers.escapeHTML) ? AppHelpers.escapeHTML(s) : String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
     container.innerHTML = ranked.slice(0, 5).map((user, idx) => `
       <div class="leaderboard-item">
         <div class="leaderboard-rank rank-${idx + 1}">${rankIcons[idx] || '#' + (idx + 1)}</div>
         <div class="leaderboard-user">
-          <span class="leaderboard-avatar">${user.name.charAt(0).toUpperCase()}</span>
+          <span class="leaderboard-avatar">${esc(user.name.charAt(0).toUpperCase())}</span>
           <div class="leaderboard-meta">
-            <strong>${user.name}</strong>
-            <small>${user.email}</small>
+            <strong>${esc(user.name)}</strong>
+            <small>${esc(user.email)}</small>
           </div>
         </div>
         <div class="leaderboard-score">
@@ -367,6 +367,8 @@
       return;
     }
 
+    const esc = (s) => (typeof AppHelpers !== 'undefined' && AppHelpers.escapeHTML) ? AppHelpers.escapeHTML(s) : String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
     container.innerHTML = presentUsers.map((u) => {
       const record = todayAttendance[u.email];
       return `
@@ -374,11 +376,11 @@
           <div style="display:flex;align-items:center;gap:0.6rem;">
             <span style="font-size:0.9rem;">🟢</span>
             <div>
-              <strong>${u.name || u.email}</strong>
-              <small style="display:block;color:var(--ink-soft);font-size:0.75rem;">${u.email}</small>
+              <strong>${esc(u.name || u.email)}</strong>
+              <small style="display:block;color:var(--ink-soft);font-size:0.75rem;">${esc(u.email)}</small>
             </div>
           </div>
-          <span class="attendance-time-tag">${record.time || 'Present'}</span>
+          <span class="attendance-time-tag">${esc(record.time || 'Present')}</span>
         </div>
       `;
     }).join('');
@@ -394,9 +396,11 @@
       return;
     }
 
+    const esc = (s) => (typeof AppHelpers !== 'undefined' && AppHelpers.escapeHTML) ? AppHelpers.escapeHTML(s) : String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
     container.innerHTML = activity.slice(0, 6).map(act => `
       <div class="activity-item">
-        <span>${act.text || act.description || JSON.stringify(act)}</span>
+        <span>${esc(act.text || act.description || String(act))}</span>
       </div>
     `).join('');
   }

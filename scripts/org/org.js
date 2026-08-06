@@ -133,22 +133,24 @@
         return;
       }
 
+      const esc = (s) => (typeof AppHelpers !== 'undefined' && AppHelpers.escapeHTML) ? AppHelpers.escapeHTML(s) : String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
       memberList.innerHTML = filtered.map(member => {
         const isSelf = member.email === currentUser.email;
         const isThisAdmin = member.role === 'admin';
         return `
-          <div class="member-row" data-email="${member.email}">
+          <div class="member-row" data-email="${esc(member.email)}">
             <div class="member-info">
-              <span class="member-avatar">${(member.name || member.email).charAt(0).toUpperCase()}</span>
+              <span class="member-avatar">${esc((member.name || member.email).charAt(0).toUpperCase())}</span>
               <div class="member-details">
-                <strong>${member.name || 'Unknown'}</strong>
-                <small>${member.email}</small>
+                <strong>${esc(member.name || 'Unknown')}</strong>
+                <small>${esc(member.email)}</small>
               </div>
             </div>
             <div class="member-actions">
               <span class="org-badge ${isThisAdmin ? 'badge-admin' : 'badge-employee'}">${isThisAdmin ? '🛡️ Admin' : '👤 Employee'}</span>
-              ${!isSelf && !isThisAdmin ? `<button class="inline-btn" data-action="promote" data-email="${member.email}">Promote</button>` : ''}
-              ${!isSelf ? `<button class="inline-btn danger" data-action="remove" data-email="${member.email}">Remove</button>` : '<span class="member-you-tag">You</span>'}
+              ${!isSelf && !isThisAdmin ? `<button class="inline-btn" data-action="promote" data-email="${esc(member.email)}">Promote</button>` : ''}
+              ${!isSelf ? `<button class="inline-btn danger" data-action="remove" data-email="${esc(member.email)}">Remove</button>` : '<span class="member-you-tag">You</span>'}
             </div>
           </div>
         `;

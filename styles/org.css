@@ -339,7 +339,7 @@
   position: fixed;
   top: 1.2rem;
   right: 1.2rem;
-  z-index: 9999;
+  z-index: 9000;
   display: grid;
   gap: 0.6rem;
   pointer-events: none;

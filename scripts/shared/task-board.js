@@ -401,31 +401,33 @@
       Done: paginatedTasks.filter((t) => getTaskStatusGroup(t) === 'Done')
     };
 
+    const esc = (s) => (typeof AppHelpers !== 'undefined' && AppHelpers.escapeHTML) ? AppHelpers.escapeHTML(s) : String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
     taskGroupsEl.innerHTML = Object.entries(groups).map(([label, groupTasks]) => {
       const renderedRows = groupTasks.length ? groupTasks.map((task) => {
-        const labelsPills = (task.labels || []).map(l => `<span class="filter-chip" style="font-size:0.7rem;padding:0.1rem 0.4rem;">${l}</span>`).join(' ');
+        const labelsPills = (task.labels || []).map(l => `<span class="filter-chip" style="font-size:0.7rem;padding:0.1rem 0.4rem;">${esc(l)}</span>`).join(' ');
         
         let assigneeBadge = '';
         if (task.isOrgTask) {
           assigneeBadge = `<span class="org-badge badge-employee" style="font-size:0.72rem;">🌐 Org Task</span>`;
         } else if (task.assignedUserEmail) {
            const assignedUser = orgUsers.find(u => u.email === task.assignedUserEmail) || { name: task.assigneeName || task.assignedUserEmail.split('@')[0] };
-           assigneeBadge = `<span class="org-badge badge-employee" style="font-size:0.72rem;">👤 ${assignedUser.name}</span>`;
+           assigneeBadge = `<span class="org-badge badge-employee" style="font-size:0.72rem;">👤 ${esc(assignedUser.name)}</span>`;
         } else if (task.assigneeName) {
-           assigneeBadge = `<span class="org-badge badge-employee" style="font-size:0.72rem;">👤 ${task.assigneeName}</span>`;
+           assigneeBadge = `<span class="org-badge badge-employee" style="font-size:0.72rem;">👤 ${esc(task.assigneeName)}</span>`;
         }
 
         const canComplete = canModifyTask(task);
         const checkDisabled = !canComplete ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : '';
 
         return `
-          <article class="task-row ${task.status === 'Done' ? 'is-complete' : ''}" data-task-id="${task.id}">
-            <button class="task-check" type="button" data-toggle-task="${task.id}" aria-label="Mark ${task.title} complete" ${checkDisabled}>
+          <article class="task-row ${task.status === 'Done' ? 'is-complete' : ''}" data-task-id="${esc(task.id)}">
+            <button class="task-check" type="button" data-toggle-task="${esc(task.id)}" aria-label="Mark ${esc(task.title)} complete" ${checkDisabled}>
               ${task.status === 'Done' ? '✓' : ''}
             </button>
             <div class="task-main">
               <div class="task-title-row">
-                <strong>${task.title}</strong>
+                <strong>${esc(task.title)}</strong>
                 <div class="task-pill-row">
                   ${assigneeBadge}
                   <span class="priority-pill ${helpers.getPriorityTone(task.priority)}">${task.priority}</span>
@@ -497,13 +499,14 @@
             const canComplete = canModifyTask(task);
             const dragAttr = canComplete ? 'draggable="true"' : '';
 
+            const esc = (s) => (typeof AppHelpers !== 'undefined' && AppHelpers.escapeHTML) ? AppHelpers.escapeHTML(s) : String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
             return `
-              <article class="board-card" ${dragAttr} data-task-id="${task.id}">
+              <article class="board-card" ${dragAttr} data-task-id="${esc(task.id)}">
                 <div class="board-card-top">
-                  <strong>${task.title}</strong>
-                  <span class="priority-pill ${helpers.getPriorityTone(task.priority)}">${task.priority}</span>
+                  <strong>${esc(task.title)}</strong>
+                  <span class="priority-pill ${helpers.getPriorityTone(task.priority)}">${esc(task.priority)}</span>
                 </div>
-                <p>${task.description || 'No notes yet.'}</p>
+                <p>${esc(task.description || 'No notes yet.')}</p>
 
                 <div style="margin:0.3rem 0;">
                   <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:var(--ink-soft);margin-bottom:0.15rem;">
