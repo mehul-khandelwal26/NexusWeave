@@ -3,194 +3,350 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="NexusWeave - Modern productivity and task management platform for teams and individuals" />
-  <title>NexusWeave | Calm workspace</title>
+  <meta name="description" content="NexusWeave - Effortless task management for modern teams" />
+  <title>NexusWeave — Effortless Task Management for Modern Teams</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="../styles/global.css" />
   <link rel="stylesheet" href="../styles/product.css" />
   <link rel="stylesheet" href="../styles/auth.css" />
+  <link rel="stylesheet" href="../styles/pages.css" />
 </head>
 <body>
-  <div class="site-shell">
-    <header class="site-header">
-      <nav class="navbar">
-        <a class="brand" href="index.html">
-          <span class="brand-mark"></span>
-          <span>NexusWeave</span>
-        </a>
-        <div class="nav-links">
-          <a href="features.html">Features</a>
-          <a href="about.html">About</a>
-          <a href="#auth">Sign In</a>
-          <button class="theme-toggle-btn" type="button" data-theme-toggle aria-label="Toggle dark mode">
-            <span class="toggle-icon"></span>
-            <span>Theme</span>
+  <!-- Header Navbar (Matching Mockup Header 1:1) -->
+  <header class="site-header">
+    <nav class="navbar">
+      <a class="brand" href="#hero">
+        <span class="brand-icon">N</span>
+        <span>NexusWeave</span>
+      </a>
+      <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#about">About</a>
+        <a href="#auth">Sign In</a>
+        <button class="theme-toggle-btn" type="button" data-theme-toggle aria-label="Toggle dark mode">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+          <span>Theme</span>
+        </button>
+      </div>
+    </nav>
+  </header>
+
+  <!-- SECTION 1: HERO & SIGN-IN GRID (1:1 MOCKUP REPLICATION) -->
+  <main class="landing-container" id="hero">
+    <!-- Left Hero Column -->
+    <section class="hero-content">
+      <div>
+        <div class="announcement-badge">
+          <span>✨ Announcing NexusWeave 2.0 – Seamless Team Productivity</span>
+        </div>
+
+        <h1 class="hero-title">Effortless task management for modern teams.</h1>
+        <p class="hero-subtitle">Organize, track, and collaborate on projects with speed, clarity, and precision.</p>
+
+        <div class="hero-actions">
+          <a class="primary-link" href="#auth">
+            <span>Get Started Free</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+          </a>
+          <a class="secondary-link" href="#features">Explore Features</a>
+        </div>
+      </div>
+
+      <!-- Dashboard Mockup Showcase (Exact Purple Glow Outline 1:1) -->
+      <div class="mockup-frame">
+        <div class="mockup-sidebar">
+          <div class="mockup-sidebar-brand">
+            <span class="brand-icon" style="width:22px;height:22px;font-size:0.75rem;">N</span>
+            <span>NexusWeave</span>
+          </div>
+
+          <div class="mockup-nav-group">
+            <div class="mockup-nav-title">Navigation</div>
+            <div class="mockup-nav-item active">📁 Projects</div>
+            <div class="mockup-nav-item">👥 Teams</div>
+            <div class="mockup-nav-item">⚙️ Settings</div>
+          </div>
+
+          <div class="mockup-nav-group">
+            <div class="mockup-nav-title">Projects</div>
+            <div class="mockup-nav-item">🚀 Project Alpha</div>
+            <div class="mockup-nav-item">🎨 Design System</div>
+          </div>
+        </div>
+
+        <div class="mockup-main">
+          <div class="mockup-topbar">
+            <h4>Project Alpha</h4>
+            <span style="font-size:0.75rem;background:var(--purple-primary);padding:3px 8px;border-radius:4px;color:#fff;font-weight:600;">+ Root Team</span>
+          </div>
+
+          <div class="mockup-board">
+            <div class="mockup-col">
+              <div class="mockup-col-head">
+                <span>Tasks</span>
+                <span>1</span>
+              </div>
+              <div class="mockup-card">
+                <div>Design System Updates</div>
+                <div class="mockup-avatars">
+                  <span class="avatar-circle">A</span>
+                  <span class="avatar-circle" style="background:#059669;">B</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="mockup-col">
+              <div class="mockup-col-head">
+                <span>Tasks</span>
+                <span>12</span>
+              </div>
+              <div class="mockup-card">
+                <div>User Feedback Synthesis</div>
+                <div class="mockup-avatars">
+                  <span class="avatar-circle" style="background:#d97706;">C</span>
+                  <span class="avatar-circle" style="background:#2563eb;">D</span>
+                </div>
+              </div>
+              <div class="mockup-card">
+                <div>API Integration</div>
+                <div class="mockup-avatars">
+                  <span class="avatar-circle" style="background:#7c3aed;">E</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="mockup-col">
+              <div class="mockup-col-head">
+                <span>Project</span>
+                <span>0</span>
+              </div>
+              <div class="mockup-card" style="opacity:0.6;">
+                <div>API Integration</div>
+                <div class="mockup-avatars">
+                  <span class="avatar-circle" style="background:#4b5563;">F</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Sign-In Panel Card (Exact Purple Glow Outline 1:1) -->
+    <section class="auth-panel" id="auth">
+      <div class="panel-card">
+        <!-- Dual Portal Tabs Switcher -->
+        <div class="portal-tabs" role="tablist" aria-label="Account scope selector">
+          <button type="button" class="portal-tab active" id="portalPersonalBtn" role="tab" aria-selected="true">
+            <span>Personal</span>
+            <span class="portal-tab-subtitle">Individual workspace</span>
+          </button>
+          <button type="button" class="portal-tab" id="portalOrgBtn" role="tab" aria-selected="false">
+            <span>Organization</span>
+            <span class="portal-tab-subtitle">Team & company scope</span>
           </button>
         </div>
-      </nav>
-    </header>
 
-    <main class="landing-shell">
-      <aside class="feature-sidebar">
-        <div class="sidebar-card">
-          <p class="eyebrow">Start here</p>
-          <h2>Explore the experience before you sign in.</h2>
-          <p class="sidebar-copy">Browse the core features, plan your workflow, and see how NexusWeave keeps work calm and organized.</p>
-          <div class="feature-list">
-            <a class="feature-item" href="#feature-productivity">
-              <strong>Calm planning</strong>
-              <span>Track milestones and keep work visible.</span>
-            </a>
-            <a class="feature-item" href="#feature-collab">
-              <strong>Focused collaboration</strong>
-              <span>Keep teams aligned without noisy meetings.</span>
-            </a>
-            <a class="feature-item" href="#feature-automation">
-              <strong>Smart automation</strong>
-              <span>Generate task suggestions instantly.</span>
-            </a>
-            <a class="feature-item" href="#feature-security">
-              <strong>Secure sessions</strong>
-              <span>Sign in with Google and keep a JWT-style session.</span>
-            </a>
-          </div>
+        <h2 id="panelTitle">Welcome Back</h2>
+        <p class="panel-card-subtitle" id="authSubtitle">Sign in to your account</p>
+        
+        <div id="formErrors" class="form-errors hidden" aria-live="polite"></div>
+
+        <!-- Role Selector for Organization Portal -->
+        <div class="role-selector hidden" id="roleSelector">
+          <button type="button" class="role-btn active" data-role="admin" id="roleAdminBtn">
+            <span>Admin</span>
+          </button>
+          <button type="button" class="role-btn" data-role="employee" id="roleEmployeeBtn">
+            <span>Employee</span>
+          </button>
         </div>
-        <div class="sidebar-card sidebar-highlight">
-          <h3>Why it feels premium</h3>
-          <ul>
-            <li>Clean multi-panel layout</li>
-            <li>Dark mode that stays readable</li>
-            <li>Google-style sign-in flow</li>
-          </ul>
+
+        <form id="loginForm">
+          <label class="field hidden" id="nameField">
+            <span>Full Name</span>
+            <input type="text" id="signupName" placeholder="Alex Morgan" autocomplete="name" />
+          </label>
+
+          <label class="field">
+            <span>Work Email</span>
+            <input type="email" id="email" placeholder="you@company.com" autocomplete="email" required />
+          </label>
+
+          <label class="field">
+            <span>Password</span>
+            <div class="password-input-wrapper">
+              <input type="password" id="password" placeholder="Enter your password" autocomplete="current-password" required />
+              <button type="button" class="toggle-password-btn" id="togglePasswordBtn" aria-label="Toggle password visibility">
+                <svg class="eye-icon eye-show" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                <svg class="eye-icon eye-hide hidden" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+              </button>
+            </div>
+          </label>
+
+          <!-- Admin Org Fields -->
+          <div id="adminOrgFields" class="org-fields hidden">
+            <label class="field">
+              <span>Organization Name</span>
+              <input type="text" id="orgName" placeholder="Acme Corporation" />
+            </label>
+            <label class="field">
+              <span>Organization Key <small>(secret)</small></span>
+              <input type="text" id="orgKey" placeholder="Enter a secret key for your team" />
+            </label>
+            <label class="field">
+              <span>Visibility</span>
+              <select id="orgVisibility">
+                <option value="public">Public — anyone can join</option>
+                <option value="private" selected>Private — key required to join</option>
+              </select>
+            </label>
+          </div>
+
+          <!-- Employee Org Fields -->
+          <div id="employeeOrgFields" class="org-fields hidden">
+            <label class="field">
+              <span>Select Organization</span>
+              <select id="orgSelect">
+                <option value="">Select an organization</option>
+              </select>
+            </label>
+            <label class="field hidden" id="employeeKeyField">
+              <span>Organization Key</span>
+              <input type="text" id="employeeOrgKey" placeholder="Enter the organization key" />
+            </label>
+          </div>
+
+          <button class="login-btn" type="submit">Sign In with Email</button>
+          
+          <div class="divider-row">OR</div>
+
+          <button class="google-btn" type="button" id="googleLoginBtn">
+            <svg width="18" height="18" viewBox="0 0 18 18">
+              <path fill="#4285F4" d="M17.64 9.2c0-.74-.06-1.28-.19-1.84H9v3.34h4.96c-.1.83-.64 2.08-1.84 2.92l2.84 2.2c1.7-1.57 2.68-3.88 2.68-6.62z"/>
+              <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.84-2.2c-.76.53-1.78.9-3.12.9-2.38 0-4.41-1.57-5.13-3.72L.97 13.06C2.45 16 5.48 18 9 18z"/>
+              <path fill="#FBBC05" d="M3.87 10.8c-.18-.53-.28-1.1-.28-1.8s.1-1.27.28-1.8L.97 4.94C.35 6.17 0 7.55 0 9s.35 2.83.97 4.06l2.9-2.26z"/>
+              <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0 5.48 0 2.45 2 0 4.94l2.9 2.26C3.59 5.05 5.62 3.58 9 3.58z"/>
+            </svg>
+            <span>Continue with Google</span>
+          </button>
+        </form>
+
+        <div class="switch-row">
+          <span id="switchText">Don't have an account?</span>
+          <a href="#" id="toggleMode">Sign up</a>
         </div>
-      </aside>
-
-      <section class="content-stack">
-        <section class="hero-copy">
-          <p class="eyebrow">Future of work, designed for calm focus</p>
-          <h1>Turn ambitious plans into a beautifully managed workflow.</h1>
-          <p class="subtitle">Bring your ideas, tasks, and deadlines into a workspace that feels calm, clear, and ready to ship.</p>
-          <div class="hero-actions">
-            <a class="primary-link" href="#auth">Start for free</a>
-            <a class="secondary-link" href="features.html">Explore features</a>
-          </div>
-          <div class="hero-highlights"></div>
-        </section>
-
-        <section class="auth-panel" id="auth">
-          <div class="panel-card">
-            <!-- HackerRank Style Dual Portal Switcher -->
-            <div class="portal-tabs" role="tablist" aria-label="Account scope selector">
-              <button type="button" class="portal-tab active" id="portalPersonalBtn" role="tab" aria-selected="true">
-                <span>👤 For Individuals</span>
-                <span class="portal-tab-subtitle">Personal tasks & Heatmap</span>
-              </button>
-              <button type="button" class="portal-tab" id="portalOrgBtn" role="tab" aria-selected="false">
-                <span>🏢 For Organizations</span>
-                <span class="portal-tab-subtitle">Teams & Company workspace</span>
-              </button>
-            </div>
-
-            <h2 id="panelTitle">Welcome back</h2>
-            <p id="authSubtitle">Log into your personal workspace</p>
-            <div id="formErrors" class="form-errors" aria-live="polite"></div>
-
-            <div class="role-selector hidden" id="roleSelector">
-              <button type="button" class="role-btn active" data-role="admin" id="roleAdminBtn">
-                <span class="role-icon">🛡️</span>
-                <span>Admin</span>
-              </button>
-              <button type="button" class="role-btn" data-role="employee" id="roleEmployeeBtn">
-                <span class="role-icon">👤</span>
-                <span>Employee</span>
-              </button>
-            </div>
-
-            <form id="loginForm">
-              <label class="field hidden" id="nameField">
-                <span>Full Name</span>
-                <input type="text" id="signupName" placeholder="John Doe" autocomplete="name" />
-              </label>
-              <label class="field">
-                <span>Email</span>
-                <input type="email" id="email" placeholder="you@example.com" autocomplete="email" />
-              </label>
-              <label class="field">
-                <span>Password</span>
-                <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" />
-              </label>
-
-              <div id="adminOrgFields" class="org-fields hidden">
-                <div class="org-fields-header">
-                  <span class="eyebrow">Organization Setup</span>
-                </div>
-                <label class="field">
-                  <span>Organization Name</span>
-                  <input type="text" id="orgName" placeholder="Acme Corporation" />
-                </label>
-                <label class="field">
-                  <span>Organization Key <small>(secret)</small></span>
-                  <input type="text" id="orgKey" placeholder="Enter a secret key for your org" />
-                </label>
-                <label class="field">
-                  <span>Visibility</span>
-                  <select id="orgVisibility">
-                    <option value="public">Public — anyone can join</option>
-                    <option value="private" selected>Private — key required to join</option>
-                  </select>
-                </label>
-              </div>
-
-              <div id="employeeOrgFields" class="org-fields hidden">
-                <div class="org-fields-header">
-                  <span class="eyebrow">Join Organization</span>
-                </div>
-                <label class="field">
-                  <span>Organization</span>
-                  <select id="orgSelect">
-                    <option value="">Select an organization</option>
-                  </select>
-                </label>
-                <label class="field hidden" id="employeeKeyField">
-                  <span>Organization Key</span>
-                  <input type="text" id="employeeOrgKey" placeholder="Enter the organization key" />
-                </label>
-              </div>
-
-              <button class="login-btn" type="submit">Login</button>
-              <button class="google-btn" type="button" id="googleLoginBtn">Continue with Google</button>
-            </form>
-            <div class="switch-row">
-              <span id="switchText">Don't have an account?</span>
-              <a href="#" id="toggleMode">Sign up</a>
-            </div>
-          </div>
-        </section>
-      </section>
-    </main>
-
-    <section class="info-section">
-      <article class="info-card" id="feature-productivity">
-        <h3>Smart planning</h3>
-        <p>Auto-suggest tasks and keep every milestone visible in a calm kanban board.</p>
-      </article>
-      <article class="info-card" id="feature-collab">
-        <h3>Focused collaboration</h3>
-        <p>Organize projects, assign priorities, and keep due dates in sight without clutter.</p>
-      </article>
-      <article class="info-card" id="feature-automation">
-        <h3>Fast onboarding</h3>
-        <p>Jump in with email or Google and get moving in minutes.</p>
-      </article>
-      <article class="info-card" id="feature-security">
-        <h3>Protected access</h3>
-        <p>Every sign-in creates a JWT-style session so the dashboard stays secure.</p>
-      </article>
+      </div>
     </section>
-  </div>
+  </main>
+
+  <!-- SECTION 2: FEATURES GRID -->
+  <section class="page-section" id="features">
+    <div class="section-header">
+      <div class="announcement-badge" style="margin-bottom:0.75rem;">Capabilities</div>
+      <h2>Engineered for productivity at scale</h2>
+      <p>A focused set of tools designed to help individuals and teams organize work with speed, clarity, and precision.</p>
+    </div>
+
+    <div class="features-grid">
+      <article class="feature-card" id="feature-productivity">
+        <div class="feature-icon-box">🤖</div>
+        <h3>AI Milestone Planning</h3>
+        <p>Generate structured task breakdowns and milestone timelines automatically when starting new projects.</p>
+      </article>
+
+      <article class="feature-card" id="feature-collab">
+        <div class="feature-icon-box">📋</div>
+        <h3>Kanban Sprint Boards</h3>
+        <p>Track progress cleanly across custom columns with drag-and-drop prioritization and label filtering.</p>
+      </article>
+
+      <article class="feature-card" id="feature-automation">
+        <div class="feature-icon-box">⏱️</div>
+        <h3>Pomodoro Focus Sessions</h3>
+        <p>Time-box deep work sessions with accurate timers that log completion metrics to your personal dashboard.</p>
+      </article>
+
+      <article class="feature-card" id="feature-security">
+        <div class="feature-icon-box">💬</div>
+        <h3>Real-Time Team Messaging</h3>
+        <p>Direct WebSocket channel communication with typing indicators, online status, and activity feeds.</p>
+      </article>
+
+      <article class="feature-card">
+        <div class="feature-icon-box">🛡️</div>
+        <h3>Role-Based Access Control</h3>
+        <p>Multi-tenant organization architecture separating Admin management rights from Employee execution views.</p>
+      </article>
+
+      <article class="feature-card">
+        <div class="feature-icon-box">📊</div>
+        <h3>Activity Heatmaps & Reports</h3>
+        <p>Visualize completion rates, team output trends, and milestone velocity over time.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- SECTION 3: ABOUT & METRICS -->
+  <section class="page-section" id="about">
+    <div class="section-header">
+      <div class="announcement-badge" style="margin-bottom:0.75rem;">About NexusWeave</div>
+      <h2>Built to make software development calm</h2>
+      <p>NexusWeave provides modern teams with a dependable, fast foundation for daily task execution.</p>
+    </div>
+
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-value">99.9%</div>
+        <div class="metric-label">Uptime Target</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value">&lt; 50ms</div>
+        <div class="metric-label">WebSocket Latency</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value">100%</div>
+        <div class="metric-label">Sanitized Data Pipelines</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value">25 Mins</div>
+        <div class="metric-label">Default Focus Sprint</div>
+      </div>
+    </div>
+
+    <div class="about-grid">
+      <div class="about-card">
+        <h3>Built for Focus</h3>
+        <p>Whether you're managing a personal task queue or leading a multi-member engineering team, NexusWeave keeps essential deliverables visible without cognitive overload.</p>
+      </div>
+      <div class="about-card">
+        <h3>Designed to Scale</h3>
+        <p>Start with simple task tracking and seamlessly transition into an organization-wide workspace with security keys, real-time channels, and role permissions.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer style="border-top: 1px solid rgba(255, 255, 255, 0.08); padding: 3rem 2rem; background: #07080c; color: var(--text-muted); font-size: 0.88rem;">
+    <div style="max-width:1280px; margin:0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1.5rem;">
+      <a class="brand" href="#hero">
+        <span class="brand-icon">N</span>
+        <span>NexusWeave</span>
+      </a>
+      <p>© 2026 NexusWeave Inc. All rights reserved.</p>
+      <div style="display: flex; gap: 1.5rem; font-weight: 500;">
+        <a href="#hero" style="color: var(--text-muted);">Home</a>
+        <a href="#features" style="color: var(--text-muted);">Features</a>
+        <a href="#about" style="color: var(--text-muted);">About</a>
+        <a href="#auth" style="color: var(--text-muted);">Sign In</a>
+      </div>
+    </div>
+  </footer>
 
   <script src="../scripts/shared/app-helpers.js"></script>
+  <script src="../scripts/shared/bg-animation.js"></script>
   <script src="../scripts/shared/theme.js"></script>
   <script src="../scripts/services/api-client.js"></script>
   <script src="../scripts/auth/auth.js"></script>

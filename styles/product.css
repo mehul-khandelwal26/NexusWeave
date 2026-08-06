@@ -1,9 +1,9 @@
 :root {
   --surface-strong: #f6f6f6;
-  --text: var(--ink);
-  --text-soft: var(--ink-soft);
-  --primary: var(--accent);
-  --primary-soft: rgba(91, 33, 182, 0.08);
+  --text: var(--text-main);
+  --text-soft: var(--text-muted);
+  --primary: var(--accent-primary);
+  --primary-soft: rgba(124, 58, 237, 0.08);
   --success: #059669;
   --success-soft: #ecfdf5;
   --warning: #d97706;
@@ -24,18 +24,10 @@
   --danger-soft: rgba(248, 113, 113, 0.16);
 }
 
-body {
-  background: linear-gradient(180deg, var(--surface-muted) 0%, #f8fafc 100%);
-}
-
-body[data-theme='dark'] {
-  background: linear-gradient(180deg, var(--surface-muted) 0%, #020617 100%);
-}
-
 .page-shell,
 .site-shell,
 .dashboard-shell {
-  width: min(1320px, calc(100% - 2rem));
+  width: min(1280px, calc(100% - 2.5rem));
 }
 
 .card,
@@ -49,12 +41,11 @@ body[data-theme='dark'] {
 .modal-card,
 .info-card,
 .sidebar-card,
-.panel-card,
 .welcome-card {
-  background: var(--surface);
+  background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  box-shadow: 0 16px 36px var(--shadow);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn,
@@ -75,8 +66,8 @@ body[data-theme='dark'] {
 
 .secondary-btn,
 .link-btn {
-  background: var(--surface);
-  color: var(--text);
+  background: var(--bg-surface);
+  color: var(--text-main);
 }
 
 .badge,
@@ -109,7 +100,7 @@ body[data-theme='dark'] {
 
 .status-todo {
   background: var(--surface-strong);
-  color: var(--text-soft);
+  color: var(--text-muted);
 }
 
 .status-progress {
@@ -123,7 +114,7 @@ body[data-theme='dark'] {
 }
 
 .surface-muted {
-  background: var(--surface-muted);
+  background: var(--bg-muted);
 }
 
 .input,
@@ -132,8 +123,8 @@ select,
 textarea {
   border: 1px solid var(--border);
   border-radius: 14px;
-  background: var(--surface);
-  color: var(--text);
+  background: var(--bg-surface);
+  color: var(--text-main);
   padding: 0.8rem 0.9rem;
 }
 
@@ -147,7 +138,7 @@ a:focus-visible {
 }
 
 .text-soft {
-  color: var(--text-soft);
+  color: var(--text-muted);
 }
 
 .hero-grid,

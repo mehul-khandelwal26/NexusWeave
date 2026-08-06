@@ -14,9 +14,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const authSubtitle = document.getElementById('authSubtitle');
   const formErrors = document.getElementById('formErrors');
   const googleLoginBtn = document.getElementById('googleLoginBtn');
-  const toggleModeBtn = document.getElementById('toggleMode');
-  const switchText = document.getElementById('switchText');
-  const submitBtn = document.querySelector('.login-btn');
+  const togglePasswordBtn = document.getElementById('togglePasswordBtn');
+  if (togglePasswordBtn && passwordInput) {
+    togglePasswordBtn.addEventListener('click', () => {
+      const isPassword = passwordInput.getAttribute('type') === 'password';
+      passwordInput.setAttribute('type', isPassword ? 'text' : 'password');
+      const eyeShow = togglePasswordBtn.querySelector('.eye-show');
+      const eyeHide = togglePasswordBtn.querySelector('.eye-hide');
+      if (eyeShow && eyeHide) {
+        eyeShow.classList.toggle('hidden', isPassword);
+        eyeHide.classList.toggle('hidden', !isPassword);
+      }
+    });
+  }
 
   // Dual Portal Tabs
   const portalPersonalBtn = document.getElementById('portalPersonalBtn');

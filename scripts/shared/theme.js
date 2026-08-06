@@ -3,7 +3,7 @@
   const toggleButtons = document.querySelectorAll('[data-theme-toggle]');
 
   function getStoredTheme() {
-    return localStorage.getItem(storageKey) || 'light';
+    return localStorage.getItem(storageKey) || 'dark';
   }
 
   function applyTheme(theme) {
