@@ -230,6 +230,25 @@
   box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);
 }
 
+.chat-contact-item .chat-unread-badge {
+  position: relative;
+  top: auto;
+  right: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.3rem;
+  height: 1.3rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: var(--danger, #ef4444);
+  color: white;
+  font-size: 0.72rem;
+  font-weight: 800;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);
+  flex-shrink: 0;
+}
+
 /* Chat Drawer Modal */
 .chat-drawer {
   position: fixed;
@@ -426,3 +445,47 @@
   background: var(--surface);
   color: inherit;
 }
+
+/* Connection Status Indicator */
+.chat-status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  margin-top: 0.1rem;
+}
+
+.chat-status-indicator::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ink-soft);
+}
+
+.chat-status-indicator.online {
+  color: #10b981;
+}
+
+.chat-status-indicator.online::before {
+  background: #10b981;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+}
+
+.chat-status-indicator.connecting {
+  color: #f59e0b;
+}
+
+.chat-status-indicator.connecting::before {
+  background: #f59e0b;
+}
+
+.chat-status-indicator.disconnected {
+  color: #ef4444;
+}
+
+.chat-status-indicator.disconnected::before {
+  background: #ef4444;
+}
+
