@@ -253,7 +253,7 @@
               </div>
             </section>
 
-            <!-- Admin Stats Grid (6 key metrics) -->
+            <!-- Admin Stats Grid -->
             <section class="stats-grid admin-stats-grid">
               <article class="stat-card glass-card">
                 <div class="stat-card-head">
@@ -262,15 +262,6 @@
                 </div>
                 <h3 id="adminTotalEmployees">0</h3>
                 <p>Total Employees</p>
-              </article>
-
-              <article class="stat-card glass-card">
-                <div class="stat-card-head">
-                  <span class="stat-icon">🟢</span>
-                  <span class="stat-live-dot">Live</span>
-                </div>
-                <h3 id="adminOnlineEmployees">0</h3>
-                <p>Online Employees</p>
               </article>
 
               <article class="stat-card glass-card">
@@ -303,31 +294,6 @@
                 </div>
                 <h3 id="adminAttendanceRate">0%</h3>
                 <p>Attendance Today</p>
-              </article>
-
-              <article class="stat-card glass-card">
-                <div class="stat-card-head">
-                  <span class="stat-icon">⏱️</span>
-                  <span class="stat-trend positive">W / M</span>
-                </div>
-                <h3 id="adminWorkingHours">0h</h3>
-                <p>Weekly / Monthly Hours</p>
-              </article>
-
-              <article class="stat-card glass-card">
-                <div class="stat-card-head">
-                  <span class="stat-icon">🎯</span>
-                </div>
-                <h3 id="adminProductivityScore">0%</h3>
-                <p>Productivity Score</p>
-              </article>
-
-              <article class="stat-card glass-card">
-                <div class="stat-card-head">
-                  <span class="stat-icon">⚡</span>
-                </div>
-                <h3 id="adminAvgCompletionTime">0d</h3>
-                <p>Avg Completion Time</p>
               </article>
             </section>
 
@@ -370,33 +336,24 @@
               <section class="panel glass-card">
                 <div class="panel-head">
                   <div>
-                    <h2>Today's Attendance & Presence</h2>
-                    <p class="text-soft">Real-time employee check-ins & presence</p>
+                    <h2>Mark Your Attendance</h2>
+                    <p class="text-soft">Simple daily check-in for today</p>
                   </div>
                 </div>
-                <div id="adminAttendanceList" class="attendance-admin-list">
-                  <div class="empty-inline">Loading attendance data…</div>
-                </div>
-              </section>
-
-              <!-- Attendance Calendar -->
-              <section class="panel glass-card">
-                <div class="panel-head">
+                <div class="simple-attendance-box">
                   <div>
-                    <h2>Attendance Calendar</h2>
-                    <p class="text-soft">Monthly organization check-in matrix</p>
+                    <strong id="adminSelfAttendanceStatus">Not marked today</strong>
+                    <p class="text-soft" id="adminSelfAttendanceMeta" style="margin:0.25rem 0 0;">Click below to mark yourself present.</p>
                   </div>
-                  <div style="display:flex;gap:0.4rem;font-size:0.75rem;">
-                    <span class="legend-pill" style="background:rgba(34,197,94,0.15);color:#16a34a;">🟢 Present</span>
-                    <span class="legend-pill" style="background:rgba(245,158,11,0.15);color:#d97706;">🟡 Late</span>
-                    <span class="legend-pill" style="background:rgba(239,68,68,0.15);color:#dc2626;">🔴 Absent</span>
-                  </div>
+                  <button type="button" id="adminMarkAttendanceBtn" class="primary-btn">Mark Present</button>
                 </div>
-                <div id="attendanceCalendarGrid" class="attendance-calendar-grid">
-                  <div class="empty-inline">Loading calendar…</div>
+                <div style="margin-top:1rem;">
+                  <h3 style="font-size:0.95rem;margin-bottom:0.6rem;">Team present today</h3>
+                  <div id="adminAttendanceList" class="attendance-admin-list">
+                    <div class="empty-inline">No attendance marked yet.</div>
+                  </div>
                 </div>
               </section>
-            </div>
 
               <section class="panel glass-card">
                 <div class="panel-head">
@@ -418,20 +375,19 @@
           ══════════════════════════════════════════ -->
           <div id="employeeDashboardView" class="hidden">
 
-            <!-- Employee Top Banner: Welcome + Profile Quick View -->
+            <!-- Employee Top Banner: Welcome + Simple Attendance -->
             <section class="welcome-card glass-panel employee-hero">
               <div class="employee-hero-left">
                 <h2 id="employeeWelcomeTitle">Welcome back</h2>
                 <p id="employeeOrgSub">Member of <span id="employeeOrgNameText">Workspace</span></p>
               </div>
 
-              <!-- Interactive Attendance Control Card -->
-              <div class="attendance-control-box glass-card">
-                <div class="attendance-status-indicator">
-                  <span id="clockStatusBadge" class="clock-badge badge-out">⚪ Clocked Out</span>
-                  <small id="clockTimeDisplay" class="text-soft">Not clocked in today</small>
+              <div class="simple-attendance-box glass-card">
+                <div>
+                  <strong id="empAttendanceStatus">Not marked today</strong>
+                  <p class="text-soft" id="empAttendanceMeta" style="margin:0.25rem 0 0;">Mark yourself present for today.</p>
                 </div>
-                <button type="button" id="toggleClockBtn" class="primary-btn clock-btn">Clock In Today</button>
+                <button type="button" id="empMarkAttendanceBtn" class="primary-btn">Mark Present</button>
               </div>
             </section>
 
@@ -463,10 +419,10 @@
 
               <article class="stat-card glass-card">
                 <div class="stat-card-head">
-                  <span class="stat-icon">⏱️</span>
+                  <span class="stat-icon">✅</span>
                 </div>
-                <h3 id="empHoursThisWeek">0h</h3>
-                <p>Work Hours This Week</p>
+                <h3 id="empAttendanceStat">No</h3>
+                <p>Attendance Today</p>
               </article>
             </section>
 

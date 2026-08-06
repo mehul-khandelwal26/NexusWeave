@@ -13,9 +13,6 @@
     return;
   }
 
-  const isAdmin = currentUser.role === 'admin';
-  const isPersonal = currentUser.role === 'personal' || (!isAdmin && currentUser.role !== 'employee');
-
   /* ── DOM Elements ── */
   const personalView = document.getElementById('personalDashboardView');
   const adminView = document.getElementById('adminDashboardView');
@@ -24,29 +21,23 @@
   const dashboardHeading = document.getElementById('dashboardHeading');
   const dashboardEyebrow = document.getElementById('dashboardEyebrow');
 
-  async function init() {
-    // Fetch data from backend
-    const data = await api.getUserData();
-    if (data) {
-      currentUser.tasks = data.tasks || [];
-      currentUser.projects = data.projects || [];
-    }
+  function applyRoleView(user) {
+    const roleIsAdmin = user.role === 'admin';
+    const roleIsPersonal = user.role === 'personal' || (!roleIsAdmin && user.role !== 'employee');
 
-    // Set topbar header info
     if (roleBadgeHeader) {
-      roleBadgeHeader.textContent = isPersonal ? '👤 Personal' : isAdmin ? '🛡️ Admin' : '👤 Employee';
-      roleBadgeHeader.className = `profile-role-badge role-${isPersonal ? 'personal' : isAdmin ? 'admin' : 'employee'}`;
+      roleBadgeHeader.textContent = roleIsPersonal ? '👤 Personal' : roleIsAdmin ? '🛡️ Admin' : '👤 Employee';
+      roleBadgeHeader.className = `profile-role-badge role-${roleIsPersonal ? 'personal' : roleIsAdmin ? 'admin' : 'employee'}`;
     }
-    if (dashboardEyebrow) dashboardEyebrow.textContent = isPersonal ? 'Personal Focus Hub' : isAdmin ? 'Admin Command Center' : 'Team Workspace';
-    if (dashboardHeading) dashboardHeading.textContent = isPersonal ? 'Personal Dashboard' : isAdmin ? 'Executive Dashboard' : 'Employee Dashboard';
+    if (dashboardEyebrow) dashboardEyebrow.textContent = roleIsPersonal ? 'Personal Focus Hub' : roleIsAdmin ? 'Admin Command Center' : 'Team Workspace';
+    if (dashboardHeading) dashboardHeading.textContent = roleIsPersonal ? 'Personal Dashboard' : roleIsAdmin ? 'Executive Dashboard' : 'Employee Dashboard';
 
-    // Toggle View
-    if (isPersonal) {
+    if (roleIsPersonal) {
       personalView?.classList.remove('hidden');
       adminView?.classList.add('hidden');
       employeeView?.classList.add('hidden');
       initPersonalDashboard();
-    } else if (isAdmin) {
+    } else if (roleIsAdmin) {
       personalView?.classList.add('hidden');
       adminView?.classList.remove('hidden');
       employeeView?.classList.add('hidden');
@@ -56,6 +47,41 @@
       adminView?.classList.add('hidden');
       employeeView?.classList.remove('hidden');
       initEmployeeDashboard();
+    }
+  }
+
+  // Show the correct dashboard immediately (views start hidden in HTML)
+  applyRoleView(currentUser);
+
+  async function init() {
+    try {
+      if (api.refreshMe) {
+        const refreshed = await api.refreshMe();
+        if (refreshed) {
+          // Preserve already-loaded tasks/projects while merging profile fields
+          refreshed.tasks = currentUser.tasks || refreshed.tasks || [];
+          refreshed.projects = currentUser.projects || refreshed.projects || [];
+          currentUser = refreshed;
+        }
+      }
+
+      const data = await api.getUserData();
+      if (data) {
+        currentUser.tasks = Array.isArray(data.tasks) ? data.tasks : [];
+        currentUser.projects = Array.isArray(data.projects) ? data.projects : [];
+        // Persist so board/tasks pages and refresh share the same data
+        if (api.saveUserData) {
+          api.saveUserData({
+            projects: currentUser.projects,
+            tasks: currentUser.tasks
+          });
+        }
+      }
+
+      applyRoleView(currentUser);
+    } catch (err) {
+      console.warn('Dashboard refresh failed; showing local session data.', err);
+      applyRoleView(currentUser);
     }
   }
 
@@ -77,86 +103,48 @@
       adminWelcomeTitle.textContent = `Welcome, ${currentUser.name || 'Admin'}${orgInfo ? ' — ' + orgInfo.name : ''}`;
     }
 
-    // Calculate Metrics
     const totalEmployees = orgUsers.length;
 
-    // Collect all tasks across all users in org
-    let allOrgTasks = [];
-    orgUsers.forEach(u => {
-      if (Array.isArray(u.tasks)) {
-        allOrgTasks.push(...u.tasks.map(t => ({ ...t, userEmail: u.email, userName: u.name })));
-      }
+    // Org tasks come from getUserData (admin JWT sees all org tasks) — org user API has no embedded tasks
+    const allOrgTasks = Array.isArray(currentUser.tasks) ? currentUser.tasks.slice() : [];
+
+    // Attach tasks to each member for leaderboard scoring
+    const usersWithTasks = orgUsers.map((u) => {
+      const email = (u.email || '').toLowerCase();
+      const memberTasks = allOrgTasks.filter((t) => {
+        const owner = (t.assignedUserEmail || t.userEmail || '').toLowerCase();
+        return owner === email;
+      });
+      return { ...u, tasks: memberTasks };
     });
 
     const tasksAssigned = allOrgTasks.length;
-    const completedTasks = allOrgTasks.filter(t => t.status === 'Done').length;
-    const pendingTasks = allOrgTasks.filter(t => t.status !== 'Done').length;
+    const completedTasks = allOrgTasks.filter((t) => t.status === 'Done').length;
+    const pendingTasks = allOrgTasks.filter((t) => t.status !== 'Done').length;
 
-    // Attendance data
-    const attendanceRecords = JSON.parse(localStorage.getItem('nw_attendance') || '{}');
-    const todayKey = new Date().toISOString().split('T')[0];
-    const todayAttendance = attendanceRecords[todayKey] || {};
+    const todayAttendance = getTodayAttendanceMap();
+    const presentCount = Object.keys(todayAttendance).filter((e) => {
+      const s = todayAttendance[e] && todayAttendance[e].status;
+      return s === 'in' || s === 'present';
+    }).length;
+    const attendanceRate = totalEmployees > 0 ? Math.round((presentCount / totalEmployees) * 100) : 0;
 
-    const clockedInEmails = Object.keys(todayAttendance).filter(e => todayAttendance[e].status === 'in');
-    const clockedInCount = clockedInEmails.length;
-    const attendanceRate = totalEmployees > 0 ? Math.round((clockedInCount / totalEmployees) * 100) : 0;
+    const adminTotalEl = document.getElementById('adminTotalEmployees');
+    const adminAssignedEl = document.getElementById('adminTasksAssigned');
+    const adminCompletedEl = document.getElementById('adminCompletedTasks');
+    const adminPendingEl = document.getElementById('adminPendingTasks');
+    const adminAttendanceEl = document.getElementById('adminAttendanceRate');
 
-    // Online employees from NexusTracker & presence
-    const tracker = window.NexusTracker;
-    let activePresenceCount = 0;
-    orgUsers.forEach(u => {
-      const presence = tracker ? tracker.getUserPresence(u.email) : { status: 'offline' };
-      if (presence.status === 'active' || presence.status === 'idle') activePresenceCount++;
-    });
-    const onlineCount = Math.max(clockedInCount, activePresenceCount, Math.min(totalEmployees, Math.ceil(totalEmployees * 0.75)));
+    if (adminTotalEl) adminTotalEl.textContent = totalEmployees;
+    if (adminAssignedEl) adminAssignedEl.textContent = tasksAssigned;
+    if (adminCompletedEl) adminCompletedEl.textContent = completedTasks;
+    if (adminPendingEl) adminPendingEl.textContent = pendingTasks;
+    if (adminAttendanceEl) adminAttendanceEl.textContent = `${attendanceRate}%`;
 
-    // Productivity Score & Avg Completion Time
-    let totalScore = 0;
-    orgUsers.forEach(u => {
-      totalScore += tracker ? tracker.calculateProductivityScore(u) : 85;
-    });
-    const avgScore = orgUsers.length ? Math.round(totalScore / orgUsers.length) : 85;
-
-    // Working Hours
-    let totalWeeklyHours = 0;
-    let totalMonthlyHours = 0;
-    orgUsers.forEach(u => {
-      totalWeeklyHours += tracker ? tracker.calculateWorkingHours(u.email, 'weekly') : 38;
-      totalMonthlyHours += tracker ? tracker.calculateWorkingHours(u.email, 'monthly') : 155;
-    });
-
-    const avgCompletionTimeStr = tracker ? tracker.calculateAvgCompletionTime(currentUser) : '1.8 days';
-
-    // Render Stats Elements
-    document.getElementById('adminTotalEmployees').textContent = totalEmployees;
-    document.getElementById('adminOnlineEmployees').textContent = onlineCount;
-    document.getElementById('adminTasksAssigned').textContent = tasksAssigned;
-    document.getElementById('adminCompletedTasks').textContent = completedTasks;
-    document.getElementById('adminPendingTasks').textContent = pendingTasks;
-    document.getElementById('adminAttendanceRate').textContent = `${attendanceRate}%`;
-
-    const adminWorkingHours = document.getElementById('adminWorkingHours');
-    if (adminWorkingHours) adminWorkingHours.textContent = `${totalWeeklyHours}h / ${totalMonthlyHours}h`;
-
-    const adminProductivityScore = document.getElementById('adminProductivityScore');
-    if (adminProductivityScore) adminProductivityScore.textContent = `${avgScore}%`;
-
-    const adminAvgCompletionTime = document.getElementById('adminAvgCompletionTime');
-    if (adminAvgCompletionTime) adminAvgCompletionTime.textContent = avgCompletionTimeStr;
-
-    // Render Productivity Graph (Chart.js)
     renderAdminProductivityChart(allOrgTasks);
-
-    // Render Employee Leaderboard
-    renderAdminLeaderboard(orgUsers);
-
-    // Render Today's Attendance List
-    renderAdminAttendanceList(orgUsers, todayAttendance);
-
-    // Render Attendance Calendar Matrix
-    renderAttendanceCalendarGrid(orgUsers);
-
-    // Render Org Activity Feed
+    renderAdminLeaderboard(usersWithTasks);
+    initSimpleAttendance('admin');
+    renderAdminAttendanceList(orgUsers, getTodayAttendanceMap());
     renderAdminActivityFeed(currentUser);
   }
 
@@ -218,6 +206,8 @@
             ticks: { color: textColor, font: { family: 'Inter', size: 12 } }
           },
           y: {
+            beginAtZero: true,
+            suggestedMax: Math.max(5, ...completedByDay, 1),
             grid: { color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' },
             ticks: { color: textColor, font: { family: 'Inter', size: 12 }, precision: 0 }
           }
@@ -271,86 +261,127 @@
     `).join('');
   }
 
+  function getTodayKey() {
+    return new Date().toISOString().split('T')[0];
+  }
+
+  function getTodayAttendanceMap() {
+    const records = JSON.parse(localStorage.getItem('nw_attendance') || '{}');
+    return records[getTodayKey()] || {};
+  }
+
+  function isMarkedPresent(email) {
+    const record = getTodayAttendanceMap()[email];
+    return Boolean(record && (record.status === 'in' || record.status === 'present'));
+  }
+
+  function markAttendancePresent(email, name) {
+    const key = getTodayKey();
+    const records = JSON.parse(localStorage.getItem('nw_attendance') || '{}');
+    if (!records[key]) records[key] = {};
+    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    records[key][email] = { status: 'present', time, markedAt: new Date().toISOString() };
+    localStorage.setItem('nw_attendance', JSON.stringify(records));
+
+    if (window.NexusNotify && email === currentUser.email) {
+      window.NexusNotify.add({ icon: '✅', text: 'Attendance marked for today.', type: 'success' });
+    }
+
+    return records[key][email];
+  }
+
+  function clearAttendance(email) {
+    const key = getTodayKey();
+    const records = JSON.parse(localStorage.getItem('nw_attendance') || '{}');
+    if (records[key] && records[key][email]) {
+      delete records[key][email];
+      localStorage.setItem('nw_attendance', JSON.stringify(records));
+    }
+  }
+
+  let attendanceBound = { admin: false, emp: false };
+
+  function initSimpleAttendance(role) {
+    const isAdminRole = role === 'admin';
+    const statusEl = document.getElementById(isAdminRole ? 'adminSelfAttendanceStatus' : 'empAttendanceStatus');
+    const metaEl = document.getElementById(isAdminRole ? 'adminSelfAttendanceMeta' : 'empAttendanceMeta');
+    const btn = document.getElementById(isAdminRole ? 'adminMarkAttendanceBtn' : 'empMarkAttendanceBtn');
+    const statEl = document.getElementById('empAttendanceStat');
+    if (!btn || !statusEl) return;
+
+    function refreshUI() {
+      const present = isMarkedPresent(currentUser.email);
+      const record = getTodayAttendanceMap()[currentUser.email];
+      if (present) {
+        statusEl.textContent = 'Present today';
+        if (metaEl) metaEl.textContent = `Marked at ${record.time || '—'}. Click to undo.`;
+        btn.textContent = 'Undo Attendance';
+        btn.className = 'ghost-btn';
+      } else {
+        statusEl.textContent = 'Not marked today';
+        if (metaEl) metaEl.textContent = 'Click below to mark yourself present.';
+        btn.textContent = 'Mark Present';
+        btn.className = 'primary-btn';
+      }
+      if (statEl && !isAdminRole) statEl.textContent = present ? 'Yes' : 'No';
+    }
+
+    if (!attendanceBound[role]) {
+      attendanceBound[role] = true;
+      btn.addEventListener('click', () => {
+        if (isMarkedPresent(currentUser.email)) {
+          clearAttendance(currentUser.email);
+        } else {
+          markAttendancePresent(currentUser.email, currentUser.name);
+        }
+        refreshUI();
+        if (isAdminRole) {
+          api.getAllUsersInOrg(currentUser.organizationId).then((users) => {
+            renderAdminAttendanceList(users || [], getTodayAttendanceMap());
+          }).catch(() => {
+            renderAdminAttendanceList([currentUser], getTodayAttendanceMap());
+          });
+        }
+      });
+    }
+
+    refreshUI();
+  }
+
   function renderAdminAttendanceList(users, todayAttendance) {
     const container = document.getElementById('adminAttendanceList');
     if (!container) return;
 
     if (!users.length) {
-      container.innerHTML = `<div class="empty-inline">No employees registered.</div>`;
+      container.innerHTML = `<div class="empty-inline">No team members found.</div>`;
       return;
     }
 
-    container.innerHTML = users.map(u => {
+    const presentUsers = users.filter((u) => {
       const record = todayAttendance[u.email];
-      const isPresent = record && record.status === 'in';
-      const timeStr = isPresent ? record.time : 'Not checked in';
+      return record && (record.status === 'in' || record.status === 'present');
+    });
 
-      const tracker = window.NexusTracker;
-      const presence = tracker ? tracker.getUserPresence(u.email) : { status: 'offline' };
-      const presenceTag = presence.status === 'active' ? '🟢 Active Now' : presence.status === 'idle' ? '🟡 Idle' : '⚪ Offline';
+    if (!presentUsers.length) {
+      container.innerHTML = `<div class="empty-inline">No attendance marked yet today.</div>`;
+      return;
+    }
 
+    container.innerHTML = presentUsers.map((u) => {
+      const record = todayAttendance[u.email];
       return `
         <div class="attendance-admin-item">
           <div style="display:flex;align-items:center;gap:0.6rem;">
-            <span style="font-size:0.9rem;">${isPresent ? '🟢' : '⚪'}</span>
+            <span style="font-size:0.9rem;">🟢</span>
             <div>
               <strong>${u.name || u.email}</strong>
-              <small style="display:block;color:var(--ink-soft);font-size:0.75rem;">${presenceTag}</small>
+              <small style="display:block;color:var(--ink-soft);font-size:0.75rem;">${u.email}</small>
             </div>
           </div>
-          <span class="attendance-time-tag">${timeStr}</span>
+          <span class="attendance-time-tag">${record.time || 'Present'}</span>
         </div>
       `;
     }).join('');
-  }
-
-  function renderAttendanceCalendarGrid(users) {
-    const container = document.getElementById('attendanceCalendarGrid');
-    if (!container) return;
-
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const now = new Date();
-    const currentMonthDays = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-
-    const headersHTML = days.map(d => `<div class="calendar-day-cell day-header">${d}</div>`).join('');
-
-    let cellsHTML = '';
-    const records = JSON.parse(localStorage.getItem('nw_attendance') || '{}');
-
-    for (let day = 1; day <= Math.min(28, currentMonthDays); day++) {
-      const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      const dayRecord = records[dateStr] || {};
-
-      let presentCount = 0;
-      let lateCount = 0;
-
-      users.forEach(u => {
-        if (dayRecord[u.email]?.status === 'in') {
-          if (dayRecord[u.email]?.isLate) lateCount++;
-          else presentCount++;
-        }
-      });
-
-      let statusClass = '';
-      if (day > now.getDate()) {
-        statusClass = '';
-      } else if (lateCount > 0) {
-        statusClass = 'status-late';
-      } else if (presentCount > 0) {
-        statusClass = 'status-present';
-      } else {
-        statusClass = 'status-absent';
-      }
-
-      cellsHTML += `
-        <div class="calendar-day-cell ${statusClass}">
-          <span>${day}</span>
-          ${statusClass ? `<span class="calendar-status-dot"></span>` : ''}
-        </div>
-      `;
-    }
-
-    container.innerHTML = headersHTML + cellsHTML;
   }
 
   function renderAdminActivityFeed(user) {
@@ -375,6 +406,7 @@
   ───────────────────────────────────────────── */
   let empDoughnutInstance = null;
   let empBarInstance = null;
+  let empNotifsBound = false;
 
   function initEmployeeDashboard() {
     const welcomeTitle = document.getElementById('employeeWelcomeTitle');
@@ -382,7 +414,6 @@
     const empProfileAvatar = document.getElementById('empProfileAvatar');
     const empProfileName = document.getElementById('empProfileName');
     const empProfileEmail = document.getElementById('empProfileEmail');
-    const empProfileRoleBadge = document.getElementById('empProfileRoleBadge');
 
     const orgInfo = currentUser.organizationId ? api.getOrganization(currentUser.organizationId) : null;
 
@@ -393,89 +424,42 @@
     if (empProfileName) empProfileName.textContent = currentUser.name || 'Employee';
     if (empProfileEmail) empProfileEmail.textContent = currentUser.email;
 
-    // Metrics
-    const userTasks = currentUser.tasks || [];
-    const assignedCount = userTasks.length;
-    const completedCount = userTasks.filter(t => t.status === 'Done').length;
+    const tasksForDash = Array.isArray(currentUser.tasks) ? currentUser.tasks : [];
 
-    // Deadlines count (due within 3 days or overdue)
+    const assignedCount = tasksForDash.length;
+    const completedCount = tasksForDash.filter(t => t.status === 'Done').length;
+
     const now = new Date();
-    const upcomingDeadlines = userTasks.filter(t => {
+    const upcomingDeadlines = tasksForDash.filter(t => {
       if (t.status === 'Done' || !t.dueDate) return false;
       const due = new Date(t.dueDate);
+      if (isNaN(due.getTime())) return false;
       const diffDays = (due - now) / (1000 * 60 * 60 * 24);
       return diffDays <= 3;
     }).length;
 
-    document.getElementById('empAssignedTasks').textContent = assignedCount;
-    document.getElementById('empCompletedTasks').textContent = completedCount;
-    document.getElementById('empUpcomingDeadlines').textContent = upcomingDeadlines;
+    const empAssignedEl = document.getElementById('empAssignedTasks');
+    const empCompletedEl = document.getElementById('empCompletedTasks');
+    const empDeadlinesEl = document.getElementById('empUpcomingDeadlines');
+    if (empAssignedEl) empAssignedEl.textContent = assignedCount;
+    if (empCompletedEl) empCompletedEl.textContent = completedCount;
+    if (empDeadlinesEl) empDeadlinesEl.textContent = upcomingDeadlines;
 
-    // Setup Attendance Clock-In Widget
-    initAttendanceWidget();
-
-    // Render Employee Charts (Chart.js)
-    renderEmployeeCharts(userTasks);
-
-    // Render Deadlines List
-    renderEmployeeDeadlines(userTasks);
-
-    // Render Notifications Feed
-    renderEmployeeNotifications();
-  }
-
-  function initAttendanceWidget() {
-    const clockStatusBadge = document.getElementById('clockStatusBadge');
-    const clockTimeDisplay = document.getElementById('clockTimeDisplay');
-    const toggleClockBtn = document.getElementById('toggleClockBtn');
-    const empHoursThisWeek = document.getElementById('empHoursThisWeek');
-
-    const tracker = window.NexusTracker;
-    const todayKey = new Date().toISOString().split('T')[0];
-    const records = JSON.parse(localStorage.getItem('nw_attendance') || '{}');
-    if (!records[todayKey]) records[todayKey] = {};
-
-    let userTodayRecord = records[todayKey][currentUser.email] || { status: 'out', checkInTime: null };
-
-    function updateClockUI() {
-      const isLate = userTodayRecord.isLate;
-
-      if (userTodayRecord.status === 'in') {
-        clockStatusBadge.textContent = isLate ? '🟡 Clocked In (Late)' : '🟢 Clocked In';
-        clockStatusBadge.className = `clock-badge ${isLate ? 'badge-private' : 'badge-in'}`;
-        clockTimeDisplay.textContent = `Since ${userTodayRecord.checkInTime || userTodayRecord.time}`;
-        toggleClockBtn.textContent = 'Clock Out';
-        toggleClockBtn.className = 'ghost-btn clock-btn danger-ghost';
-      } else {
-        clockStatusBadge.textContent = '⚪ Clocked Out';
-        clockStatusBadge.className = 'clock-badge badge-out';
-        clockTimeDisplay.textContent = 'Not clocked in today';
-        toggleClockBtn.textContent = 'Clock In Today';
-        toggleClockBtn.className = 'primary-btn clock-btn';
-      }
-
-      // Calculate weekly hours from tracker
-      const weeklyHours = tracker ? tracker.calculateWorkingHours(currentUser.email, 'weekly') : 38;
-      if (empHoursThisWeek) empHoursThisWeek.textContent = `${weeklyHours}h`;
-    }
-
-    toggleClockBtn.addEventListener('click', () => {
-      if (userTodayRecord.status === 'in') {
-        userTodayRecord = tracker ? tracker.markCheckOut(currentUser.email) : { status: 'out' };
-      } else {
-        userTodayRecord = tracker ? tracker.markCheckIn(currentUser.email) : { status: 'in' };
-      }
-      updateClockUI();
-    });
-
-    updateClockUI();
+    try { initSimpleAttendance('emp'); } catch (err) { console.warn('Attendance widget error:', err); }
+    try { renderEmployeeCharts(tasksForDash); } catch (err) { console.warn('Employee charts error:', err); }
+    try { renderEmployeeDeadlines(tasksForDash); } catch (err) { console.warn('Employee deadlines error:', err); }
+    try { renderEmployeeNotifications(tasksForDash); } catch (err) { console.warn('Employee notifications error:', err); }
   }
 
   function renderEmployeeCharts(tasks) {
+    if (typeof Chart === 'undefined') {
+      console.warn('Chart.js not loaded');
+      return;
+    }
+
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     const textColor = isDark ? '#94a3b8' : '#64748b';
 
-    // 1. Doughnut Chart (Task Statuses)
     const doughnutCtx = document.getElementById('empTaskDoughnutChart');
     if (doughnutCtx) {
       if (empDoughnutInstance) empDoughnutInstance.destroy();
@@ -483,14 +467,15 @@
       const done = tasks.filter(t => t.status === 'Done').length;
       const inProgress = tasks.filter(t => t.status === 'In Progress').length;
       const todo = tasks.filter(t => t.status === 'Todo' || !t.status).length;
+      const hasData = done + inProgress + todo > 0;
 
       empDoughnutInstance = new Chart(doughnutCtx, {
         type: 'doughnut',
         data: {
-          labels: ['Completed', 'In Progress', 'To Do'],
+          labels: hasData ? ['Completed', 'In Progress', 'To Do'] : ['No tasks yet'],
           datasets: [{
-            data: [done, inProgress, todo],
-            backgroundColor: ['#22c55e', '#3b82f6', '#94a3b8'],
+            data: hasData ? [done, inProgress, todo] : [1],
+            backgroundColor: hasData ? ['#22c55e', '#3b82f6', '#94a3b8'] : [isDark ? '#334155' : '#e2e8f0'],
             borderWidth: 0
           }]
         },
@@ -505,16 +490,17 @@
       });
     }
 
-    // 2. Bar Chart (Weekly Completions)
     const barCtx = document.getElementById('empWeeklyBarChart');
     if (barCtx) {
       if (empBarInstance) empBarInstance.destroy();
 
       const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
       const counts = [0, 0, 0, 0, 0, 0, 0];
+      const weekAgo = Date.now() - 7 * 86400000;
 
       tasks.filter(t => t.status === 'Done').forEach(t => {
-        const d = t.completedAt ? new Date(t.completedAt) : new Date();
+        const d = t.completedAt ? new Date(t.completedAt) : (t.updatedAt ? new Date(t.updatedAt) : null);
+        if (!d || isNaN(d.getTime()) || d.getTime() < weekAgo) return;
         const idx = (d.getDay() + 6) % 7;
         counts[idx] += 1;
       });
@@ -536,7 +522,12 @@
           plugins: { legend: { display: false } },
           scales: {
             x: { grid: { display: false }, ticks: { color: textColor, font: { size: 11 } } },
-            y: { grid: { color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }, ticks: { color: textColor, precision: 0 } }
+            y: {
+              beginAtZero: true,
+              suggestedMax: Math.max(3, ...counts),
+              grid: { color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' },
+              ticks: { color: textColor, precision: 0 }
+            }
           }
         }
       });
@@ -547,37 +538,54 @@
     const container = document.getElementById('empDeadlinesList');
     if (!container) return;
 
-    const pending = tasks.filter(t => t.status !== 'Done' && t.dueDate && !isNaN(new Date(t.dueDate).getTime())).sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
-
-    if (!pending.length) {
-      container.innerHTML = `<div class="empty-inline">No upcoming deadlines. You are all caught up! 🎉</div>`;
-      return;
-    }
-
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    container.innerHTML = pending.slice(0, 5).map(task => {
-      const due = new Date(task.dueDate);
-      due.setHours(0, 0, 0, 0);
+    const withDue = tasks.filter(t => t.status !== 'Done' && t.dueDate && !isNaN(new Date(t.dueDate).getTime()));
+    const highPriority = tasks.filter(t =>
+      t.status !== 'Done' &&
+      String(t.priority || '').toLowerCase() === 'high' &&
+      !withDue.includes(t)
+    );
 
-      const diffDays = Math.round((due - today) / (1000 * 60 * 60 * 24));
+    const pending = [
+      ...withDue.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate)),
+      ...highPriority
+    ];
+
+    if (!pending.length) {
+      container.innerHTML = `<div class="empty-inline">No upcoming deadlines or high-priority tasks. You are all caught up! 🎉</div>`;
+      return;
+    }
+
+    container.innerHTML = pending.slice(0, 8).map(task => {
       let urgencyClass = 'urgency-upcoming';
-      let urgencyText = `Due in ${diffDays} days`;
+      let urgencyText = task.priority ? `${task.priority} priority` : 'Priority';
 
-      if (diffDays < 0) {
-        urgencyClass = 'urgency-overdue';
-        urgencyText = `Overdue by ${Math.abs(diffDays)}d`;
-      } else if (diffDays === 0) {
-        urgencyClass = 'urgency-today';
-        urgencyText = 'Due Today';
+      if (task.dueDate) {
+        const due = new Date(task.dueDate);
+        due.setHours(0, 0, 0, 0);
+        const diffDays = Math.round((due - today) / (1000 * 60 * 60 * 24));
+        if (diffDays < 0) {
+          urgencyClass = 'urgency-overdue';
+          urgencyText = `Overdue by ${Math.abs(diffDays)}d`;
+        } else if (diffDays === 0) {
+          urgencyClass = 'urgency-today';
+          urgencyText = 'Due Today';
+        } else {
+          urgencyText = `Due in ${diffDays}d · ${task.priority || 'Medium'}`;
+        }
       }
+
+      const projectName = task.projectName
+        || (currentUser.projects || []).find(p => String(p.id || p._id) === String(task.projectId))?.name
+        || 'General Workspace';
 
       return `
         <div class="deadline-item">
           <div class="deadline-info">
             <strong>${task.title || 'Untitled Task'}</strong>
-            <small>${task.projectName || 'General Workspace'}</small>
+            <small>${projectName}</small>
           </div>
           <span class="urgency-badge ${urgencyClass}">${urgencyText}</span>
         </div>
@@ -585,23 +593,76 @@
     }).join('');
   }
 
-  function renderEmployeeNotifications() {
+  function buildEmployeeNotifications(tasks) {
+    const items = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const stored = (() => {
+      try {
+        return JSON.parse(localStorage.getItem(`nw_notifs_${currentUser.email}`) || '[]');
+      } catch (_) {
+        return [];
+      }
+    })();
+
+    stored.slice(0, 8).forEach((n) => {
+      items.push({
+        icon: n.icon || '🔔',
+        text: n.text,
+        time: n.timeStr || 'Recent'
+      });
+    });
+
+    tasks.forEach((t) => {
+      if (t.status === 'Done') return;
+      if (t.dueDate) {
+        const due = new Date(t.dueDate);
+        if (!isNaN(due.getTime())) {
+          due.setHours(0, 0, 0, 0);
+          const diffDays = Math.round((due - today) / 86400000);
+          if (diffDays < 0) {
+            items.push({ icon: '⚠️', text: `"${t.title}" is overdue by ${Math.abs(diffDays)} day(s).`, time: 'Deadline' });
+          } else if (diffDays <= 2) {
+            items.push({ icon: '⏰', text: `"${t.title}" is due ${diffDays === 0 ? 'today' : 'in ' + diffDays + ' day(s)'}.`, time: 'Upcoming' });
+          }
+        }
+      }
+      if (String(t.priority || '').toLowerCase() === 'high') {
+        items.push({ icon: '🔥', text: `High priority task: "${t.title}" needs attention.`, time: 'Priority' });
+      }
+    });
+
+    if (!items.length) {
+      items.push(
+        { icon: '📢', text: 'Welcome to your employee workspace portal.', time: 'Just now' },
+        { icon: '📌', text: 'Check your upcoming deadlines & task board.', time: 'Today' },
+        { icon: '🛡️', text: 'Organization policies and team sync are up to date.', time: 'Yesterday' }
+      );
+    }
+
+    // Dedupe by text
+    const seen = new Set();
+    return items.filter((n) => {
+      if (seen.has(n.text)) return false;
+      seen.add(n.text);
+      return true;
+    }).slice(0, 10);
+  }
+
+  function renderEmployeeNotifications(tasks = []) {
     const container = document.getElementById('empNotificationsList');
     const clearBtn = document.getElementById('clearNotifsBtn');
     if (!container) return;
 
-    const notifs = [
-      { icon: '📢', text: 'Welcome to your employee workspace portal.', time: 'Just now' },
-      { icon: '📌', text: 'Check your upcoming deadlines & task board.', time: 'Today' },
-      { icon: '🛡️', text: 'Organization policies and team sync updated.', time: 'Yesterday' }
-    ];
+    const notifs = buildEmployeeNotifications(tasks);
 
-    function renderNotifsList(items) {
-      if (!items.length) {
+    function renderNotifsList(list) {
+      if (!list.length) {
         container.innerHTML = `<div class="empty-inline">No notifications.</div>`;
         return;
       }
-      container.innerHTML = items.map(n => `
+      container.innerHTML = list.map(n => `
         <div class="notification-item">
           <span class="notification-icon">${n.icon}</span>
           <div class="notification-text">
@@ -612,8 +673,12 @@
       `).join('');
     }
 
-    if (clearBtn) {
+    if (clearBtn && !empNotifsBound) {
+      empNotifsBound = true;
       clearBtn.addEventListener('click', () => {
+        try {
+          localStorage.setItem(`nw_notifs_${currentUser.email}`, '[]');
+        } catch (_) { /* ignore */ }
         renderNotifsList([]);
       });
     }
@@ -667,19 +732,25 @@
     renderPersonalTasksList(userTasks);
   }
 
-  function renderPersonalHeatmap(tasks) {
+  async function renderPersonalHeatmap(tasks) {
     const grid = document.getElementById('personalHeatmapGrid');
     if (!grid) return;
 
-    // Create Map of completed dates: 'YYYY-MM-DD' -> count
-    const completionMap = {};
-    tasks.forEach(t => {
-      if (t.status === 'Done' && (t.completedAt || t.updatedAt || t.createdAt)) {
-        const dateString = t.completedAt || t.updatedAt || t.createdAt;
-        const dateKey = new Date(dateString).toISOString().split('T')[0];
-        completionMap[dateKey] = (completionMap[dateKey] || 0) + 1;
-      }
-    });
+    // Prefer server heatmap; fall back to local task dates
+    let completionMap = null;
+    if (api.fetchTaskHeatmap) {
+      completionMap = await api.fetchTaskHeatmap();
+    }
+    if (!completionMap) {
+      completionMap = {};
+      tasks.forEach(t => {
+        if (t.status === 'Done' && (t.completedAt || t.updatedAt || t.createdAt)) {
+          const dateString = t.completedAt || t.updatedAt || t.createdAt;
+          const dateKey = new Date(dateString).toISOString().split('T')[0];
+          completionMap[dateKey] = (completionMap[dateKey] || 0) + 1;
+        }
+      });
+    }
 
     // Build 52-week matrix (364 days leading up to today)
     const today = new Date();
@@ -820,8 +891,10 @@
     const freshUser = api.getMe();
     if (!freshUser) return;
     Object.assign(currentUser, freshUser);
-    if (isAdmin) initAdminDashboard();
-    else if (isPersonal) initPersonalDashboard();
+    const roleIsAdmin = currentUser.role === 'admin';
+    const roleIsPersonal = currentUser.role === 'personal' || (!roleIsAdmin && currentUser.role !== 'employee');
+    if (roleIsAdmin) initAdminDashboard();
+    else if (roleIsPersonal) initPersonalDashboard();
     else initEmployeeDashboard();
   }
 

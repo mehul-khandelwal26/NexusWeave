@@ -200,7 +200,7 @@
     }
 
     if (!contacts.length && currentUser.organizationId) {
-      contacts = api.getAllUsersInOrg(currentUser.organizationId);
+      contacts = await api.getAllUsersInOrg(currentUser.organizationId);
     }
 
     // Exclude current user

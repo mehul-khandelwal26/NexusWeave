@@ -123,6 +123,11 @@
           </div>
 
           <div class="filter-row" role="group" aria-label="Task filters">
+            <select id="taskOwnershipFilter" aria-label="Filter by ownership" class="hidden">
+              <option value="mine">My tasks</option>
+              <option value="team">Employee tasks</option>
+              <option value="all">All tasks</option>
+            </select>
             <select id="taskPriorityFilter" aria-label="Filter by priority">
               <option value="All">All priorities</option>
               <option value="High">High</option>

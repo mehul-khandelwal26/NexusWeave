@@ -20,6 +20,11 @@
   function getWsUrl(token) {
     const apiBase = (window.NexusAPI && window.NexusAPI.API_BASE) || 'http://localhost:4000/api';
     let wsHost = apiBase.replace(/^http/, 'ws').replace(/\/api$/, '');
+    // Relative /api → build from current page host
+    if (apiBase === '/api' || apiBase.startsWith('/')) {
+      const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      return `${proto}//${window.location.host}/ws?token=${encodeURIComponent(token)}`;
+    }
     return `${wsHost}/ws?token=${encodeURIComponent(token)}`;
   }
 
@@ -147,8 +152,8 @@
     },
 
     /* ── High level messaging actions ── */
-    sendMessage({ toUserId, toEmail, text }) {
-      const sentWS = this.emitRaw('send_message', { toUserId, toEmail, text });
+    sendMessage({ toUserId, toEmail, text, tempId }) {
+      const sentWS = this.emitRaw('send_message', { toUserId, toEmail, text, tempId });
       if (!sentWS) {
         console.warn('WebSocket not connected. Attempting reconnection...');
         this.connect();

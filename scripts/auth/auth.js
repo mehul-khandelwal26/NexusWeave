@@ -222,20 +222,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  googleLoginBtn?.addEventListener('click', async () => {
-    const mockEmail = `user.${Math.floor(Math.random() * 1000)}@gmail.com`;
-    const mockName = 'Google Developer';
-    const res = await api.signup({
-      name: mockName,
-      email: mockEmail,
-      password: 'google_oauth_pass',
-      role: 'personal'
-    });
-    if (res.success) {
-      window.location.href = 'dashboard.html';
-    } else {
-      showError(res.error || 'Google login failed');
-    }
+  googleLoginBtn?.addEventListener('click', (e) => {
+    e.preventDefault();
+    showError('Google sign-in is not available yet. Please use email and password.');
   });
 
   updateFormVisibility();

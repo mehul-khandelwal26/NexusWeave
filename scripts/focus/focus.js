@@ -64,7 +64,10 @@
 
       // Log Focus Activity (Mocked for now as we don't save activity to backend yet)
       const focusMins = customMinutesInput ? (parseInt(customMinutesInput.value, 10) || 25) : 25;
-      console.log(`Completed a ${focusMins}-minute Focus Sprint! ⏱️`);
+      // Focus session completed — logged via UI toast if present
+      if (typeof showNotif === 'function') {
+        showNotif(`Completed a ${focusMins}-minute Focus Sprint!`, 'success');
+      }
       window.dispatchEvent(new CustomEvent('nexus:tasks-updated'));
 
       clearTimerState();

@@ -778,7 +778,22 @@
   border: 1px solid var(--border);
 }
 
-/* ── Employee Hero & Clock-In Widget ── */
+.simple-attendance-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface-muted);
+  flex-wrap: wrap;
+}
+
+.simple-attendance-box .primary-btn {
+  white-space: nowrap;
+}
+
 .employee-hero {
   display: flex;
   align-items: center;

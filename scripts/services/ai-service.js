@@ -20,13 +20,13 @@
     },
 
     /* ── Compile Full Workspace Context ── */
-    getWorkspaceContext() {
+    async getWorkspaceContext() {
       const currentUser = api.getMe();
       if (!currentUser) return null;
 
       const isAdmin = currentUser.role === 'admin';
       const orgId = currentUser.organizationId;
-      const orgUsers = orgId ? api.getAllUsersInOrg(orgId) : [currentUser];
+      const orgUsers = orgId ? await api.getAllUsersInOrg(orgId) : [currentUser];
       const orgInfo = orgId ? api.getOrganization(orgId) : null;
 
       // Compile Employee Tasks & Metrics
@@ -75,7 +75,7 @@
 
     /* ── Main Query Analyzer / Prompt Handler ── */
     async ask(promptText) {
-      const ctx = this.getWorkspaceContext();
+      const ctx = await this.getWorkspaceContext();
       if (!ctx) return 'Error: Unable to fetch workspace context. Please log in.';
 
       const apiKey = this.getApiKey();

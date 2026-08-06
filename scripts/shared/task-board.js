@@ -37,6 +37,7 @@
     status: 'All',
     project: 'All',
     dueRange: 'All',
+    ownershipScope: 'mine',
     sortBy: 'updatedAt',
     sortDirection: 'desc',
     label: 'All',
@@ -70,6 +71,7 @@
   const projectFilter = document.getElementById('taskProjectFilter');
   const labelFilter = document.getElementById('taskLabelFilter');
   const dueFilter = document.getElementById('taskDueFilter');
+  const ownershipFilter = document.getElementById('taskOwnershipFilter');
   const filterChipsEl = document.getElementById('filterChips');
 
   // Pagination Elements
@@ -163,7 +165,14 @@
             labels: bt.labels || [],
             attachments: bt.attachments || [],
             version: bt.version || 1,
-            assigneeName: bt.assignedUser?.username || '',
+            assignedUserEmail: bt.assignedUserEmail || null,
+            isOrgTask: Boolean(bt.isOrgTask),
+            completedAt: bt.completedAt || null,
+            assigneeName: bt.assignedUserEmail
+              ? (bt.assignedUserEmail.split('@')[0])
+              : (bt.assignedUser?.username || ''),
+            userEmail: bt.userEmail || null,
+            organizationId: bt.organizationId || null,
             createdAt: bt.createdAt || new Date().toISOString(),
             updatedAt: bt.updatedAt || new Date().toISOString()
           }));
@@ -173,8 +182,8 @@
           state.currentUser.projects = data.projects;
         }
         
-        // Fetch org users if admin
-        if (state.currentUser.role === 'admin' && api.fetchBackendOrgUsers) {
+        // Fetch org users for assignee UI (admin + employee)
+        if (state.currentUser.organizationId && api.fetchBackendOrgUsers) {
            orgUsers = await api.fetchBackendOrgUsers();
         }
         
@@ -198,10 +207,50 @@
       localStorage.setItem(DB_KEY, JSON.stringify(users));
       database = users;
     }
+
+    // Also write into the shared notification bell store
+    try {
+      const key = `nw_notifs_${targetEmail}`;
+      const notifs = JSON.parse(localStorage.getItem(key) || '[]');
+      notifs.unshift({
+        id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        icon: icon || '🔔',
+        text,
+        type: 'info',
+        read: false,
+        timestamp: new Date().toISOString(),
+        timeStr: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      });
+      localStorage.setItem(key, JSON.stringify(notifs.slice(0, 30)));
+    } catch (_) { /* ignore */ }
+
+    if (window.NexusNotify && typeof window.NexusNotify.add === 'function' && targetEmail === sessionEmail) {
+      window.NexusNotify.add({ icon, text, type: 'info' });
+    }
+  }
+
+  function isMyTask(task) {
+    const email = (sessionEmail || '').toLowerCase();
+    const assigned = (task.assignedUserEmail || '').toLowerCase();
+    const owner = (task.userEmail || '').toLowerCase();
+    if (assigned) return assigned === email;
+    if (owner) return owner === email;
+    return true;
   }
 
   function getVisibleTasks() {
-    const taskList = Array.isArray(state.currentUser.tasks) ? state.currentUser.tasks : [];
+    let taskList = Array.isArray(state.currentUser.tasks) ? state.currentUser.tasks.slice() : [];
+
+    // Admin ownership scope: My tasks vs Employee tasks vs All
+    if (state.currentUser.role === 'admin') {
+      const scope = state.filters.ownershipScope || 'mine';
+      if (scope === 'mine') {
+        taskList = taskList.filter(isMyTask);
+      } else if (scope === 'team') {
+        taskList = taskList.filter((t) => !isMyTask(t));
+      }
+    }
+
     const filtered = helpers.filterTasks(taskList, state.filters, state.currentUser.projects || []);
     return sortTasks(filtered);
   }
@@ -227,6 +276,10 @@
     const chips = [];
 
     if (state.filters.query) chips.push({ label: `Search: ${state.filters.query}`, value: 'query' });
+    if (state.currentUser.role === 'admin' && state.filters.ownershipScope && state.filters.ownershipScope !== 'all') {
+      const scopeLabel = state.filters.ownershipScope === 'team' ? 'Employee tasks' : 'My tasks';
+      chips.push({ label: scopeLabel, value: 'ownershipScope' });
+    }
     if (state.filters.priority !== 'All') chips.push({ label: `Priority: ${state.filters.priority}`, value: 'priority' });
     if (state.filters.status !== 'All') chips.push({ label: `Status: ${state.filters.status}`, value: 'status' });
     if (state.filters.project !== 'All') chips.push({ label: `Project: ${getProjectName(state.filters.project)}`, value: 'project' });
@@ -243,8 +296,10 @@
     filterChipsEl.querySelectorAll('[data-clear-filter]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const key = btn.dataset.clearFilter;
-        state.filters[key] = 'All';
+        if (key === 'ownershipScope') state.filters.ownershipScope = 'all';
+        else state.filters[key] = 'All';
         if (key === 'query') state.filters.query = '';
+        if (ownershipFilter && key === 'ownershipScope') ownershipFilter.value = 'all';
         saveViewState();
         renderAll();
       });
@@ -260,6 +315,15 @@
     const labels = Array.from(new Set((state.currentUser.tasks || []).flatMap((t) => t.labels || [])));
     if (labelFilter) {
       labelFilter.innerHTML = `<option value="All">All labels</option>${labels.map((l) => `<option value="${l}" ${state.filters.label === l ? 'selected' : ''}>${l}</option>`).join('')}`;
+    }
+
+    if (ownershipFilter) {
+      if (state.currentUser.role === 'admin') {
+        ownershipFilter.classList.remove('hidden');
+        ownershipFilter.value = state.filters.ownershipScope || 'mine';
+      } else {
+        ownershipFilter.classList.add('hidden');
+      }
     }
 
     if (sortSelect) {
@@ -738,15 +802,20 @@
         _id: createdTask?._id,
         title,
         description,
-        assigneeName: createdTask?.assignedUser?.username || currentUser.name,
+        assigneeName: assignedUserEmail
+          ? assignedUserEmail.split('@')[0]
+          : (createdTask?.assignedUser?.username || currentUser.name),
+        assignedUserEmail: assignedUserEmail || createdTask?.assignedUserEmail || null,
+        isOrgTask: Boolean(isOrgTask || createdTask?.isOrgTask),
+        completedAt: (status === 'Done') ? (createdTask?.completedAt || new Date().toISOString()) : null,
         priority,
         dueDate,
         dueTime,
         reminderDate,
         reminderTime,
         status,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        createdAt: createdTask?.createdAt || new Date().toISOString(),
+        updatedAt: createdTask?.updatedAt || new Date().toISOString()
       };
 
       state.currentUser.tasks.unshift(newTask);
@@ -853,6 +922,15 @@
     });
   }
 
+  if (ownershipFilter) {
+    ownershipFilter.addEventListener('change', (e) => {
+      state.filters.ownershipScope = e.target.value || 'mine';
+      state.filters.currentPage = 1;
+      saveViewState();
+      renderAll();
+    });
+  }
+
   if (prevPageBtn) {
     prevPageBtn.addEventListener('click', () => {
       if (state.filters.currentPage > 1) {
@@ -892,43 +970,108 @@
   // Initial Run
   syncFromBackend().then(() => {
     renderAll();
+  }).catch((err) => {
+    console.warn('Task sync failed:', err);
+    renderAll();
   });
 
-  init();
+  /* ── Board Background ── */
+  (function setupBoardBackground() {
+    const changeBoardBgBtn = document.getElementById('changeBoardBgBtn');
+    const boardBgModal = document.getElementById('boardBgModal');
+    const closeBoardBgModal = document.getElementById('closeBoardBgModal');
+    if (!changeBoardBgBtn || !boardBgModal) return;
 
-  const changeBoardBgBtn = document.getElementById('changeBoardBgBtn');
-  const boardBgModal = document.getElementById('boardBgModal');
-  const closeBoardBgModal = document.getElementById('closeBoardBgModal');
+    const BOARD_BG_KEY = `nw_board_bg_${sessionEmail || 'guest'}`;
 
-  if (changeBoardBgBtn && boardBgModal) {
-    changeBoardBgBtn.addEventListener('click', () => {
+    function applyBoardBackground(bgVal) {
+      const boardEl = document.getElementById('boardColumns');
+      const panel = boardEl ? boardEl.closest('.page-panel') : document.querySelector('.page-panel');
+      const shell = document.querySelector('.app-shell');
+
+      if (!bgVal || bgVal === 'none') {
+        document.body.classList.remove('has-board-bg');
+        document.body.style.background = '';
+        document.body.style.backgroundImage = '';
+        document.body.style.backgroundSize = '';
+        document.body.style.backgroundPosition = '';
+        document.body.style.backgroundAttachment = '';
+        document.body.style.backgroundRepeat = '';
+        if (shell) shell.style.background = '';
+        if (panel) {
+          panel.style.background = '';
+          panel.style.backdropFilter = '';
+        }
+        if (boardEl) {
+          boardEl.classList.remove('has-bg');
+          boardEl.style.background = '';
+          boardEl.style.backgroundImage = '';
+        }
+        return;
+      }
+
+      document.body.classList.add('has-board-bg');
+      document.body.style.background = bgVal;
+      document.body.style.backgroundSize = 'cover';
+      document.body.style.backgroundPosition = 'center';
+      document.body.style.backgroundAttachment = 'fixed';
+      document.body.style.backgroundRepeat = 'no-repeat';
+
+      if (shell) shell.style.background = 'transparent';
+      if (panel) {
+        const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+        panel.style.background = dark ? 'rgba(17, 24, 39, 0.78)' : 'rgba(255, 255, 255, 0.78)';
+        panel.style.backdropFilter = 'blur(10px)';
+      }
+      if (boardEl) {
+        boardEl.classList.add('has-bg');
+        boardEl.style.background = bgVal;
+        boardEl.style.backgroundSize = 'cover';
+        boardEl.style.backgroundPosition = 'center';
+      }
+    }
+
+    function openBoardBgModal() {
+      boardBgModal.classList.remove('hidden');
       boardBgModal.classList.add('is-open');
+      boardBgModal.style.display = 'flex';
+    }
+
+    function closeBoardBgModalFn() {
+      boardBgModal.classList.add('hidden');
+      boardBgModal.classList.remove('is-open');
+      boardBgModal.style.display = '';
+    }
+
+    try {
+      const savedBg = localStorage.getItem(BOARD_BG_KEY);
+      if (savedBg) applyBoardBackground(savedBg);
+    } catch (_) { /* ignore */ }
+
+    changeBoardBgBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openBoardBgModal();
     });
 
     if (closeBoardBgModal) {
-      closeBoardBgModal.addEventListener('click', () => {
-        boardBgModal.classList.remove('is-open');
+      closeBoardBgModal.addEventListener('click', (e) => {
+        e.preventDefault();
+        closeBoardBgModalFn();
       });
     }
 
     boardBgModal.addEventListener('click', (e) => {
       if (e.target === boardBgModal) {
-        boardBgModal.classList.remove('is-open');
+        closeBoardBgModalFn();
+        return;
       }
-      
       const option = e.target.closest('.bg-option');
-      if (option) {
-        const bgVal = option.dataset.bgValue;
-        if (bgVal === 'none') {
-          document.body.style.background = 'none';
-        } else {
-          document.body.style.background = bgVal;
-          document.body.style.backgroundSize = 'cover';
-          document.body.style.backgroundPosition = 'center';
-          document.body.style.backgroundAttachment = 'fixed';
-        }
-        boardBgModal.classList.remove('is-open');
-      }
+      if (!option) return;
+      const bgVal = option.getAttribute('data-bg-value') || 'none';
+      applyBoardBackground(bgVal);
+      try { localStorage.setItem(BOARD_BG_KEY, bgVal); } catch (_) { /* ignore */ }
+      closeBoardBgModalFn();
     });
-  }
+  })();
 })();

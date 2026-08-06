@@ -1,4 +1,4 @@
-const jwt = require('jsonwebtoken');
+const { verifyToken } = require('../utils/jwt');
 
 module.exports = function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -8,7 +8,7 @@ module.exports = function requireAuth(req, res, next) {
 
   const token = authHeader.split(' ')[1];
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET || 'nexusweave_super_secret_jwt_key_2026');
+    const payload = verifyToken(token);
     req.user = payload;
     next();
   } catch (err) {

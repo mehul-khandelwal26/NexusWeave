@@ -19,27 +19,72 @@
     localStorage.setItem('nw_orgs', JSON.stringify(orgs));
   }
 
-  function createJwt(user) {
-    const payload = { sub: user.id || user._id, email: user.email, name: user.name || user.username, role: user.role || 'personal', orgId: user.organizationId || null, exp: Date.now() + 24 * 60 * 60 * 1000 };
-    return `eyJhbGciOiJIUzI1NiJ9.${btoa(JSON.stringify(payload))}.nexusweave_sig`;
+  function upsertLocalOrg(org) {
+    if (!org || !org.id) return;
+    const orgs = getOrgs();
+    const idx = orgs.findIndex((o) => o.id === org.id);
+    const normalized = {
+      id: org.id,
+      name: org.name,
+      orgKey: org.orgKey,
+      visibility: org.visibility || 'public',
+      adminEmail: (org.admins && org.admins[0]) || org.createdBy || null,
+      members: org.members || [],
+      admins: org.admins || [],
+      createdAt: org.createdAt || Date.now()
+    };
+    if (idx >= 0) orgs[idx] = { ...orgs[idx], ...normalized };
+    else orgs.push(normalized);
+    saveOrgs(orgs);
+    return normalized;
   }
 
-  function setSession(user, provider, token = null) {
-    const jwtToken = token || createJwt(user);
+  function setSession(user, provider, token) {
+    if (!token) {
+      throw new Error('Server authentication token is required');
+    }
     const sessions = JSON.parse(localStorage.getItem('nw_sessions')) || [];
     const sessionId = generateId('sess');
     sessions.push({
       id: sessionId,
       userId: user.id || user._id,
-      token: jwtToken,
+      token,
       provider,
       createdAt: Date.now(),
       expiresAt: Date.now() + 24 * 60 * 60 * 1000
     });
     localStorage.setItem('nw_sessions', JSON.stringify(sessions));
     localStorage.setItem('session', user.email);
-    localStorage.setItem('jwt', jwtToken);
+    localStorage.setItem('jwt', token);
     localStorage.setItem('authProvider', provider);
+  }
+
+  function applyAuthResponse(backendUser, token, provider) {
+    if (!token || !backendUser) return null;
+    const email = backendUser.email;
+    const users = getUsers();
+    const existing = users[email] || {};
+    const merged = {
+      ...existing,
+      id: backendUser.id || backendUser._id || existing.id,
+      name: backendUser.name || existing.name || email.split('@')[0],
+      email,
+      role: backendUser.role || existing.role || 'personal',
+      organizationId: backendUser.organizationId || null,
+      department: backendUser.department || existing.department || 'Engineering',
+      bio: backendUser.bio != null ? backendUser.bio : (existing.bio || ''),
+      skills: backendUser.skills || existing.skills || [],
+      theme: backendUser.theme || existing.theme || 'light',
+      provider: backendUser.provider || provider || 'email',
+      projects: existing.projects || [],
+      tasks: existing.tasks || [],
+      activity: existing.activity || []
+    };
+    delete merged.password;
+    users[email] = merged;
+    saveUsers(users);
+    setSession(merged, provider || 'email', token);
+    return sanitizeUser(merged);
   }
 
   function clearSession() {
@@ -48,7 +93,11 @@
     localStorage.removeItem('authProvider');
   }
 
-  const API_BASE = 'http://localhost:4000/api';
+  // Relative /api when served by Express on :4000; absolute URL for Live Server / other ports
+  const API_BASE = (typeof window !== 'undefined' && window.location && String(window.location.port) === '4000')
+    ? '/api'
+    : 'http://localhost:4000/api';
+
 
   async function tryBackendRequest(endpoint, options = {}) {
     const controller = new AbortController();
@@ -63,6 +112,14 @@
           ...(options.headers || {})
         }
       });
+      if (res.status === 401) {
+        const errData = await res.json().catch(() => ({}));
+        return {
+          _error: true,
+          status: 401,
+          message: (errData.errors && errData.errors[0]) || 'Session expired. Please log in again.'
+        };
+      }
       if (res.ok) {
         return await res.json();
       }
@@ -70,7 +127,6 @@
       const errorMsg = (errData.errors && errData.errors[0]) || errData.message || errData.error || 'Server error';
       return { _error: true, status: res.status, message: errorMsg };
     } catch (e) {
-      // Backend offline or timeout
       return null;
     } finally {
       clearTimeout(timeoutId);
@@ -78,9 +134,26 @@
   }
 
   function sanitizeUser(user) {
+    if (!user) return null;
     const sanitized = { ...user };
     delete sanitized.password;
     return sanitized;
+  }
+
+  function syncLocalUserFromServer(userData) {
+    if (!userData || !userData.email) return;
+    const users = getUsers();
+    const existing = users[userData.email] || {};
+    users[userData.email] = {
+      ...existing,
+      ...userData,
+      id: userData.id || userData._id || existing.id,
+      projects: existing.projects || [],
+      tasks: existing.tasks || [],
+      activity: existing.activity || []
+    };
+    delete users[userData.email].password;
+    saveUsers(users);
   }
 
   root.NexusAPI = {
@@ -89,7 +162,6 @@
     /* ── Auth ── */
     async signup({ name, email, password, role = 'personal', orgName, orgKey, orgVisibility, orgId }) {
       const username = name || email.split('@')[0];
-      // Try To-Do_Board backend register endpoint (/api/auth/register)
       const backendRes = await tryBackendRequest('/auth/register', {
         method: 'POST',
         body: JSON.stringify({ name: username, email, password, role, orgName, orgKey, orgVisibility, orgId })
@@ -98,57 +170,33 @@
       if (!backendRes) {
         return { success: false, error: 'Backend offline. Please try again later.' };
       }
-
       if (backendRes._error) {
         return { success: false, error: backendRes.message || 'Failed to sign up.' };
       }
 
       const token = backendRes.token;
       const userData = backendRes.user;
-      const backendOrgId = userData.organizationId;
-
-      if (role === 'admin' && orgName) {
-        const orgs = getOrgs();
-        // Check if we need to mirror it locally
-        if (!orgs.find(o => o.id === backendOrgId)) {
-          const newOrg = {
-            id: backendOrgId,
-            name: orgName,
-            orgKey: orgKey || Math.random().toString(36).substr(2, 6),
-            visibility: orgVisibility || 'private',
-            adminEmail: email,
-            members: [email],
-            createdAt: Date.now()
-          };
-          orgs.push(newOrg);
-          saveOrgs(orgs);
-        }
+      if (!token) {
+        return { success: false, error: 'Signup succeeded but no auth token was returned.' };
       }
 
-      const users = getUsers();
-      const newUser = {
-        id: userData.id,
-        name: userData.name || username,
-        email,
-        password,
-        role: userData.role || role,
-        organizationId: backendOrgId || null,
-        theme: 'light',
-        projects: [],
-        tasks: [],
-        activity: [],
-        createdAt: Date.now()
-      };
+      if (role === 'admin' && orgName && userData.organizationId) {
+        upsertLocalOrg({
+          id: userData.organizationId,
+          name: orgName,
+          orgKey: orgKey || '',
+          visibility: orgVisibility || 'public',
+          createdBy: email,
+          admins: [email],
+          members: [email]
+        });
+      }
 
-      users[email] = newUser;
-      saveUsers(users);
-      setSession(newUser, 'email', token);
-
-      return { success: true, token: localStorage.getItem('jwt'), user: sanitizeUser(newUser) };
+      const user = applyAuthResponse(userData, token, 'email');
+      return { success: true, token, user };
     },
 
     async login({ email, password, role }) {
-      // Try To-Do_Board backend login endpoint (/api/auth/login)
       const backendRes = await tryBackendRequest('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, password, role })
@@ -157,43 +205,18 @@
       if (!backendRes) {
         return { success: false, error: 'Backend offline. Please try again later.' };
       }
-
       if (backendRes._error) {
         return { success: false, error: backendRes.message || 'Invalid email or password.' };
       }
 
       const token = backendRes.token;
       const userData = backendRes.user;
-
-      const users = getUsers();
-      let user = users[email];
-
-      if (!user) {
-        // Create local record if logged in from backend
-        user = {
-          id: userData.id,
-          name: userData.name || email.split('@')[0],
-          email: userData.email,
-          password,
-          role: userData.role || role || 'personal',
-          organizationId: userData.organizationId || null,
-          projects: [],
-          tasks: [],
-          activity: []
-        };
-      } else {
-        // Sync local record
-        user.id = userData.id;
-        user.name = userData.name || user.name;
-        user.role = userData.role || user.role;
-        user.organizationId = userData.organizationId || null;
+      if (!token) {
+        return { success: false, error: 'Login succeeded but no auth token was returned.' };
       }
-      
-      users[email] = user;
-      saveUsers(users);
 
-      setSession(user, 'email', token);
-      return { success: true, token: localStorage.getItem('jwt'), user: sanitizeUser(user) };
+      const user = applyAuthResponse(userData, token, 'email');
+      return { success: true, token, user };
     },
 
     async logout() {
@@ -201,7 +224,7 @@
       return { success: true };
     },
 
-    getMe() {
+    getMeSync() {
       const email = localStorage.getItem('session');
       const token = localStorage.getItem('jwt');
       if (!email || !token) return null;
@@ -209,7 +232,14 @@
       const users = getUsers();
       const user = users[email];
       if (!user) {
-        return { email, name: email.split('@')[0], role: 'personal', projects: [], tasks: [], activity: [] };
+        return {
+          email,
+          name: email.split('@')[0],
+          role: 'personal',
+          projects: [],
+          tasks: [],
+          activity: []
+        };
       }
 
       const sanitized = sanitizeUser(user);
@@ -217,20 +247,72 @@
       return sanitized;
     },
 
+    getMe() {
+      return this.getMeSync();
+    },
+
+    /** Async: refresh profile + JWT from server */
+    async refreshMe() {
+      const email = localStorage.getItem('session');
+      const token = localStorage.getItem('jwt');
+      if (!email || !token) return null;
+
+      const res = await tryBackendRequest('/auth/me', { method: 'GET' });
+      if (res && !res._error && res.user) {
+        if (res.token) {
+          localStorage.setItem('jwt', res.token);
+        }
+        const user = applyAuthResponse(res.user, res.token || token, localStorage.getItem('authProvider') || 'email');
+        if (user && user.organizationId) {
+          try {
+            await this.fetchOrganization(user.organizationId);
+          } catch (_) { /* optional cache warm */ }
+        }
+        return user;
+      }
+
+      if (res && res.status === 401) {
+        clearSession();
+        return null;
+      }
+
+      return this.getMeSync();
+    },
+
+    async updateProfile(updates) {
+      const res = await tryBackendRequest('/auth/me', {
+        method: 'PATCH',
+        body: JSON.stringify(updates)
+      });
+      if (!res) return { success: false, error: 'Backend offline.' };
+      if (res._error) return { success: false, error: res.message || 'Failed to update profile.' };
+      const token = res.token || localStorage.getItem('jwt');
+      const user = applyAuthResponse(res.user, token, localStorage.getItem('authProvider') || 'email');
+      return { success: true, user };
+    },
+
     isAuthenticated() {
-      return this.getMe() !== null;
+      return Boolean(localStorage.getItem('session') && localStorage.getItem('jwt'));
     },
 
     getRole() {
-      const user = this.getMe();
+      const user = this.getMeSync();
       return user ? user.role : null;
     },
 
-    /* ── Backend API Direct Task Integration ── */
+    /* ── Tasks ── */
     async fetchBackendTasks() {
       const res = await tryBackendRequest('/tasks', { method: 'GET' });
       if (res && !res._error && res.tasks && Array.isArray(res.tasks)) {
         return res.tasks;
+      }
+      return null;
+    },
+
+    async fetchTaskHeatmap() {
+      const res = await tryBackendRequest('/tasks/heatmap', { method: 'GET' });
+      if (res && !res._error && res.completionMap) {
+        return res.completionMap;
       }
       return null;
     },
@@ -281,7 +363,7 @@
       return false;
     },
 
-    /* ── Backend API Direct Project Integration ── */
+    /* ── Projects ── */
     async fetchBackendProjects() {
       const res = await tryBackendRequest('/projects', { method: 'GET' });
       if (res && !res._error && res.projects) {
@@ -301,7 +383,23 @@
       return null;
     },
 
-    /* ── Backend API Direct Organization Integration ── */
+    async updateBackendProject(id, projectData) {
+      const res = await tryBackendRequest(`/projects/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(projectData)
+      });
+      if (res && !res._error && res.project) {
+        return res.project;
+      }
+      return null;
+    },
+
+    async deleteBackendProject(id) {
+      const res = await tryBackendRequest(`/projects/${id}`, { method: 'DELETE' });
+      if (res && !res._error) return true;
+      return false;
+    },
+
     async fetchBackendOrgUsers() {
       const res = await tryBackendRequest('/orgs/users', { method: 'GET' });
       if (res && !res._error && res.users) {
@@ -310,23 +408,21 @@
       return [];
     },
 
-    /* ── Fetch Combined Data ── */
     async getUserData() {
       const email = localStorage.getItem('session');
       if (!email) return null;
-      
+
       const [tasksRes, projectsRes] = await Promise.all([
         tryBackendRequest('/tasks', { method: 'GET' }),
         tryBackendRequest('/projects', { method: 'GET' })
       ]);
-      
+
       const tasks = (tasksRes && !tasksRes._error && tasksRes.tasks) ? tasksRes.tasks : [];
       const projects = (projectsRes && !projectsRes._error && projectsRes.projects) ? projectsRes.projects : [];
-      
-      // Map _id to id for frontend compatibility
-      tasks.forEach(t => t.id = t._id);
-      projects.forEach(p => p.id = p._id);
-      
+
+      tasks.forEach((t) => { t.id = t._id || t.id; });
+      projects.forEach((p) => { p.id = p._id || p.id; });
+
       return { projects, tasks, activity: [] };
     },
 
@@ -360,10 +456,20 @@
       return [];
     },
 
+    async fetchOrganization(orgId) {
+      if (!orgId) return null;
+      const res = await tryBackendRequest(`/orgs/${orgId}`, { method: 'GET' });
+      if (res && !res._error && res.org) {
+        upsertLocalOrg(res.org);
+        return res.org;
+      }
+      return this.getOrgFull(orgId);
+    },
+
     getOrganization(orgId) {
       if (!orgId) return null;
       const orgs = getOrgs();
-      const org = orgs.find(o => o.id === orgId);
+      const org = orgs.find((o) => o.id === orgId);
       if (!org) return null;
       return { id: org.id, name: org.name, visibility: org.visibility };
     },
@@ -371,7 +477,7 @@
     getOrgFull(orgId) {
       if (!orgId) return null;
       const orgs = getOrgs();
-      return orgs.find(o => o.id === orgId) || null;
+      return orgs.find((o) => o.id === orgId) || null;
     },
 
     async getAllUsersInOrg(orgId) {
@@ -386,8 +492,8 @@
       const orgs = await this.getPublicOrganizations();
       const q = (query || '').toLowerCase().trim();
       return orgs
-        .filter(o => !q || o.name.toLowerCase().includes(q))
-        .map(o => ({ id: o.id, name: o.name, visibility: o.visibility, memberCount: o.memberCount || 0 }));
+        .filter((o) => !q || o.name.toLowerCase().includes(q))
+        .map((o) => ({ id: o.id, name: o.name, visibility: o.visibility, memberCount: o.memberCount || 0 }));
     },
 
     async joinOrganization({ orgId, orgKey }) {
@@ -396,13 +502,11 @@
         body: JSON.stringify({ orgId, orgKey })
       });
       if (res && !res._error) {
-        const users = getUsers();
-        const email = localStorage.getItem('session');
-        if (users[email]) {
-          users[email].organizationId = orgId;
-          users[email].role = 'employee';
-          saveUsers(users);
+        if (res.token && res.user) {
+          applyAuthResponse(res.user, res.token, localStorage.getItem('authProvider') || 'email');
         }
+        if (res.org) upsertLocalOrg(res.org);
+        else if (orgId) await this.fetchOrganization(orgId);
         return { success: true, orgName: res.orgName };
       }
       return { success: false, error: res ? res.message : 'Failed to join organization' };
@@ -411,12 +515,17 @@
     async leaveOrganization() {
       const res = await tryBackendRequest('/orgs/leave', { method: 'POST' });
       if (res && !res._error) {
-        const users = getUsers();
-        const email = localStorage.getItem('session');
-        if (users[email]) {
-          users[email].organizationId = null;
-          users[email].role = 'personal';
-          saveUsers(users);
+        if (res.token && res.user) {
+          applyAuthResponse(res.user, res.token, localStorage.getItem('authProvider') || 'email');
+        } else {
+          const users = getUsers();
+          const email = localStorage.getItem('session');
+          if (users[email]) {
+            users[email].organizationId = null;
+            users[email].role = 'personal';
+            delete users[email].password;
+            saveUsers(users);
+          }
         }
         return { success: true };
       }
@@ -425,7 +534,11 @@
 
     async removeMemberFromOrg(orgId, emailToRemove) {
       const res = await tryBackendRequest(`/orgs/${orgId}/members/${encodeURIComponent(emailToRemove)}`, { method: 'DELETE' });
-      if (res && !res._error) return { success: true };
+      if (res && !res._error) {
+        if (res.token && res.user) applyAuthResponse(res.user, res.token, localStorage.getItem('authProvider') || 'email');
+        await this.fetchOrganization(orgId);
+        return { success: true };
+      }
       return { success: false, error: res ? res.message : 'Failed to remove member' };
     },
 
@@ -434,13 +547,27 @@
         method: 'POST',
         body: JSON.stringify({ emailToPromote })
       });
-      if (res && !res._error) return { success: true };
+      if (res && !res._error) {
+        if (res.token && res.user) applyAuthResponse(res.user, res.token, localStorage.getItem('authProvider') || 'email');
+        await this.fetchOrganization(orgId);
+        return { success: true };
+      }
       return { success: false, error: res ? res.message : 'Failed to promote member' };
     },
 
     async regenerateOrgKey(orgId) {
       const res = await tryBackendRequest(`/orgs/${orgId}/regen-key`, { method: 'POST' });
-      if (res && !res._error && res.newKey) return { success: true, newKey: res.newKey };
+      if (res && !res._error && res.newKey) {
+        if (res.org) upsertLocalOrg(res.org);
+        else {
+          const local = this.getOrgFull(orgId);
+          if (local) {
+            local.orgKey = res.newKey;
+            upsertLocalOrg(local);
+          }
+        }
+        return { success: true, newKey: res.newKey };
+      }
       return { success: false, error: res ? res.message : 'Failed to regenerate key' };
     },
 
@@ -449,7 +576,10 @@
         method: 'PATCH',
         body: JSON.stringify({ name, visibility })
       });
-      if (res && !res._error) return { success: true };
+      if (res && !res._error) {
+        if (res.org) upsertLocalOrg(res.org);
+        return { success: true };
+      }
       return { success: false, error: res ? res.message : 'Failed to update settings' };
     },
 
@@ -478,4 +608,7 @@
       return { total: 0, bySender: {} };
     }
   };
+
+  // Backward-compatible: many pages call getMe() expecting sync. Keep sync alias via getMeSync
+  // but prefer async. Pages that need auth will be updated to await getMe().
 })(window);

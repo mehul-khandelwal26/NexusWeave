@@ -1,11 +1,22 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
+
 const http = require('http');
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
-const jwt = require('jsonwebtoken');
 const WebSocket = require('ws');
-const path = require('path');
+
+const { getJwtSecret, verifyToken } = require('./utils/jwt');
+
+// Fail fast if JWT_SECRET is missing
+try {
+  getJwtSecret();
+} catch (err) {
+  console.error('❌', err.message);
+  console.error('Set JWT_SECRET in backend/.env before starting the server.');
+  process.exit(1);
+}
 
 const authRoutes = require('./routes/auth');
 const orgRoutes = require('./routes/orgs');
@@ -18,25 +29,18 @@ const Message = require('./models/Message');
 
 const app = express();
 const server = http.createServer(app);
+const rootDir = path.join(__dirname, '..');
 
 app.use(cors({ origin: process.env.CLIENT_ORIGIN || '*' }));
 app.use(express.json());
 
-// Routes
+// API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/orgs', orgRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/messages', messageRoutes);
 
-// Serve Static Frontend Files
-app.use(express.static(path.join(__dirname, '../')));
-
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../pages/index.html'));
-});
-
-// Health Check
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'online',
@@ -47,6 +51,32 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Block secrets / backend source before any static serving
+app.use((req, res, next) => {
+  const p = req.path.toLowerCase();
+  if (
+    p.startsWith('/backend') ||
+    p.includes('/.env') ||
+    p.endsWith('.env') ||
+    p.includes('node_modules')
+  ) {
+    return res.status(404).json({ errors: ['Not found.'] });
+  }
+  next();
+});
+
+// Serve frontend from repo root (preserves original asset + page URLs)
+app.use(express.static(rootDir));
+
+app.get('/', (_req, res) => {
+  res.sendFile(path.join(rootDir, 'pages', 'index.html'));
+});
+
+// Unknown API routes
+app.use('/api', (_req, res) => {
+  res.status(404).json({ errors: ['API endpoint not found.'] });
+});
+
 // Global error handler
 app.use((err, req, res, _next) => {
   console.error('Unhandled error:', err.message);
@@ -55,7 +85,7 @@ app.use((err, req, res, _next) => {
 
 // --- WebSocket Setup ---
 const wss = new WebSocket.Server({ server, path: '/ws' });
-const userSockets = new Map(); // userId -> Set of WS connections
+const userSockets = new Map();
 
 function sendToUser(userId, data) {
   const userSet = userSockets.get(userId.toString());
@@ -80,7 +110,7 @@ wss.on('connection', async (ws, req) => {
 
   let userPayload;
   try {
-    userPayload = jwt.verify(token, process.env.JWT_SECRET || 'nexusweave_super_secret_jwt_key_2026');
+    userPayload = verifyToken(token);
   } catch (err) {
     ws.close(4002, 'Invalid or expired token');
     return;
@@ -88,6 +118,12 @@ wss.on('connection', async (ws, req) => {
 
   const userId = userPayload.sub;
   const userEmail = userPayload.email;
+
+  const existingUser = await User.findById(userId);
+  if (!existingUser) {
+    ws.close(4003, 'User not found');
+    return;
+  }
 
   ws.userId = userId;
   ws.userEmail = userEmail;
@@ -105,7 +141,7 @@ wss.on('connection', async (ws, req) => {
       const { type, payload } = data;
 
       if (type === 'send_message') {
-        const { toUserId, toEmail, text } = payload || {};
+        const { toUserId, toEmail, text, tempId } = payload || {};
         if (!text || !text.trim()) return;
 
         let targetUser = null;
@@ -131,14 +167,12 @@ wss.on('connection', async (ws, req) => {
         const safeMsg = newMsg.toSafeObject();
         safeMsg.fromEmail = userEmail;
         safeMsg.toEmail = targetUser.email;
-        if (payload && payload.tempId) {
-          safeMsg.tempId = payload.tempId;
+        if (tempId) {
+          safeMsg.tempId = tempId;
         }
 
-        // Send to receiver & sender
         sendToUser(targetUser._id.toString(), { type: 'new_message', payload: safeMsg });
         sendToUser(userId, { type: 'new_message', payload: safeMsg });
-
       } else if (type === 'typing') {
         const { toUserId, toEmail, isTyping } = payload || {};
         let targetUser = null;
@@ -155,7 +189,6 @@ wss.on('connection', async (ws, req) => {
             payload: { fromUserId: userId, fromEmail: userEmail, isTyping: Boolean(isTyping) }
           });
         }
-
       } else if (type === 'mark_read') {
         const { fromUserId, fromEmail } = payload || {};
         let senderUser = null;
@@ -204,7 +237,8 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/nexusw
 mongoose
   .connect(MONGODB_URI)
   .then(() => {
-    console.log('✅ Connected to MongoDB Atlas Database');
+    const isAtlas = /mongodb\.net|atlas/i.test(MONGODB_URI);
+    console.log(isAtlas ? '✅ Connected to MongoDB Atlas' : '✅ Connected to MongoDB');
     server.listen(PORT, () => {
       console.log(`🚀 NexusWeave Backend Server running on http://localhost:${PORT}`);
       console.log(`📡 WebSocket server initialized on ws://localhost:${PORT}/ws`);

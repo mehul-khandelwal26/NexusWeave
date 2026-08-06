@@ -190,19 +190,18 @@
   if (cancelEditProfModal) cancelEditProfModal.addEventListener('click', closeEditModal);
 
   if (editProfileForm) {
-    editProfileForm.addEventListener('submit', (e) => {
+    editProfileForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const users = JSON.parse(localStorage.getItem('users') || '{}');
-      const email = localStorage.getItem('session');
-
-      if (users[email]) {
-        users[email].name = editProfName.value.trim();
-        users[email].department = editProfDepartment.value.trim();
-        users[email].bio = editProfBio.value.trim();
-        users[email].skills = editProfSkills.value.split(',').map(s => s.trim()).filter(Boolean);
-        localStorage.setItem('users', JSON.stringify(users));
+      const result = await api.updateProfile({
+        name: editProfName.value.trim(),
+        department: editProfDepartment.value.trim(),
+        bio: editProfBio.value.trim(),
+        skills: editProfSkills.value.split(',').map(s => s.trim()).filter(Boolean)
+      });
+      if (!result.success) {
+        alert(result.error || 'Failed to save profile.');
+        return;
       }
-
       closeEditModal();
       renderProfile();
     });
@@ -218,5 +217,27 @@
     });
   }
 
+  async function bootstrapProfile() {
+    try {
+      if (api.refreshMe) {
+        const refreshed = await api.refreshMe();
+        if (refreshed) {
+          Object.assign(currentUser, refreshed);
+        }
+      }
+      const data = await api.getUserData();
+      if (data) {
+        currentUser.tasks = data.tasks || [];
+        currentUser.projects = data.projects || [];
+        api.saveUserData({ projects: data.projects, tasks: data.tasks });
+      }
+    } catch (err) {
+      console.warn('Profile refresh failed; showing local data.', err);
+    }
+    renderProfile();
+  }
+
+  // Render immediately, then refresh from server
   renderProfile();
+  bootstrapProfile();
 })();

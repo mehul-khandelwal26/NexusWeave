@@ -8,13 +8,28 @@
   const api = window.NexusAPI;
 
   /* ── Auth Guard ── */
-  const currentUser = api.getMe();
+  let currentUser = api.getMe();
   let searchDebounceTimer = null;
   if (!currentUser) {
     window.location.href = 'index.html';
     return;
   }
 
+  async function bootstrapOrgPage() {
+    try {
+      if (api.refreshMe) {
+        const refreshed = await api.refreshMe();
+        if (refreshed) {
+          currentUser = refreshed;
+        }
+      }
+    } catch (err) {
+      console.warn('Org page refresh failed; using local session.', err);
+    }
+    startOrgUI();
+  }
+
+  function startOrgUI() {
   const isAdmin = currentUser.role === 'admin';
 
   /* ── Panel Visibility ── */
@@ -79,11 +94,11 @@
     const saveOrgBtn = document.getElementById('saveOrgSettings');
     const regenKeyBtn = document.getElementById('regenOrgKey');
 
-    // Load current admin's org
-    function loadAdminOrg() {
-      const org = api.getOrgFull(currentUser.organizationId);
+    // Load current admin's org from backend
+    async function loadAdminOrg() {
+      const org = await api.fetchOrganization(currentUser.organizationId);
       if (!org) {
-        showNotif('No organization found. Please re-register.', 'error');
+        showNotif('No organization found. Please re-register or refresh after login.', 'error');
         return;
       }
 
@@ -92,7 +107,7 @@
         orgVisibilityDisplay.textContent = org.visibility === 'private' ? '🔒 Private' : '🌐 Public';
         orgVisibilityDisplay.className = `org-badge ${org.visibility === 'private' ? 'badge-private' : 'badge-public'}`;
       }
-      if (orgKeyValue) orgKeyValue.value = org.orgKey;
+      if (orgKeyValue) orgKeyValue.value = org.orgKey || '';
       if (editOrgNameInput) editOrgNameInput.value = org.name;
       if (editOrgVisibilityInput) editOrgVisibilityInput.value = org.visibility;
 
@@ -229,8 +244,8 @@
 
     // Member search
     if (orgMemberSearch) {
-      orgMemberSearch.addEventListener('input', () => {
-        const org = api.getOrgFull(currentUser.organizationId);
+      orgMemberSearch.addEventListener('input', async () => {
+        const org = await api.fetchOrganization(currentUser.organizationId);
         if (org) renderMembers(org, orgMemberSearch.value);
       });
     }
@@ -263,12 +278,12 @@
     let pendingJoinOrgId = null;
 
     // Show current org if already in one
-    function renderCurrentOrg() {
+    async function renderCurrentOrg() {
       if (!currentUser.organizationId) {
         if (currentOrgCard) currentOrgCard.classList.add('hidden');
         return;
       }
-      const org = api.getOrgFull(currentUser.organizationId);
+      const org = await api.fetchOrganization(currentUser.organizationId);
       if (!org) {
         if (currentOrgCard) currentOrgCard.classList.add('hidden');
         return;
@@ -279,7 +294,8 @@
         currentOrgVisibility.textContent = org.visibility === 'private' ? '🔒 Private' : '🌐 Public';
         currentOrgVisibility.className = `org-badge ${org.visibility === 'private' ? 'badge-private' : 'badge-public'}`;
       }
-      if (currentOrgMembers) currentOrgMembers.textContent = `${org.members.length} member${org.members.length !== 1 ? 's' : ''}`;
+      const memberCountVal = org.memberCount != null ? org.memberCount : (org.members || []).length;
+      if (currentOrgMembers) currentOrgMembers.textContent = `${memberCountVal} member${memberCountVal !== 1 ? 's' : ''}`;
     }
 
     // Search organizations
@@ -362,30 +378,23 @@
         confirmJoinBtn.disabled = true;
         confirmJoinBtn.textContent = 'Joining…';
 
-        const result = api.joinOrganization({ orgId: pendingJoinOrgId, orgKey });
+        const result = await api.joinOrganization({ orgId: pendingJoinOrgId, orgKey });
         confirmJoinBtn.disabled = false;
         confirmJoinBtn.textContent = 'Join Organization';
 
         if (result.success) {
           closeJoinModalFn();
           showNotif(`🎉 You've joined ${result.orgName} successfully!`, 'success');
-          // Refresh current user data
           const freshUser = api.getMe();
           if (freshUser) {
             currentUser.organizationId = freshUser.organizationId;
+            currentUser.role = freshUser.role;
           }
 
-          // Emit Real-time Socket Event for Admin Notification
-          if (window.NexusSocket) {
-            window.NexusSocket.emit('employee:joined', {
-              orgId: freshUser ? freshUser.organizationId : pendingJoinOrgId,
-              userName: currentUser.name || currentUser.email.split('@')[0],
-              userEmail: currentUser.email
-            });
-          }
-
-          renderCurrentOrg();
+          await renderCurrentOrg();
           searchOrgs(orgSearchInput ? orgSearchInput.value.trim() : '');
+          // Soft reload so admin/employee panels reflect new role/JWT
+          setTimeout(() => window.location.reload(), 800);
         } else {
           showNotif(result.error || 'Failed to join organization.', 'error');
         }
@@ -427,4 +436,7 @@
     renderCurrentOrg();
     searchOrgs();
   }
+  } // end startOrgUI
+
+  bootstrapOrgPage();
 })();

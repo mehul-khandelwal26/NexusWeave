@@ -124,6 +124,11 @@
           </div>
 
           <div class="filter-row" role="group" aria-label="Board filters">
+            <select id="taskOwnershipFilter" aria-label="Filter by ownership" class="hidden">
+              <option value="mine">My tasks</option>
+              <option value="team">Employee tasks</option>
+              <option value="all">All tasks</option>
+            </select>
             <select id="taskPriorityFilter" aria-label="Filter by priority">
               <option value="All">All priorities</option>
               <option value="High">High</option>
@@ -285,18 +290,24 @@
       <div class="modal-body" style="padding-top: 1rem;">
         <p class="meta" style="margin-bottom: 1.2rem; color: var(--ink-soft); font-size: 0.9rem;">Choose a background style for your Kanban board workspace.</p>
         
-        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; max-height: 280px; overflow-y: auto; padding-right: 0.2rem;">
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; max-height: 320px; overflow-y: auto; padding-right: 0.2rem;">
           <div class="bg-option bg-none" data-bg-value="none">
             None
           </div>
-          <div class="bg-option" data-bg-value="linear-gradient(135deg, #09090e 0%, #1f1d36 100%)" style="background: linear-gradient(135deg, #09090e 0%, #1f1d36 100%);"></div>
-          <div class="bg-option" data-bg-value="linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)" style="background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);"></div>
-          <div class="bg-option" data-bg-value="linear-gradient(135deg, #a78bfa 0%, #5b21b6 100%)" style="background: linear-gradient(135deg, #a78bfa 0%, #5b21b6 100%);"></div>
-          
-          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?q=80&w=800')" style="background: url('https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?q=80&w=800') center/cover no-repeat;"></div>
-          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=800')" style="background: url('https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=800') center/cover no-repeat;"></div>
-          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800')" style="background: url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800') center/cover no-repeat;"></div>
-          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1464802686167-b939a6910659?q=80&w=800')" style="background: url('https://images.unsplash.com/photo-1464802686167-b939a6910659?q=80&w=800') center/cover no-repeat;"></div>
+          <div class="bg-option" data-bg-value="linear-gradient(135deg, #09090e 0%, #1f1d36 100%)" style="background: linear-gradient(135deg, #09090e 0%, #1f1d36 100%);" title="Midnight"></div>
+          <div class="bg-option" data-bg-value="linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)" style="background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);" title="Blush"></div>
+          <div class="bg-option" data-bg-value="linear-gradient(135deg, #a78bfa 0%, #5b21b6 100%)" style="background: linear-gradient(135deg, #a78bfa 0%, #5b21b6 100%);" title="Violet"></div>
+          <div class="bg-option" data-bg-value="linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%)" style="background: linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%);" title="Ocean"></div>
+          <div class="bg-option" data-bg-value="linear-gradient(135deg, #34d399 0%, #059669 100%)" style="background: linear-gradient(135deg, #34d399 0%, #059669 100%);" title="Forest"></div>
+
+          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?auto=format&fit=crop&w=1600&q=80')" style="background: url('https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?auto=format&fit=crop&w=400&q=60') center/cover no-repeat;" title="Stars"></div>
+          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&w=1600&q=80')" style="background: url('https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&w=400&q=60') center/cover no-repeat;" title="Gradient mesh"></div>
+          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1600&q=80')" style="background: url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=400&q=60') center/cover no-repeat;" title="Abstract"></div>
+          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1464802686167-b939a6910659?auto=format&fit=crop&w=1600&q=80')" style="background: url('https://images.unsplash.com/photo-1464802686167-b939a6910659?auto=format&fit=crop&w=400&q=60') center/cover no-repeat;" title="Galaxy"></div>
+          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1600&q=80')" style="background: url('https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=400&q=60') center/cover no-repeat;" title="Office light"></div>
+          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&w=1600&q=80')" style="background: url('https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&w=400&q=60') center/cover no-repeat;" title="Workspace"></div>
+          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=format&fit=crop&w=1600&q=80')" style="background: url('https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=format&fit=crop&w=400&q=60') center/cover no-repeat;" title="Laptop desk"></div>
+          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1600&q=80')" style="background: url('https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=400&q=60') center/cover no-repeat;" title="Mountains"></div>
         </div>
       </div>
     </div>

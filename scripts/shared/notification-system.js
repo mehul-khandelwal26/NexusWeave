@@ -10,7 +10,17 @@
   if (!currentUser) return;
 
   const isAdmin = currentUser.role === 'admin';
+  const myEmail = (currentUser.email || '').toLowerCase();
   const NOTIFS_KEY = `nw_notifs_${currentUser.email}`;
+
+  function isOwnTask(task) {
+    if (!task) return false;
+    const assigned = (task.assignedUserEmail || '').toLowerCase();
+    const owner = (task.userEmail || '').toLowerCase();
+    if (assigned) return assigned === myEmail;
+    if (owner) return owner === myEmail;
+    return false;
+  }
 
   /* ── Local Notification Store ── */
   function getNotifications() {
@@ -35,11 +45,7 @@
 
     notifs.unshift(newNotif);
     saveNotifications(notifs.slice(0, 30));
-
-    // Show animated toast popup
     showToast(icon, text);
-
-    // Update bell badge & dropdown
     updateBellUI();
   }
 
@@ -99,7 +105,6 @@
 
     headerActions.insertBefore(bellWrapper, headerActions.firstChild);
 
-    // Bind Dropdown Toggle
     const bellBtn = document.getElementById('notifBellBtn');
     const dropdown = document.getElementById('notifDropdown');
     const markAllReadBtn = document.getElementById('markAllReadBtn');
@@ -170,53 +175,105 @@
 
   /* ── Realtime Socket Event Listeners ── */
   if (socket) {
-    // 1. Task Completed (Admin receives)
     socket.on('task:completed', (data) => {
       if (isAdmin && data.orgId === currentUser.organizationId) {
         addNotification({ icon: '✅', text: `Task Completed: "${data.title}" by ${data.userName}`, type: 'success' });
       }
     });
 
-    // 2. Employee Joined (Admin receives)
     socket.on('employee:joined', (data) => {
       if (isAdmin && data.orgId === currentUser.organizationId) {
         addNotification({ icon: '🎉', text: `${data.userName} (${data.userEmail}) joined your organization!`, type: 'info' });
       }
     });
 
-    // 3. Attendance Marked (Admin receives)
     socket.on('attendance:marked', (data) => {
-      if (isAdmin && data.orgId === currentUser.organizationId) {
-        addNotification({ icon: '⏱️', text: `${data.userName} clocked ${data.status === 'in' ? 'IN at ' + data.time : 'OUT'}`, type: 'info' });
+      if (isAdmin && data.orgId === currentUser.organizationId && data.userEmail !== currentUser.email) {
+        addNotification({ icon: '✅', text: `${data.userName} marked attendance for today`, type: 'info' });
       }
     });
 
-    // 4. New Task Assigned (Employee receives)
     socket.on('task:assigned', (data) => {
       if (data.assigneeEmail === currentUser.email) {
         addNotification({ icon: '📋', text: `New Task Assigned: "${data.title}" by ${data.assignedByName}`, type: 'warning' });
       }
     });
 
-    // 5. Deadline Reminder (Employee receives)
     socket.on('deadline:reminder', (data) => {
-      if (data.userEmail === currentUser.email) {
+      // Only own deadlines
+      if ((data.userEmail || '').toLowerCase() === myEmail) {
         addNotification({ icon: '⏰', text: `Upcoming Deadline: "${data.title}" is due ${data.dueText}`, type: 'warning' });
       }
     });
 
-    // 6. New Message Notification
     socket.on('message:new', (msg) => {
       if (msg.toEmail === currentUser.email) {
-        addNotification({ icon: '💬', text: `New Message from ${msg.fromName}: "${msg.text}"`, type: 'info' });
+        const from = msg.fromName || msg.fromEmail || 'someone';
+        addNotification({ icon: '💬', text: `New Message from ${from}: "${msg.content || msg.text || ''}"`, type: 'info' });
       }
     });
   }
 
-  // Initialize Bell when DOM is ready
+  function seedDeadlineNotifications() {
+    try {
+      const users = JSON.parse(localStorage.getItem('users') || '{}');
+      const user = users[currentUser.email];
+      const tasks = ((user && user.tasks) || []).filter(isOwnTask);
+
+      // Drop previously seeded deadline alerts (may include other people's tasks for admins)
+      const existing = getNotifications().filter((n) => !String(n.text || '').startsWith('Upcoming Deadline:'));
+      saveNotifications(existing);
+
+      const existingTexts = new Set(existing.map((n) => n.text));
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      tasks.forEach((t) => {
+        if (!t || t.status === 'Done' || !t.dueDate) return;
+        const due = new Date(t.dueDate);
+        if (isNaN(due.getTime())) return;
+        due.setHours(0, 0, 0, 0);
+        const diffDays = Math.round((due - today) / 86400000);
+        let text = null;
+        if (diffDays < 0) {
+          text = `Upcoming Deadline: "${t.title}" is overdue by ${Math.abs(diffDays)}d`;
+        } else if (diffDays === 0) {
+          text = `Upcoming Deadline: "${t.title}" is due today`;
+        } else if (diffDays <= 2) {
+          text = `Upcoming Deadline: "${t.title}" is due in ${diffDays} day(s)`;
+        }
+        if (text && !existingTexts.has(text)) {
+          const notifs = getNotifications();
+          notifs.unshift({
+            id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+            icon: '⏰',
+            text,
+            type: 'warning',
+            read: false,
+            timestamp: new Date().toISOString(),
+            timeStr: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          });
+          saveNotifications(notifs.slice(0, 30));
+          existingTexts.add(text);
+        }
+      });
+      updateBellUI();
+    } catch (_) { /* ignore */ }
+  }
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', injectBellUI);
+    document.addEventListener('DOMContentLoaded', () => {
+      injectBellUI();
+      seedDeadlineNotifications();
+    });
   } else {
     injectBellUI();
+    seedDeadlineNotifications();
   }
+
+  window.NexusNotify = {
+    add: addNotification,
+    refresh: updateBellUI,
+    getAll: getNotifications
+  };
 })();
