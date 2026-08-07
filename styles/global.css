@@ -127,6 +127,17 @@ body {
   transition: background-color var(--transition), color var(--transition);
 }
 
+/* Interactive particle weave backdrop. The negative index is required: with a
+   z-index of 0 the fixed canvas would paint above every non-positioned card. */
+#bgCanvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: -1;
+}
+
 a { color: inherit; text-decoration: none; }
 button, input, select, textarea { font-family: inherit; font-size: inherit; }
 button { cursor: pointer; }

@@ -24,15 +24,17 @@
     if (!canvas) {
       canvas = document.createElement('canvas');
       canvas.id = 'bgCanvas';
-      canvas.style.position = 'fixed';
-      canvas.style.top = '0';
-      canvas.style.left = '0';
-      canvas.style.width = '100%';
-      canvas.style.height = '100%';
-      canvas.style.pointerEvents = 'none';
-      canvas.style.zIndex = '0';
       document.body.prepend(canvas);
     }
+    // A negative index keeps the weave behind in-flow content while still
+    // painting above the page background propagated from <body>.
+    canvas.style.position = 'fixed';
+    canvas.style.top = '0';
+    canvas.style.left = '0';
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    canvas.style.pointerEvents = 'none';
+    canvas.style.zIndex = '-1';
     ctx = canvas.getContext('2d');
     updateThemeState();
     resizeCanvas();
