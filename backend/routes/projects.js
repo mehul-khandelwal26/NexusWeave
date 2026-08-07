@@ -2,8 +2,13 @@ const express = require('express');
 const Project = require('../models/Project');
 const requireAuth = require('../middleware/auth');
 const { isValidObjectId, sameOrg } = require('../utils/ids');
+const { logActivity } = require('../utils/activity-log');
 
 const router = express.Router();
+
+function actorName(user) {
+  return user.name || user.email.split('@')[0];
+}
 
 function canAccessProject(project, user) {
   if (!project || !user) return false;
@@ -34,7 +39,7 @@ router.get('/', requireAuth, async (req, res) => {
 
 // Create Project
 router.post('/', requireAuth, async (req, res) => {
-  const { name, description, deadline, timeline, boardBg } = req.body;
+  const { name, description, deadline, timeline, boardBg, labels, attachments } = req.body;
   if (!name || !name.trim()) {
     return res.status(400).json({ errors: ['Project name is required.'] });
   }
@@ -47,9 +52,12 @@ router.post('/', requireAuth, async (req, res) => {
       timeline: timeline || 'Execution',
       boardBg: boardBg || 'none',
       userEmail: req.user.email,
-      organizationId: req.user.orgId || null
+      organizationId: req.user.orgId || null,
+      labels: labels || [],
+      attachments: attachments || []
     });
 
+    logActivity(req, `${actorName(req.user)} created project "${project.name}".`);
     res.status(201).json({ project });
   } catch (err) {
     if (err.name === 'ValidationError') {
@@ -72,7 +80,7 @@ router.put('/:id', requireAuth, async (req, res) => {
       return res.status(403).json({ errors: ['You do not have permission to update this project.'] });
     }
 
-    const { name, description, deadline, timeline, boardBg } = req.body;
+    const { name, description, deadline, timeline, boardBg, labels, attachments } = req.body;
     if (name !== undefined) {
       if (!String(name).trim()) return res.status(400).json({ errors: ['Project name cannot be empty.'] });
       project.name = String(name).trim();
@@ -81,6 +89,8 @@ router.put('/:id', requireAuth, async (req, res) => {
     if (deadline !== undefined) project.deadline = deadline;
     if (timeline !== undefined) project.timeline = timeline;
     if (boardBg !== undefined) project.boardBg = boardBg;
+    if (labels !== undefined) project.labels = labels;
+    if (attachments !== undefined) project.attachments = attachments;
 
     await project.save();
     res.json({ project });
@@ -106,6 +116,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
     }
 
     await Project.findByIdAndDelete(req.params.id);
+    logActivity(req, `${actorName(req.user)} deleted project "${project.name}".`);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ errors: ['Failed to delete project.'] });

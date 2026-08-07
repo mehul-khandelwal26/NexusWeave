@@ -5,6 +5,26 @@
   }
   root.AppHelpers = api;
 
+  // Automatic Page Loader Progress & Smooth Dismissal
+  document.addEventListener('DOMContentLoaded', () => {
+    const loader = document.getElementById('appLoader');
+    const fill = document.getElementById('loaderBarFill');
+    if (!loader) return;
+
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += Math.random() * 25 + 15;
+      if (fill) fill.style.width = Math.min(progress, 90) + '%';
+      if (progress >= 90) {
+        clearInterval(interval);
+        if (fill) fill.style.width = '100%';
+        setTimeout(() => {
+          loader.classList.add('loaded');
+        }, 300);
+      }
+    }, 70);
+  });
+
   document.addEventListener('keydown', (event) => {
     const activeEl = document.activeElement;
     if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable)) {
@@ -316,7 +336,30 @@
     });
   }
 
+  function escapeHTML(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function sanitizeMarkdown(rawText) {
+    if (!rawText) return '';
+    let safe = escapeHTML(rawText);
+    safe = safe.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+    safe = safe.replace(/`([^`]+)`/g, '<code>$1</code>');
+    safe = safe.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    safe = safe.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+    safe = safe.replace(/\n/g, '<br>');
+    return safe;
+  }
+
   return {
+    escapeHTML,
+    sanitizeMarkdown,
     isValidEmail,
     validateAuthFields,
     validateSignupFields,

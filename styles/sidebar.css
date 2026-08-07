@@ -1,11 +1,11 @@
-:root {
-  --sidebar-bg: rgba(255, 255, 255, 0.72);
-  --sidebar-shadow: rgba(15, 23, 42, 0.06);
+:root, :root[data-theme='dark'] {
+  --sidebar-bg: rgba(20, 21, 31, 0.88);
+  --sidebar-shadow: rgba(0, 0, 0, 0.35);
 }
 
-:root[data-theme='dark'] {
-  --sidebar-bg: rgba(17, 29, 47, 0.86);
-  --sidebar-shadow: rgba(0, 0, 0, 0.35);
+:root[data-theme='light'] {
+  --sidebar-bg: rgba(255, 255, 255, 0.88);
+  --sidebar-shadow: rgba(15, 23, 42, 0.06);
 }
 
 body.app-body {
@@ -43,8 +43,8 @@ body.app-body {
   width: 18px;
   height: 18px;
   border-radius: 6px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
-  box-shadow: 0 0 0 4px rgba(47, 191, 159, 0.18);
+  background: linear-gradient(135deg, var(--purple-primary), #a855f7);
+  box-shadow: 0 0 0 4px var(--purple-glow);
 }
 
 .sidebar-brand h2 {
@@ -72,14 +72,14 @@ body.app-body {
 
 .nav-item:hover {
   color: var(--accent-strong);
-  background: rgba(47, 191, 159, 0.08);
+  background: var(--primary-soft);
   transform: translateX(2px);
 }
 
 .nav-item.active {
   color: #ffffff;
-  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
-  box-shadow: 0 12px 24px rgba(47, 191, 159, 0.2);
+  background: linear-gradient(135deg, var(--purple-primary), #a855f7);
+  box-shadow: 0 10px 24px var(--purple-glow);
 }
 
 .nav-icon {
@@ -88,13 +88,18 @@ body.app-body {
   display: grid;
   place-items: center;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--surface-muted);
   color: currentColor;
   flex-shrink: 0;
 }
 
+.nav-item:hover .nav-icon {
+  background: var(--bg-input-focus);
+}
+
 .nav-item.active .nav-icon {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
 }
 
 .sidebar-footer {

@@ -140,7 +140,7 @@
   position: fixed;
   bottom: 1.5rem;
   right: 1.5rem;
-  z-index: 9999;
+  z-index: 9000;
   display: grid;
   gap: 0.6rem;
   pointer-events: none;
@@ -199,7 +199,7 @@
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: var(--accent);
+  background: linear-gradient(135deg, var(--purple-primary), #a855f7);
   color: white;
   border: 0;
   display: flex;
@@ -326,7 +326,7 @@
   width: 2.2rem;
   height: 2.2rem;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  background: linear-gradient(135deg, var(--purple-primary), #a855f7);
   color: white;
   font-weight: 700;
   font-size: 0.9rem;
@@ -398,7 +398,7 @@
 
 .chat-bubble.mine {
   align-self: flex-end;
-  background: var(--accent);
+  background: var(--purple-primary);
   color: white;
   border-bottom-right-radius: 4px;
 }

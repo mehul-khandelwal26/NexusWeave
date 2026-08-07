@@ -1,9 +1,40 @@
 const express = require('express');
 const Task = require('../models/Task');
+const User = require('../models/User');
 const requireAuth = require('../middleware/auth');
 const { isValidObjectId, sameOrg } = require('../utils/ids');
+const { logActivity } = require('../utils/activity-log');
 
 const router = express.Router();
+
+function actorName(user) {
+  return user.name || user.email.split('@')[0];
+}
+
+/** Pushes a live "you have a new task" notification to the assignee. */
+async function notifyAssignee(req, task) {
+  const assignee = task.assignedUserEmail;
+  if (!assignee || assignee === req.user.email) return;
+
+  const sendToUser = req.app.get('sendToUser');
+  if (!sendToUser) return;
+
+  try {
+    const user = await User.findOne({ email: assignee }, '_id');
+    if (!user) return;
+    sendToUser(user._id.toString(), {
+      type: 'task_assigned',
+      payload: {
+        taskId: task._id.toString(),
+        title: task.title,
+        assignedByName: actorName(req.user),
+        dueDate: task.dueDate || ''
+      }
+    });
+  } catch (err) {
+    console.error('Assignee notification error:', err.message);
+  }
+}
 
 function canViewTask(task, user) {
   if (!task || !user) return false;
@@ -65,6 +96,43 @@ router.get('/heatmap', requireAuth, async (req, res) => {
   }
 });
 
+// Get Calendar Tasks & Deadline Counts (must be registered before /:id routes)
+router.get('/calendar', requireAuth, async (req, res) => {
+  try {
+    const tasks = await Task.find(buildTaskListQuery(req.user)).sort({ dueDate: 1, createdAt: -1 });
+
+    const countsByDate = {};
+    const formattedTasks = tasks.map((t) => {
+      let dateKey = '';
+      if (t.dueDate) {
+        if (t.dueDate instanceof Date) {
+          dateKey = t.dueDate.toISOString().split('T')[0];
+        } else {
+          dateKey = String(t.dueDate).split('T')[0];
+        }
+      }
+      if (dateKey) {
+        countsByDate[dateKey] = (countsByDate[dateKey] || 0) + 1;
+      }
+      return {
+        id: t._id.toString(),
+        title: t.title,
+        description: t.description || '',
+        dueDate: dateKey || (t.dueDate ? String(t.dueDate) : ''),
+        priority: t.priority || 'Medium',
+        status: t.status || 'Todo',
+        assignedUserEmail: t.assignedUserEmail || t.userEmail || '',
+        userEmail: t.userEmail
+      };
+    });
+
+    res.json({ success: true, tasks: formattedTasks, countsByDate });
+  } catch (err) {
+    console.error('Error fetching calendar tasks:', err);
+    res.status(500).json({ errors: ['Failed to fetch calendar tasks.'] });
+  }
+});
+
 // Get Tasks
 router.get('/', requireAuth, async (req, res) => {
   try {
@@ -84,6 +152,15 @@ router.post('/', requireAuth, async (req, res) => {
 
   if (!title || !title.trim()) {
     return res.status(400).json({ errors: ['Task title is required.'] });
+  }
+
+  // Past Date Validation (Time Travel Prevention)
+  if (dueDate) {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const taskDateStr = String(dueDate).split('T')[0];
+    if (taskDateStr < todayStr) {
+      return res.status(400).json({ errors: ['Cannot create tasks with a deadline in the past.'] });
+    }
   }
 
   const isDone = status === 'Done';
@@ -107,6 +184,12 @@ router.post('/', requireAuth, async (req, res) => {
       labels: labels || [],
       attachments: attachments || []
     });
+
+    const assignedNote = task.assignedUserEmail && task.assignedUserEmail !== req.user.email
+      ? ` and assigned it to ${task.assignedUserEmail}`
+      : '';
+    logActivity(req, `${actorName(req.user)} created task "${task.title}"${assignedNote}.`);
+    notifyAssignee(req, task);
 
     res.status(201).json({ task });
   } catch (err) {
@@ -139,6 +222,8 @@ router.put('/:id', requireAuth, async (req, res) => {
 
     const isCreator = task.userEmail === req.user.email;
     const isAdmin = req.user.role === 'admin' && sameOrg(task.organizationId, req.user.orgId);
+    const previousStatus = task.status;
+    const previousAssignee = task.assignedUserEmail;
 
     if (title !== undefined) {
       if (!title.trim()) return res.status(400).json({ errors: ['Task title cannot be empty.'] });
@@ -169,6 +254,15 @@ router.put('/:id', requireAuth, async (req, res) => {
     }
 
     await task.save();
+
+    if (task.status !== previousStatus) {
+      logActivity(req, `${actorName(req.user)} moved task "${task.title}" to ${task.status}.`);
+    }
+    if (task.assignedUserEmail !== previousAssignee && task.assignedUserEmail) {
+      logActivity(req, `${actorName(req.user)} assigned task "${task.title}" to ${task.assignedUserEmail}.`);
+      notifyAssignee(req, task);
+    }
+
     res.json({ task });
   } catch (err) {
     if (err.name === 'ValidationError') {
@@ -193,6 +287,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
     }
 
     await Task.findByIdAndDelete(req.params.id);
+    logActivity(req, `${actorName(req.user)} deleted task "${task.title}".`);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ errors: ['Failed to delete task.'] });

@@ -179,7 +179,9 @@
 
   function formatMarkdownText(raw) {
     if (!raw) return '';
-    let html = raw
+    const esc = (typeof AppHelpers !== 'undefined' && AppHelpers.escapeHTML) ? AppHelpers.escapeHTML : (str => String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'));
+    let safe = esc(raw);
+    let html = safe
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.*?)\*/g, '<em>$1</em>')
       .replace(/`([^`]+)`/g, '<code style="background:var(--surface-muted);padding:0.1rem 0.35rem;border-radius:4px;">$1</code>')

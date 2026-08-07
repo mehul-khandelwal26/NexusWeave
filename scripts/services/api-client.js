@@ -43,7 +43,7 @@
     if (!token) {
       throw new Error('Server authentication token is required');
     }
-    const sessions = JSON.parse(localStorage.getItem('nw_sessions')) || [];
+    const sessions = JSON.parse(sessionStorage.getItem('nw_sessions')) || [];
     const sessionId = generateId('sess');
     sessions.push({
       id: sessionId,
@@ -53,10 +53,10 @@
       createdAt: Date.now(),
       expiresAt: Date.now() + 24 * 60 * 60 * 1000
     });
-    localStorage.setItem('nw_sessions', JSON.stringify(sessions));
-    localStorage.setItem('session', user.email);
-    localStorage.setItem('jwt', token);
-    localStorage.setItem('authProvider', provider);
+    sessionStorage.setItem('nw_sessions', JSON.stringify(sessions));
+    sessionStorage.setItem('session', user.email);
+    sessionStorage.setItem('jwt', token);
+    sessionStorage.setItem('authProvider', provider);
   }
 
   function applyAuthResponse(backendUser, token, provider) {
@@ -75,6 +75,7 @@
       bio: backendUser.bio != null ? backendUser.bio : (existing.bio || ''),
       skills: backendUser.skills || existing.skills || [],
       theme: backendUser.theme || existing.theme || 'light',
+      boardBg: backendUser.boardBg || existing.boardBg || 'none',
       provider: backendUser.provider || provider || 'email',
       projects: existing.projects || [],
       tasks: existing.tasks || [],
@@ -88,15 +89,18 @@
   }
 
   function clearSession() {
-    localStorage.removeItem('session');
-    localStorage.removeItem('jwt');
-    localStorage.removeItem('authProvider');
+    sessionStorage.removeItem('session');
+    sessionStorage.removeItem('jwt');
+    sessionStorage.removeItem('authProvider');
+    sessionStorage.removeItem('nw_sessions');
   }
 
   // Relative /api when served by Express on :4000; absolute URL for Live Server / other ports
   const API_BASE = (typeof window !== 'undefined' && window.location && String(window.location.port) === '4000')
     ? '/api'
     : 'http://localhost:4000/api';
+
+  const SERVER_UNREACHABLE = 'Cannot reach the NexusWeave server. Please make sure the backend is running and try again.';
 
 
   async function tryBackendRequest(endpoint, options = {}) {
@@ -108,7 +112,7 @@
         signal: controller.signal,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('jwt') || ''}`,
+          'Authorization': `Bearer ${sessionStorage.getItem('jwt') || ''}`,
           ...(options.headers || {})
         }
       });
@@ -140,6 +144,18 @@
     return sanitized;
   }
 
+  function getSessionUser() {
+    const email = sessionStorage.getItem('session');
+    if (!email) return null;
+    return getUsers()[email] || null;
+  }
+
+  /** Organization-scoped features (announcements, org roster) are off-limits to personal accounts. */
+  function isOrgScopedSession() {
+    const user = getSessionUser();
+    return Boolean(user && user.role && user.role !== 'personal' && user.organizationId);
+  }
+
   function syncLocalUserFromServer(userData) {
     if (!userData || !userData.email) return;
     const users = getUsers();
@@ -162,13 +178,14 @@
     /* ── Auth ── */
     async signup({ name, email, password, role = 'personal', orgName, orgKey, orgVisibility, orgId }) {
       const username = name || email.split('@')[0];
+
       const backendRes = await tryBackendRequest('/auth/register', {
         method: 'POST',
         body: JSON.stringify({ name: username, email, password, role, orgName, orgKey, orgVisibility, orgId })
       });
 
       if (!backendRes) {
-        return { success: false, error: 'Backend offline. Please try again later.' };
+        return { success: false, error: SERVER_UNREACHABLE };
       }
       if (backendRes._error) {
         return { success: false, error: backendRes.message || 'Failed to sign up.' };
@@ -176,9 +193,6 @@
 
       const token = backendRes.token;
       const userData = backendRes.user;
-      if (!token) {
-        return { success: false, error: 'Signup succeeded but no auth token was returned.' };
-      }
 
       if (role === 'admin' && orgName && userData.organizationId) {
         upsertLocalOrg({
@@ -202,21 +216,17 @@
         body: JSON.stringify({ email, password, role })
       });
 
+      // Credentials and account scope are only ever verified by the server. There is no
+      // local fallback, otherwise a personal account could sign in through the org portal.
       if (!backendRes) {
-        return { success: false, error: 'Backend offline. Please try again later.' };
+        return { success: false, error: SERVER_UNREACHABLE };
       }
       if (backendRes._error) {
         return { success: false, error: backendRes.message || 'Invalid email or password.' };
       }
 
-      const token = backendRes.token;
-      const userData = backendRes.user;
-      if (!token) {
-        return { success: false, error: 'Login succeeded but no auth token was returned.' };
-      }
-
-      const user = applyAuthResponse(userData, token, 'email');
-      return { success: true, token, user };
+      const user = applyAuthResponse(backendRes.user, backendRes.token, 'email');
+      return { success: true, token: backendRes.token, user };
     },
 
     async logout() {
@@ -225,8 +235,8 @@
     },
 
     getMeSync() {
-      const email = localStorage.getItem('session');
-      const token = localStorage.getItem('jwt');
+      const email = sessionStorage.getItem('session');
+      const token = sessionStorage.getItem('jwt');
       if (!email || !token) return null;
 
       const users = getUsers();
@@ -253,16 +263,16 @@
 
     /** Async: refresh profile + JWT from server */
     async refreshMe() {
-      const email = localStorage.getItem('session');
-      const token = localStorage.getItem('jwt');
+      const email = sessionStorage.getItem('session');
+      const token = sessionStorage.getItem('jwt');
       if (!email || !token) return null;
 
       const res = await tryBackendRequest('/auth/me', { method: 'GET' });
       if (res && !res._error && res.user) {
         if (res.token) {
-          localStorage.setItem('jwt', res.token);
+          sessionStorage.setItem('jwt', res.token);
         }
-        const user = applyAuthResponse(res.user, res.token || token, localStorage.getItem('authProvider') || 'email');
+        const user = applyAuthResponse(res.user, res.token || token, sessionStorage.getItem('authProvider') || 'email');
         if (user && user.organizationId) {
           try {
             await this.fetchOrganization(user.organizationId);
@@ -286,13 +296,13 @@
       });
       if (!res) return { success: false, error: 'Backend offline.' };
       if (res._error) return { success: false, error: res.message || 'Failed to update profile.' };
-      const token = res.token || localStorage.getItem('jwt');
-      const user = applyAuthResponse(res.user, token, localStorage.getItem('authProvider') || 'email');
+      const token = res.token || sessionStorage.getItem('jwt');
+      const user = applyAuthResponse(res.user, token, sessionStorage.getItem('authProvider') || 'email');
       return { success: true, user };
     },
 
     isAuthenticated() {
-      return Boolean(localStorage.getItem('session') && localStorage.getItem('jwt'));
+      return Boolean(sessionStorage.getItem('session') && sessionStorage.getItem('jwt'));
     },
 
     getRole() {
@@ -408,8 +418,16 @@
       return [];
     },
 
+    async fetchBackendLeaderboard() {
+      const res = await tryBackendRequest('/orgs/leaderboard', { method: 'GET' });
+      if (res && !res._error && res.success && Array.isArray(res.leaderboard)) {
+        return res.leaderboard;
+      }
+      return null;
+    },
+
     async getUserData() {
-      const email = localStorage.getItem('session');
+      const email = sessionStorage.getItem('session');
       if (!email) return null;
 
       const [tasksRes, projectsRes] = await Promise.all([
@@ -427,7 +445,7 @@
     },
 
     saveUserData({ projects, tasks, activity }) {
-      const email = localStorage.getItem('session');
+      const email = sessionStorage.getItem('session');
       if (!email) return false;
       const users = getUsers();
       const user = users[email];
@@ -503,7 +521,7 @@
       });
       if (res && !res._error) {
         if (res.token && res.user) {
-          applyAuthResponse(res.user, res.token, localStorage.getItem('authProvider') || 'email');
+          applyAuthResponse(res.user, res.token, sessionStorage.getItem('authProvider') || 'email');
         }
         if (res.org) upsertLocalOrg(res.org);
         else if (orgId) await this.fetchOrganization(orgId);
@@ -516,10 +534,10 @@
       const res = await tryBackendRequest('/orgs/leave', { method: 'POST' });
       if (res && !res._error) {
         if (res.token && res.user) {
-          applyAuthResponse(res.user, res.token, localStorage.getItem('authProvider') || 'email');
+          applyAuthResponse(res.user, res.token, sessionStorage.getItem('authProvider') || 'email');
         } else {
           const users = getUsers();
-          const email = localStorage.getItem('session');
+          const email = sessionStorage.getItem('session');
           if (users[email]) {
             users[email].organizationId = null;
             users[email].role = 'personal';
@@ -535,7 +553,7 @@
     async removeMemberFromOrg(orgId, emailToRemove) {
       const res = await tryBackendRequest(`/orgs/${orgId}/members/${encodeURIComponent(emailToRemove)}`, { method: 'DELETE' });
       if (res && !res._error) {
-        if (res.token && res.user) applyAuthResponse(res.user, res.token, localStorage.getItem('authProvider') || 'email');
+        if (res.token && res.user) applyAuthResponse(res.user, res.token, sessionStorage.getItem('authProvider') || 'email');
         await this.fetchOrganization(orgId);
         return { success: true };
       }
@@ -548,7 +566,7 @@
         body: JSON.stringify({ emailToPromote })
       });
       if (res && !res._error) {
-        if (res.token && res.user) applyAuthResponse(res.user, res.token, localStorage.getItem('authProvider') || 'email');
+        if (res.token && res.user) applyAuthResponse(res.user, res.token, sessionStorage.getItem('authProvider') || 'email');
         await this.fetchOrganization(orgId);
         return { success: true };
       }
@@ -606,6 +624,123 @@
         return res;
       }
       return { total: 0, bySender: {} };
+    },
+
+    /* ── Announcement API (organization accounts only) ── */
+    isOrgAccount: isOrgScopedSession,
+
+    async fetchAnnouncements() {
+      if (!isOrgScopedSession()) return [];
+      const res = await tryBackendRequest('/announcements', { method: 'GET' });
+      if (res && !res._error && res.success && Array.isArray(res.announcements)) {
+        return res.announcements;
+      }
+      return null;
+    },
+
+    async createAnnouncement({ title, content, attachments }) {
+      if (!isOrgScopedSession()) {
+        return { success: false, error: 'Announcements are only available to organization accounts.' };
+      }
+      const res = await tryBackendRequest('/announcements', {
+        method: 'POST',
+        body: JSON.stringify({ title, content, attachments })
+      });
+      if (res && !res._error && res.success && res.announcement) {
+        return { success: true, announcement: res.announcement };
+      }
+      return { success: false, error: res ? (res.message || (res.errors && res.errors[0])) : 'Failed to create announcement' };
+    },
+
+    /* ── Online Users & Attendance API ── */
+    async fetchOnlineUsers() {
+      const res = await tryBackendRequest('/orgs/online', { method: 'GET' });
+      if (res && !res._error && res.success) {
+        return res;
+      }
+      return null;
+    },
+
+    async fetchTodayAttendance() {
+      const res = await tryBackendRequest('/orgs/attendance/today', { method: 'GET' });
+      if (res && !res._error && res.success) {
+        return res;
+      }
+      return null;
+    },
+
+    async markDatabaseAttendance() {
+      const res = await tryBackendRequest('/orgs/attendance/mark', { method: 'POST' });
+      if (res && !res._error && res.success) {
+        return res;
+      }
+      return null;
+    },
+
+    async fetchAttendanceHistory(days = 30) {
+      const res = await tryBackendRequest(`/orgs/attendance/history?days=${days}`, { method: 'GET' });
+      if (res && !res._error && res.success) {
+        return res;
+      }
+      return null;
+    },
+
+    async clearDatabaseAttendance() {
+      const res = await tryBackendRequest('/orgs/attendance/mark', { method: 'DELETE' });
+      if (res && !res._error && res.success) {
+        return res;
+      }
+      return null;
+    },
+
+    /* ── Focus Session API ── */
+    async logFocusSession(minutes, taskId = null) {
+      const res = await tryBackendRequest('/focus', {
+        method: 'POST',
+        body: JSON.stringify({ minutes, taskId })
+      });
+      if (res && !res._error && res.success) {
+        return res.session;
+      }
+      return null;
+    },
+
+    async fetchFocusSummary(days = 7) {
+      const res = await tryBackendRequest(`/focus/summary?days=${days}`, { method: 'GET' });
+      if (res && !res._error && res.success) {
+        return res;
+      }
+      return null;
+    },
+
+    /* ── Activity Feed API ── */
+    async fetchActivity({ scope = 'me', limit = 20 } = {}) {
+      const res = await tryBackendRequest(`/activity?scope=${encodeURIComponent(scope)}&limit=${limit}`, { method: 'GET' });
+      if (res && !res._error && Array.isArray(res.activity)) {
+        return res.activity;
+      }
+      return null;
+    },
+
+    /* ── Calendar & Tasks API ── */
+    async fetchCalendarTasks(year, month) {
+      const query = (year && month) ? `?year=${year}&month=${month}` : '';
+      const res = await tryBackendRequest(`/tasks/calendar${query}`, { method: 'GET' });
+      if (res && !res._error && res.success) {
+        return res;
+      }
+      return { success: false, tasks: [], countsByDate: {} };
+    },
+
+    async createTask(taskData) {
+      const res = await tryBackendRequest('/tasks', {
+        method: 'POST',
+        body: JSON.stringify(taskData)
+      });
+      if (res && !res._error && (res.task || res.success)) {
+        return { success: true, task: res.task || res };
+      }
+      return { success: false, error: res ? (res.message || (res.errors && res.errors[0])) : 'Failed to create task' };
     }
   };
 

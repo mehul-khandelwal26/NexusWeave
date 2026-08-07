@@ -38,7 +38,7 @@
   /* ── DOM Injector for Chat Drawer ── */
   function injectChatUI() {
     currentUser = api.getMe();
-    if (!currentUser) return;
+    if (!currentUser || currentUser.role === 'personal') return;
     if (document.getElementById('chatFabTrigger')) return;
 
     // 1. Floating Action Button

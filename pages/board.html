@@ -39,6 +39,12 @@
           </span>
           <span>Create</span>
         </a>
+                <a class="nav-item" href="projects.html">
+          <span class="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+          </span>
+          <span>Projects</span>
+        </a>
         <a class="nav-item" href="tasks.html">
           <span class="nav-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
@@ -231,12 +237,18 @@
             </select>
           </label>
           <label class="field-row">
+            <span>Project</span>
+            <select id="taskProject">
+              <option value="">General (No Project)</option>
+            </select>
+          </label>
+          <label class="field-row">
             <span>Labels</span>
             <input id="taskLabels" type="text" placeholder="Frontend, Bug, Design" />
           </label>
           <label class="field-row" style="grid-column: span 2;">
             <span>Attachments</span>
-            <input id="taskAttachments" type="text" placeholder="brief.pdf, design.png" />
+            <input id="taskAttachments" type="file" multiple />
           </label>
         </div>
         <div class="modal-actions">

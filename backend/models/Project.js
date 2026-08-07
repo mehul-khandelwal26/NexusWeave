@@ -30,6 +30,14 @@ const projectSchema = new mongoose.Schema(
     organizationId: {
       type: String,
       default: null
+    },
+    labels: {
+      type: [String],
+      default: []
+    },
+    attachments: {
+      type: [String],
+      default: []
     }
   },
   { timestamps: true }

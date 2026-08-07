@@ -5,7 +5,7 @@
   const helpers = window.AppHelpers;
   const api = window.NexusAPI;
 
-  const sessionEmail = localStorage.getItem(SESSION_KEY);
+  const sessionEmail = sessionStorage.getItem(SESSION_KEY);
   let database = JSON.parse(localStorage.getItem(DB_KEY) || '{}');
 
   function normalizeUser(user, fallbackEmail = sessionEmail) {
@@ -104,6 +104,7 @@
   const taskStatusInput = document.getElementById('taskStatus');
   const taskRecurringInput = document.getElementById('taskRecurring');
   const taskLabelsInput = document.getElementById('taskLabels');
+  const taskProjectInput = document.getElementById('taskProject');
   const taskAttachmentsInput = document.getElementById('taskAttachments');
   const taskModalTitle = document.getElementById('taskModalTitle');
   const taskSubmitButton = document.getElementById('taskSubmitBtn');
@@ -189,43 +190,6 @@
         
         persistUser();
       }
-    }
-  }
-
-  function pushNotificationToUser(targetEmail, text, icon = '📌') {
-    const users = JSON.parse(localStorage.getItem(DB_KEY) || '{}');
-    if (users[targetEmail]) {
-      if (!Array.isArray(users[targetEmail].activity)) users[targetEmail].activity = [];
-      users[targetEmail].activity.unshift({
-        id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-        icon,
-        text,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        createdAt: new Date().toISOString()
-      });
-      users[targetEmail].activity = users[targetEmail].activity.slice(0, 20);
-      localStorage.setItem(DB_KEY, JSON.stringify(users));
-      database = users;
-    }
-
-    // Also write into the shared notification bell store
-    try {
-      const key = `nw_notifs_${targetEmail}`;
-      const notifs = JSON.parse(localStorage.getItem(key) || '[]');
-      notifs.unshift({
-        id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-        icon: icon || '🔔',
-        text,
-        type: 'info',
-        read: false,
-        timestamp: new Date().toISOString(),
-        timeStr: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      });
-      localStorage.setItem(key, JSON.stringify(notifs.slice(0, 30)));
-    } catch (_) { /* ignore */ }
-
-    if (window.NexusNotify && typeof window.NexusNotify.add === 'function' && targetEmail === sessionEmail) {
-      window.NexusNotify.add({ icon, text, type: 'info' });
     }
   }
 
@@ -401,31 +365,33 @@
       Done: paginatedTasks.filter((t) => getTaskStatusGroup(t) === 'Done')
     };
 
+    const esc = (s) => (typeof AppHelpers !== 'undefined' && AppHelpers.escapeHTML) ? AppHelpers.escapeHTML(s) : String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
     taskGroupsEl.innerHTML = Object.entries(groups).map(([label, groupTasks]) => {
       const renderedRows = groupTasks.length ? groupTasks.map((task) => {
-        const labelsPills = (task.labels || []).map(l => `<span class="filter-chip" style="font-size:0.7rem;padding:0.1rem 0.4rem;">${l}</span>`).join(' ');
+        const labelsPills = (task.labels || []).map(l => `<span class="filter-chip" style="font-size:0.7rem;padding:0.1rem 0.4rem;">${esc(l)}</span>`).join(' ');
         
         let assigneeBadge = '';
         if (task.isOrgTask) {
           assigneeBadge = `<span class="org-badge badge-employee" style="font-size:0.72rem;">🌐 Org Task</span>`;
         } else if (task.assignedUserEmail) {
            const assignedUser = orgUsers.find(u => u.email === task.assignedUserEmail) || { name: task.assigneeName || task.assignedUserEmail.split('@')[0] };
-           assigneeBadge = `<span class="org-badge badge-employee" style="font-size:0.72rem;">👤 ${assignedUser.name}</span>`;
+           assigneeBadge = `<span class="org-badge badge-employee" style="font-size:0.72rem;">👤 ${esc(assignedUser.name)}</span>`;
         } else if (task.assigneeName) {
-           assigneeBadge = `<span class="org-badge badge-employee" style="font-size:0.72rem;">👤 ${task.assigneeName}</span>`;
+           assigneeBadge = `<span class="org-badge badge-employee" style="font-size:0.72rem;">👤 ${esc(task.assigneeName)}</span>`;
         }
 
         const canComplete = canModifyTask(task);
         const checkDisabled = !canComplete ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : '';
 
         return `
-          <article class="task-row ${task.status === 'Done' ? 'is-complete' : ''}" data-task-id="${task.id}">
-            <button class="task-check" type="button" data-toggle-task="${task.id}" aria-label="Mark ${task.title} complete" ${checkDisabled}>
+          <article class="task-row ${task.status === 'Done' ? 'is-complete' : ''}" data-task-id="${esc(task.id)}">
+            <button class="task-check" type="button" data-toggle-task="${esc(task.id)}" aria-label="Mark ${esc(task.title)} complete" ${checkDisabled}>
               ${task.status === 'Done' ? '✓' : ''}
             </button>
             <div class="task-main">
               <div class="task-title-row">
-                <strong>${task.title}</strong>
+                <strong>${esc(task.title)}</strong>
                 <div class="task-pill-row">
                   ${assigneeBadge}
                   <span class="priority-pill ${helpers.getPriorityTone(task.priority)}">${task.priority}</span>
@@ -497,13 +463,14 @@
             const canComplete = canModifyTask(task);
             const dragAttr = canComplete ? 'draggable="true"' : '';
 
+            const esc = (s) => (typeof AppHelpers !== 'undefined' && AppHelpers.escapeHTML) ? AppHelpers.escapeHTML(s) : String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
             return `
-              <article class="board-card" ${dragAttr} data-task-id="${task.id}">
+              <article class="board-card" ${dragAttr} data-task-id="${esc(task.id)}">
                 <div class="board-card-top">
-                  <strong>${task.title}</strong>
-                  <span class="priority-pill ${helpers.getPriorityTone(task.priority)}">${task.priority}</span>
+                  <strong>${esc(task.title)}</strong>
+                  <span class="priority-pill ${helpers.getPriorityTone(task.priority)}">${esc(task.priority)}</span>
                 </div>
-                <p>${task.description || 'No notes yet.'}</p>
+                <p>${esc(task.description || 'No notes yet.')}</p>
 
                 <div style="margin:0.3rem 0;">
                   <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:var(--ink-soft);margin-bottom:0.15rem;">
@@ -677,6 +644,14 @@
   }
 
   function openTaskModal(taskIdToEdit = null) {
+    if (taskProjectInput) {
+      const projects = state.currentUser.projects || [];
+      taskProjectInput.innerHTML = `
+        <option value="">General (No Project)</option>
+        ${projects.map(p => `<option value="${p.id || p._id}">${p.name}</option>`).join('')}
+      `;
+    }
+
     if (taskIdToEdit) {
       const task = state.currentUser.tasks.find((t) => t.id === taskIdToEdit);
       if (!task) return;
@@ -684,6 +659,10 @@
       taskTitleInput.value = task.title;
       taskDescriptionInput.value = task.description || '';
       taskPriorityInput.value = task.priority || 'Medium';
+
+      if (taskProjectInput) {
+        taskProjectInput.value = task.projectId || '';
+      }
 
       const assigneeInput = document.getElementById('taskAssignee');
       if (assigneeInput) {
@@ -744,6 +723,7 @@
     const reminderDate = document.getElementById('taskReminderDate')?.value || '';
     const reminderTime = document.getElementById('taskReminderTime')?.value || '';
     const status = taskStatusInput.value;
+    const projectId = taskProjectInput?.value || null;
     
     const assigneeSelectValue = document.getElementById('taskAssignee')?.value || '';
     let isOrgTask = false;
@@ -752,6 +732,19 @@
        isOrgTask = true;
     } else if (assigneeSelectValue) {
        assignedUserEmail = assigneeSelectValue;
+    }
+
+    const labelsStr = taskLabelsInput?.value.trim() || '';
+    const labels = labelsStr ? labelsStr.split(',').map(l => l.trim()).filter(Boolean) : [];
+
+    let attachments = [];
+    if (taskAttachmentsInput) {
+      if (taskAttachmentsInput.type === 'file' && taskAttachmentsInput.files) {
+        attachments = Array.from(taskAttachmentsInput.files).map(f => f.name);
+      } else {
+        const attStr = taskAttachmentsInput.value.trim();
+        attachments = attStr ? attStr.split(',').map(a => a.trim()).filter(Boolean) : [];
+      }
     }
 
     if (editingId) {
@@ -766,6 +759,9 @@
         task.reminderDate = reminderDate;
         task.reminderTime = reminderTime;
         task.status = status;
+        task.projectId = projectId;
+        task.labels = labels;
+        task.attachments = attachments;
         if (state.currentUser.role === 'admin') {
            task.isOrgTask = isOrgTask;
            task.assignedUserEmail = assignedUserEmail;
@@ -775,8 +771,8 @@
         if (api && api.updateBackendTask && task._id) {
           try {
             await api.updateBackendTask(task._id, { 
-              title, description, priority, status, dueDate, dueTime, reminderDate, reminderTime,
-              isOrgTask: task.isOrgTask, assignedUserEmail: task.assignedUserEmail
+              title, description, priority, status, dueDate, dueTime, reminderDate, reminderTime, projectId,
+              isOrgTask: task.isOrgTask, assignedUserEmail: task.assignedUserEmail, labels, attachments
             });
           } catch (err) {
             console.warn('Backend task update failed:', err);
@@ -789,8 +785,8 @@
       if (api && api.createBackendTask) {
         try {
           createdTask = await api.createBackendTask({ 
-            title, description, priority, dueDate, dueTime, reminderDate, reminderTime, status,
-            isOrgTask, assignedUserEmail
+            title, description, priority, dueDate, dueTime, reminderDate, reminderTime, status, projectId,
+            isOrgTask, assignedUserEmail, labels, attachments
           });
         } catch (err) {
           console.warn('Backend task creation failed:', err);
@@ -802,6 +798,9 @@
         _id: createdTask?._id,
         title,
         description,
+        projectId,
+        labels,
+        attachments,
         assigneeName: assignedUserEmail
           ? assignedUserEmail.split('@')[0]
           : (createdTask?.assignedUser?.username || currentUser.name),
@@ -982,8 +981,6 @@
     const closeBoardBgModal = document.getElementById('closeBoardBgModal');
     if (!changeBoardBgBtn || !boardBgModal) return;
 
-    const BOARD_BG_KEY = `nw_board_bg_${sessionEmail || 'guest'}`;
-
     function applyBoardBackground(bgVal) {
       const boardEl = document.getElementById('boardColumns');
       const panel = boardEl ? boardEl.closest('.page-panel') : document.querySelector('.page-panel');
@@ -1043,10 +1040,12 @@
       boardBgModal.style.display = '';
     }
 
-    try {
-      const savedBg = localStorage.getItem(BOARD_BG_KEY);
-      if (savedBg) applyBoardBackground(savedBg);
-    } catch (_) { /* ignore */ }
+    // The preference lives on the user record so it follows them across devices.
+    if (api && api.refreshMe) {
+      api.refreshMe()
+        .then((user) => { if (user && user.boardBg) applyBoardBackground(user.boardBg); })
+        .catch(() => {});
+    }
 
     changeBoardBgBtn.addEventListener('click', (e) => {
       e.preventDefault();
@@ -1070,7 +1069,9 @@
       if (!option) return;
       const bgVal = option.getAttribute('data-bg-value') || 'none';
       applyBoardBackground(bgVal);
-      try { localStorage.setItem(BOARD_BG_KEY, bgVal); } catch (_) { /* ignore */ }
+      if (api && api.updateProfile) {
+        api.updateProfile({ boardBg: bgVal }).catch(() => {});
+      }
       closeBoardBgModalFn();
     });
   })();

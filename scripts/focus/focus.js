@@ -52,29 +52,48 @@
     timerStatus.textContent = isRunning ? 'Deep work in progress' : remainingSeconds === totalSeconds ? 'Ready to focus' : 'Paused';
   }
 
+  let targetEndTime = null;
+
   function tick() {
     if (!isRunning) return;
+    if (targetEndTime) {
+      remainingSeconds = Math.max(0, Math.round((targetEndTime - Date.now()) / 1000));
+    } else {
+      remainingSeconds -= 1;
+    }
+
     if (remainingSeconds <= 0) {
       clearInterval(timerId);
       isRunning = false;
+      targetEndTime = null;
       timerStatus.textContent = 'Session complete 🎉';
       if (customMinutesInput) {
         customMinutesInput.disabled = false;
       }
 
-      // Log Focus Activity (Mocked for now as we don't save activity to backend yet)
-      const focusMins = customMinutesInput ? (parseInt(customMinutesInput.value, 10) || 25) : 25;
-      // Focus session completed — logged via UI toast if present
+      const focusMins = Math.max(1, Math.round(totalSeconds / 60));
       if (typeof showNotif === 'function') {
         showNotif(`Completed a ${focusMins}-minute Focus Sprint!`, 'success');
       }
+
+      if (window.NexusAPI && window.NexusAPI.logFocusSession) {
+        window.NexusAPI.logFocusSession(focusMins)
+          .then((saved) => {
+            if (!saved && typeof showNotif === 'function') {
+              showNotif('Session finished, but it could not be saved to the server.', 'error');
+            }
+            window.dispatchEvent(new CustomEvent('nexus:focus-logged'));
+          })
+          .catch(() => {});
+      }
+
       window.dispatchEvent(new CustomEvent('nexus:tasks-updated'));
 
       clearTimerState();
+      renderTimer();
       return;
     }
 
-    remainingSeconds -= 1;
     saveTimerState();
     renderTimer();
   }
@@ -82,9 +101,16 @@
   function startTimer() {
     if (isRunning) return;
     if (customMinutesInput) {
+      const mins = Math.max(1, parseInt(customMinutesInput.value, 10) || 25);
+      customMinutesInput.value = mins;
+      if (!remainingSeconds || remainingSeconds === totalSeconds) {
+        totalSeconds = mins * 60;
+        remainingSeconds = totalSeconds;
+      }
       customMinutesInput.disabled = true;
     }
     isRunning = true;
+    targetEndTime = Date.now() + remainingSeconds * 1000;
     saveTimerState();
     timerId = setInterval(tick, 1000);
     renderTimer();
