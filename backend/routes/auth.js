@@ -7,6 +7,16 @@ const { signToken } = require('../utils/jwt');
 const router = express.Router();
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 6;
+const VALID_ROLES = ['personal', 'admin', 'employee'];
+
+// Personal and Organization are separate portals: one email belongs to exactly one of them.
+function scopeOf(role) {
+  return role === 'personal' ? 'personal' : 'organization';
+}
+
+function scopeLabel(scope) {
+  return scope === 'personal' ? 'Personal' : 'Organization';
+}
 
 function handleMongooseError(err, res, fallback) {
   if (err.name === 'ValidationError') {
@@ -30,6 +40,9 @@ router.post(['/signup', '/register'], async (req, res) => {
   if (!password || String(password).length < MIN_PASSWORD_LENGTH) {
     return res.status(400).json({ errors: [`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`] });
   }
+  if (!VALID_ROLES.includes(role)) {
+    return res.status(400).json({ errors: ['Please select a valid account type.'] });
+  }
 
   const normalizedEmail = email.trim().toLowerCase();
   let createdOrgId = null;
@@ -37,7 +50,10 @@ router.post(['/signup', '/register'], async (req, res) => {
   try {
     const existing = await User.findOne({ email: normalizedEmail });
     if (existing) {
-      return res.status(409).json({ errors: ['An account with that email already exists.'] });
+      const existingScope = scopeLabel(scopeOf(existing.role));
+      return res.status(409).json({
+        errors: [`This email is already registered as a ${existingScope} account. Personal and Organization accounts cannot share the same credentials — please sign up with a different email.`]
+      });
     }
 
     let assignedOrgId = null;
@@ -116,12 +132,23 @@ router.post('/login', async (req, res) => {
     const isMatch = await user.comparePassword(password);
     if (!isMatch) return res.status(401).json({ errors: ['Incorrect password.'] });
 
-    if (role && user.role && user.role !== role) {
-      if (role === 'personal' && user.role !== 'personal') {
-        return res.status(403).json({ errors: ['Account registered under Organization scope. Please switch to Organization tab.'] });
+    if (role) {
+      if (!VALID_ROLES.includes(role)) {
+        return res.status(400).json({ errors: ['Please select a valid account type.'] });
       }
-      if ((role === 'admin' || role === 'employee') && user.role === 'personal') {
-        return res.status(403).json({ errors: ['Account registered under Personal scope. Please switch to Personal tab.'] });
+
+      const requestedScope = scopeOf(role);
+      const accountScope = scopeOf(user.role);
+
+      if (requestedScope !== accountScope) {
+        return res.status(403).json({
+          errors: [`This email is registered as a ${scopeLabel(accountScope)} account. Switch to the ${scopeLabel(accountScope)} tab to sign in.`]
+        });
+      }
+
+      if (requestedScope === 'organization' && role !== user.role) {
+        const actual = user.role === 'admin' ? 'Admin' : 'Employee';
+        return res.status(403).json({ errors: [`This account is an Organization ${actual}. Select the ${actual} role to sign in.`] });
       }
     }
 

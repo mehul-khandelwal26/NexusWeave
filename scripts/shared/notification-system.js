@@ -10,8 +10,11 @@
   if (!currentUser) return;
 
   const isAdmin = currentUser.role === 'admin';
+  // Announcements belong to the organization workspace only — personal accounts never see them.
+  const isOrgAccount = currentUser.role !== 'personal' && Boolean(currentUser.organizationId);
   const myEmail = (currentUser.email || '').toLowerCase();
   const NOTIFS_KEY = `nw_notifs_${currentUser.email}`;
+  const ANNOUNCEMENTS_CACHE_KEY = `nw_announcements_${currentUser.organizationId || 'none'}`;
 
   function isOwnTask(task) {
     if (!task) return false;
@@ -257,47 +260,51 @@
           existingTexts.add(text);
         }
       });
-      injectBellUI();
-      injectMegaphoneUI();
-      seedDeadlineNotifications();
     } catch (_) { /* ignore */ }
   }
 
-  /* ── Header Megaphone Announcement Injector ── */
+  /* ── Header Calendar Injector ── */
+  function injectCalendarNavUI() {
+    const headerActions = document.querySelector('.header-actions');
+    if (!headerActions || document.getElementById('calendarNavWrapper')) return;
+
+    const bellWrapper = document.getElementById('notifBellWrapper');
+
+    const calendarNavWrapper = document.createElement('div');
+    calendarNavWrapper.id = 'calendarNavWrapper';
+    calendarNavWrapper.className = 'notif-wrapper';
+    calendarNavWrapper.innerHTML = `
+      <button id="calendarNavBtn" class="notif-bell-btn" type="button" aria-label="Calendar" title="Workspace Calendar & Deadlines">
+        📅
+      </button>
+    `;
+    if (bellWrapper) {
+      headerActions.insertBefore(calendarNavWrapper, bellWrapper);
+    } else {
+      headerActions.insertBefore(calendarNavWrapper, headerActions.firstChild);
+    }
+
+    document.getElementById('calendarNavBtn').addEventListener('click', () => {
+      ensureCalendarAssetsLoaded();
+      createGlobalCalendarModalInDOM();
+      const triggerOpen = () => {
+        if (window.openGlobalCalendarModal) {
+          window.openGlobalCalendarModal();
+        }
+      };
+      triggerOpen();
+      setTimeout(triggerOpen, 100);
+    });
+  }
+
+  /* ── Header Megaphone Announcement Injector (organization accounts only) ── */
   function injectMegaphoneUI() {
+    if (!isOrgAccount) return;
+
     const headerActions = document.querySelector('.header-actions');
     if (!headerActions || document.getElementById('megaphoneWrapper')) return;
 
     const bellWrapper = document.getElementById('notifBellWrapper');
-
-    // Inject Calendar Icon directly to the left of Megaphone Logo
-    if (!document.getElementById('calendarNavWrapper')) {
-      const calendarNavWrapper = document.createElement('div');
-      calendarNavWrapper.id = 'calendarNavWrapper';
-      calendarNavWrapper.className = 'notif-wrapper';
-      calendarNavWrapper.innerHTML = `
-        <button id="calendarNavBtn" class="notif-bell-btn" type="button" aria-label="Calendar" title="Workspace Calendar & Deadlines">
-          📅
-        </button>
-      `;
-      if (bellWrapper) {
-        headerActions.insertBefore(calendarNavWrapper, bellWrapper);
-      } else {
-        headerActions.insertBefore(calendarNavWrapper, headerActions.firstChild);
-      }
-
-      document.getElementById('calendarNavBtn').addEventListener('click', () => {
-        ensureCalendarAssetsLoaded();
-        createGlobalCalendarModalInDOM();
-        const triggerOpen = () => {
-          if (window.openGlobalCalendarModal) {
-            window.openGlobalCalendarModal();
-          }
-        };
-        triggerOpen();
-        setTimeout(triggerOpen, 100);
-      });
-    }
 
     const megaphoneWrapper = document.createElement('div');
     megaphoneWrapper.id = 'megaphoneWrapper';
@@ -480,6 +487,7 @@
   let cachedAnnouncements = [];
 
   function createAnnouncementModalsInDOM() {
+    if (!isOrgAccount) return;
     if (document.getElementById('announcementFeedModal')) return;
 
     const feedModal = document.createElement('div');
@@ -649,7 +657,7 @@
           }
         } else {
           // Offline fallback storage
-          const localAnnouncements = JSON.parse(localStorage.getItem('nw_announcements') || '[]');
+          const localAnnouncements = JSON.parse(localStorage.getItem(ANNOUNCEMENTS_CACHE_KEY) || '[]');
           const newAnn = {
             id: `ann_${Date.now()}`,
             title,
@@ -660,7 +668,7 @@
             createdAt: new Date().toISOString()
           };
           localAnnouncements.unshift(newAnn);
-          localStorage.setItem('nw_announcements', JSON.stringify(localAnnouncements));
+          localStorage.setItem(ANNOUNCEMENTS_CACHE_KEY, JSON.stringify(localAnnouncements));
 
           titleInput.value = '';
           contentInput.value = '';
@@ -694,6 +702,7 @@
   }
 
   function openAnnouncementFeedModal() {
+    if (!isOrgAccount) return;
     createAnnouncementModalsInDOM();
     const modal = document.getElementById('announcementFeedModal');
     if (modal) {
@@ -709,6 +718,7 @@
   }
 
   function openCreateAnnouncementModal() {
+    if (!isOrgAccount) return;
     createAnnouncementModalsInDOM();
     const modal = document.getElementById('announcementCreateModal');
     if (modal) modal.classList.remove('hidden');
@@ -720,6 +730,8 @@
   }
 
   async function loadAndRenderAnnouncements() {
+    if (!isOrgAccount) return;
+
     const container = document.getElementById('announcementFeedContainer');
     if (!container) return;
 
@@ -729,7 +741,7 @@
     }
 
     if (!announcements) {
-      announcements = JSON.parse(localStorage.getItem('nw_announcements') || '[]');
+      announcements = JSON.parse(localStorage.getItem(ANNOUNCEMENTS_CACHE_KEY) || '[]');
     }
 
     cachedAnnouncements = announcements || [];
@@ -825,6 +837,7 @@
 
   function initAllUI() {
     injectBellUI();
+    injectCalendarNavUI();
     injectMegaphoneUI();
     seedDeadlineNotifications();
   }

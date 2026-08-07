@@ -99,6 +99,8 @@
     ? '/api'
     : 'http://localhost:4000/api';
 
+  const SERVER_UNREACHABLE = 'Cannot reach the NexusWeave server. Please make sure the backend is running and try again.';
+
 
   async function tryBackendRequest(endpoint, options = {}) {
     const controller = new AbortController();
@@ -141,6 +143,18 @@
     return sanitized;
   }
 
+  function getSessionUser() {
+    const email = sessionStorage.getItem('session');
+    if (!email) return null;
+    return getUsers()[email] || null;
+  }
+
+  /** Organization-scoped features (announcements, org roster) are off-limits to personal accounts. */
+  function isOrgScopedSession() {
+    const user = getSessionUser();
+    return Boolean(user && user.role && user.role !== 'personal' && user.organizationId);
+  }
+
   function syncLocalUserFromServer(userData) {
     if (!userData || !userData.email) return;
     const users = getUsers();
@@ -163,44 +177,21 @@
     /* ── Auth ── */
     async signup({ name, email, password, role = 'personal', orgName, orgKey, orgVisibility, orgId }) {
       const username = name || email.split('@')[0];
-      let token, userData;
 
       const backendRes = await tryBackendRequest('/auth/register', {
         method: 'POST',
         body: JSON.stringify({ name: username, email, password, role, orgName, orgKey, orgVisibility, orgId })
       });
 
-      if (backendRes && !backendRes._error) {
-        token = backendRes.token;
-        userData = backendRes.user;
-      } else if (backendRes && backendRes._error) {
-        return { success: false, error: backendRes.message || 'Failed to sign up.' };
-      } else {
-        // Offline Fallback Mode
-        token = 'jwt_offline_' + Date.now();
-        let orgIdFinal = orgId || null;
-        if (role === 'admin' && orgName) {
-          orgIdFinal = generateId('org');
-          upsertLocalOrg({
-            id: orgIdFinal,
-            name: orgName,
-            orgKey: orgKey || '',
-            visibility: orgVisibility || 'public',
-            createdBy: email,
-            admins: [email],
-            members: [email]
-          });
-        }
-        userData = {
-          id: generateId('user'),
-          name: username,
-          email,
-          role,
-          organizationId: orgIdFinal,
-          department: 'Engineering',
-          theme: 'dark'
-        };
+      if (!backendRes) {
+        return { success: false, error: SERVER_UNREACHABLE };
       }
+      if (backendRes._error) {
+        return { success: false, error: backendRes.message || 'Failed to sign up.' };
+      }
+
+      const token = backendRes.token;
+      const userData = backendRes.user;
 
       if (role === 'admin' && orgName && userData.organizationId) {
         upsertLocalOrg({
@@ -219,39 +210,22 @@
     },
 
     async login({ email, password, role }) {
-      let token, userData;
-
       const backendRes = await tryBackendRequest('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, password, role })
       });
 
-      if (backendRes && !backendRes._error) {
-        token = backendRes.token;
-        userData = backendRes.user;
-      } else if (backendRes && backendRes._error) {
+      // Credentials and account scope are only ever verified by the server. There is no
+      // local fallback, otherwise a personal account could sign in through the org portal.
+      if (!backendRes) {
+        return { success: false, error: SERVER_UNREACHABLE };
+      }
+      if (backendRes._error) {
         return { success: false, error: backendRes.message || 'Invalid email or password.' };
-      } else {
-        // Offline Fallback Mode
-        const users = getUsers();
-        const existing = users[email];
-        token = 'jwt_offline_' + Date.now();
-        if (existing) {
-          userData = { ...existing };
-        } else {
-          userData = {
-            id: generateId('user'),
-            name: email.split('@')[0],
-            email,
-            role: role || 'personal',
-            department: 'Engineering',
-            theme: 'dark'
-          };
-        }
       }
 
-      const user = applyAuthResponse(userData, token, 'email');
-      return { success: true, token, user };
+      const user = applyAuthResponse(backendRes.user, backendRes.token, 'email');
+      return { success: true, token: backendRes.token, user };
     },
 
     async logout() {
@@ -651,8 +625,11 @@
       return { total: 0, bySender: {} };
     },
 
-    /* ── Announcement API ── */
+    /* ── Announcement API (organization accounts only) ── */
+    isOrgAccount: isOrgScopedSession,
+
     async fetchAnnouncements() {
+      if (!isOrgScopedSession()) return [];
       const res = await tryBackendRequest('/announcements', { method: 'GET' });
       if (res && !res._error && res.success && Array.isArray(res.announcements)) {
         return res.announcements;
@@ -661,6 +638,9 @@
     },
 
     async createAnnouncement({ title, content, attachments }) {
+      if (!isOrgScopedSession()) {
+        return { success: false, error: 'Announcements are only available to organization accounts.' };
+      }
       const res = await tryBackendRequest('/announcements', {
         method: 'POST',
         body: JSON.stringify({ title, content, attachments })

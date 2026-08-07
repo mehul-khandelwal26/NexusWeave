@@ -4,17 +4,16 @@ const requireAuth = require('../middleware/auth');
 
 const router = express.Router();
 
-// Get Announcements (For all authenticated members)
+const ORG_ONLY_ERROR = 'Announcements are only available to organization accounts.';
+
+// Get Announcements (members of the requesting user's organization only)
 router.get('/', requireAuth, async (req, res) => {
+  if (!req.user.orgId) {
+    return res.status(403).json({ errors: [ORG_ONLY_ERROR] });
+  }
+
   try {
-    const query = {};
-    if (req.user.orgId) {
-      query.$or = [
-        { organizationId: req.user.orgId },
-        { organizationId: null }
-      ];
-    }
-    const announcements = await Announcement.find(query).sort({ createdAt: -1 });
+    const announcements = await Announcement.find({ organizationId: req.user.orgId }).sort({ createdAt: -1 });
     res.json({ success: true, announcements });
   } catch (err) {
     console.error('Error fetching announcements:', err);
@@ -22,8 +21,11 @@ router.get('/', requireAuth, async (req, res) => {
   }
 });
 
-// Create Announcement (Admin Only)
+// Create Announcement (Organization Admin Only)
 router.post('/', requireAuth, async (req, res) => {
+  if (!req.user.orgId) {
+    return res.status(403).json({ errors: [ORG_ONLY_ERROR] });
+  }
   if (req.user.role !== 'admin') {
     return res.status(403).json({ errors: ['Unauthorized. Only admins can create announcements.'] });
   }
@@ -50,7 +52,7 @@ router.post('/', requireAuth, async (req, res) => {
       attachments: formattedAttachments,
       createdBy: req.user.email,
       authorName: req.user.name || req.user.email.split('@')[0],
-      organizationId: req.user.orgId || null
+      organizationId: req.user.orgId
     });
 
     res.status(201).json({ success: true, announcement });

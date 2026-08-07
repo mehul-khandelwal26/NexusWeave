@@ -29,7 +29,8 @@ const announcementSchema = new mongoose.Schema(
     },
     organizationId: {
       type: String,
-      default: null
+      required: true,
+      index: true
     }
   },
   { timestamps: true }
