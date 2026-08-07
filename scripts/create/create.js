@@ -28,7 +28,7 @@ const SESSION_KEY = 'session';
 const JWT_KEY = 'jwt';
 const DEFAULT_LABELS = ['Work', 'College', 'Personal', 'Urgent', 'Meeting'];
 
-const sessionEmail = localStorage.getItem(SESSION_KEY);
+const sessionEmail = sessionStorage.getItem(SESSION_KEY);
 
 let currentUser = window.NexusAPI ? window.NexusAPI.getMe() : null;
 
@@ -48,10 +48,6 @@ let selectedTasksForNewProject = [];
 let aiSuggestedTasks = null;
 let aiSuggestedBg = null;
 let toastTimer = null;
-
-function pushActivity(message) {
-  // Activity tracking removed or ignored for backend refactor
-}
 
 function setActiveEntity(targetKey) {
   toggleButtons.forEach((button) => {
@@ -92,8 +88,16 @@ function closeLabelModal() {
   labelModal.setAttribute('aria-hidden', 'true');
 }
 
-function saveTasks() {
+/** Mirrors the server state into the shared cache the other pages read. */
+function syncLocalCache() {
+  if (window.NexusAPI && window.NexusAPI.saveUserData) {
+    window.NexusAPI.saveUserData({ tasks, projects });
+  }
   window.dispatchEvent(new CustomEvent('nexus:tasks-updated'));
+}
+
+function saveTasks() {
+  syncLocalCache();
 }
 
 function saveLabels() {
@@ -101,7 +105,7 @@ function saveLabels() {
 }
 
 function saveProjects() {
-  window.dispatchEvent(new CustomEvent('nexus:tasks-updated'));
+  syncLocalCache();
 }
 
 function getProjectFormValues() {
@@ -148,19 +152,19 @@ async function handleProjectSubmit(event) {
   }
 
   const project = buildProjectObject(values);
-  let createdProject = project;
 
-  if (window.NexusAPI && window.NexusAPI.createBackendProject) {
-    try {
-      const p = await window.NexusAPI.createBackendProject(project);
-      if (p) {
-        createdProject = p;
-        createdProject.id = p._id;
-      }
-    } catch(e) {
-      console.warn("Failed to create project in backend", e);
-    }
+  let createdProject = null;
+  try {
+    createdProject = await window.NexusAPI.createBackendProject(project);
+  } catch (e) {
+    console.warn('Failed to create project in backend', e);
   }
+
+  if (!createdProject) {
+    showFeedback('Could not save the project to the server. Please check your connection and try again.', 'error', projectFeedback);
+    return;
+  }
+  createdProject.id = createdProject._id || createdProject.id;
 
   if (aiSuggestedTasks) {
     for (let i = 0; i < aiSuggestedTasks.length; i++) {
@@ -176,19 +180,15 @@ async function handleProjectSubmit(event) {
         attachments: []
       };
       
-      let createdTask = taskData;
-      if (window.NexusAPI && window.NexusAPI.createBackendTask) {
-        try {
-          const t = await window.NexusAPI.createBackendTask(taskData);
-          if (t) {
-            createdTask = t;
-            createdTask.id = t._id;
-          }
-        } catch(e) {
-           console.warn("Failed to create AI task in backend", e);
+      try {
+        const t = await window.NexusAPI.createBackendTask(taskData);
+        if (t) {
+          t.id = t._id || t.id;
+          tasks.unshift(t);
         }
+      } catch (e) {
+        console.warn('Failed to create AI task in backend', e);
       }
-      tasks.unshift(createdTask);
     }
     aiSuggestedTasks = null;
   }
@@ -210,7 +210,6 @@ async function handleProjectSubmit(event) {
 
   projects = [createdProject, ...projects];
   saveProjects();
-  pushActivity(`Created project "${createdProject.name}" with ${selectedTasksForNewProject.length} tasks.`);
   showFeedback('Project created successfully.', 'success', projectFeedback);
   showToast('Project created successfully.');
   
@@ -439,22 +438,23 @@ async function handleTaskSubmit(event) {
 
   const task = buildTaskObject(values);
 
-  // Call Backend API to store in MongoDB Atlas
-  if (window.NexusAPI && window.NexusAPI.createBackendTask) {
-    try {
-      const createdBt = await window.NexusAPI.createBackendTask(task);
-      if (createdBt) {
-        task._id = createdBt._id;
-        task.id = createdBt._id;
-      }
-    } catch (err) {
-      console.warn('Backend task creation failed, continuing with local storage:', err);
-    }
+  // The database is the only place a task really exists — a task that lives
+  // solely in this tab would silently disappear on the next page load.
+  let createdTask = null;
+  try {
+    createdTask = await window.NexusAPI.createBackendTask(task);
+  } catch (err) {
+    console.warn('Backend task creation failed:', err);
   }
 
-  tasks = [task, ...tasks];
+  if (!createdTask) {
+    showFeedback('Could not save the task to the server. Please check your connection and try again.', 'error', taskFeedback);
+    return;
+  }
+
+  createdTask.id = createdTask._id || createdTask.id;
+  tasks = [createdTask, ...tasks];
   saveTasks();
-  pushActivity(`Created task "${task.title}".`);
   showFeedback('Task created successfully.', 'success', taskFeedback);
   showToast('Task created successfully.');
   resetTaskForm();

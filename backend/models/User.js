@@ -40,7 +40,7 @@ const userSchema = new mongoose.Schema(
     },
     skills: {
       type: [String],
-      default: ['JavaScript', 'System Architecture', 'UI Design']
+      default: []
     },
     provider: {
       type: String,
@@ -50,6 +50,10 @@ const userSchema = new mongoose.Schema(
     theme: {
       type: String,
       default: 'light'
+    },
+    boardBg: {
+      type: String,
+      default: 'none'
     }
   },
   { timestamps: true }
@@ -81,6 +85,7 @@ userSchema.methods.toSafeObject = function toSafeObject() {
     skills: this.skills,
     provider: this.provider,
     theme: this.theme,
+    boardBg: this.boardBg,
     createdAt: this.createdAt
   };
 };

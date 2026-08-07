@@ -70,9 +70,9 @@
 }
 
 .badge-current {
-  background: linear-gradient(135deg, rgba(47, 191, 159, 0.1), rgba(47, 191, 159, 0.2));
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.1), rgba(124, 58, 237, 0.2));
   color: var(--accent);
-  border: 1px solid rgba(47, 191, 159, 0.25);
+  border: 1px solid rgba(124, 58, 237, 0.25);
 }
 
 /* ── Count Badge ── */
@@ -207,7 +207,7 @@
   width: 2.2rem;
   height: 2.2rem;
   border-radius: 999px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  background: linear-gradient(135deg, var(--purple-primary), #a855f7);
   color: white;
   display: grid;
   place-items: center;
@@ -288,7 +288,7 @@
 
 .org-result-card:hover {
   border-color: var(--accent);
-  box-shadow: 0 4px 16px rgba(47, 191, 159, 0.08);
+  box-shadow: 0 4px 16px rgba(124, 58, 237, 0.08);
 }
 
 .org-result-info {
@@ -326,12 +326,12 @@
 }
 
 .org-current-card {
-  background: linear-gradient(135deg, rgba(47, 191, 159, 0.04), rgba(47, 191, 159, 0.1));
-  border-color: rgba(47, 191, 159, 0.3);
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.04), rgba(124, 58, 237, 0.1));
+  border-color: rgba(124, 58, 237, 0.3);
 }
 
 :root[data-theme='dark'] .org-current-card {
-  background: linear-gradient(135deg, rgba(47, 191, 159, 0.06), rgba(47, 191, 159, 0.12));
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.06), rgba(124, 58, 237, 0.12));
 }
 
 /* ── Notifications ── */

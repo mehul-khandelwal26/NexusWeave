@@ -164,14 +164,26 @@
 
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const completedByDay = [0, 0, 0, 0, 0, 0, 0];
+    const previousWeekByDay = [0, 0, 0, 0, 0, 0, 0];
 
-    allTasks.filter(t => t.status === 'Done').forEach(t => {
-      const date = t.completedAt ? new Date(t.completedAt) : new Date();
+    // Week boundaries (Monday-start) so "this week" and "last week" are real
+    // comparable windows rather than an invented target line.
+    const startOfWeek = new Date();
+    startOfWeek.setHours(0, 0, 0, 0);
+    startOfWeek.setDate(startOfWeek.getDate() - ((startOfWeek.getDay() + 6) % 7));
+    const startOfPreviousWeek = new Date(startOfWeek.getTime() - 7 * 86400000);
+
+    allTasks.filter(t => t.status === 'Done' && t.completedAt).forEach(t => {
+      const date = new Date(t.completedAt);
+      if (isNaN(date.getTime())) return;
       const dayIdx = (date.getDay() + 6) % 7;
-      completedByDay[dayIdx] += 1;
+      if (date >= startOfWeek) {
+        completedByDay[dayIdx] += 1;
+      } else if (date >= startOfPreviousWeek) {
+        previousWeekByDay[dayIdx] += 1;
+      }
     });
 
-    const targetByDay = [5, 8, 12, 10, 15, 6, 4];
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     const accentColor = isDark ? '#a78bfa' : '#5b21b6';
     const textColor = isDark ? '#94a3b8' : '#64748b';
@@ -182,15 +194,15 @@
         labels: days,
         datasets: [
           {
-            label: 'Completed Tasks',
+            label: 'Completed This Week',
             data: completedByDay,
             backgroundColor: accentColor,
             borderRadius: 8,
             borderSkipped: false
           },
           {
-            label: 'Target Goal',
-            data: targetByDay,
+            label: 'Previous Week',
+            data: previousWeekByDay,
             backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
             borderRadius: 8,
             borderSkipped: false

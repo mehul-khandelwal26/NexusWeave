@@ -114,77 +114,43 @@
     const pendingTasks = allOrgTasks.filter((t) => t.status !== 'Done').length;
 
     // Fetch Online Users & Today Attendance from Backend Database API
-    const [onlineRes, attendanceRes] = await Promise.all([
+    const [onlineRes] = await Promise.all([
       api.fetchOnlineUsers ? api.fetchOnlineUsers() : Promise.resolve(null),
-      api.fetchTodayAttendance ? api.fetchTodayAttendance() : Promise.resolve(null)
+      loadAttendanceSnapshot()
     ]);
 
     const onlineCount = (onlineRes && onlineRes.success) ? onlineRes.onlineCount : 1;
     const totalCount = (onlineRes && onlineRes.success) ? onlineRes.totalCount : Math.max(totalEmployees, 1);
-    const attendanceRate = (attendanceRes && attendanceRes.success) ? attendanceRes.attendanceRate : 0;
 
     const adminTotalEl = document.getElementById('adminTotalEmployees');
     const adminAssignedEl = document.getElementById('adminTasksAssigned');
     const adminCompletedEl = document.getElementById('adminCompletedTasks');
     const adminPendingEl = document.getElementById('adminPendingTasks');
-    const adminAttendanceEl = document.getElementById('adminAttendanceRate');
 
     // Requirement 1: Ratio format [Online Count]/[Total Count]
     if (adminTotalEl) adminTotalEl.textContent = `${onlineCount}/${totalCount}`;
     if (adminAssignedEl) adminAssignedEl.textContent = tasksAssigned;
     if (adminCompletedEl) adminCompletedEl.textContent = completedTasks;
     if (adminPendingEl) adminPendingEl.textContent = pendingTasks;
-    if (adminAttendanceEl) adminAttendanceEl.textContent = `${attendanceRate}%`;
 
     // Setup Clickable Metric Card Modals
     setupMetricCardModals();
 
     initSimpleAttendance('admin');
-    renderAdminAttendanceList(orgUsers, getTodayAttendanceMap());
-    renderAdminActivityFeed(currentUser);
+    renderAdminActivityFeed();
   }
 
-  function getTodayKey() {
-    return new Date().toISOString().split('T')[0];
-  }
-
-  function getTodayAttendanceMap() {
-    const records = JSON.parse(localStorage.getItem('nw_attendance') || '{}');
-    return records[getTodayKey()] || {};
-  }
-
-  function isMarkedPresent(email) {
-    const record = getTodayAttendanceMap()[email];
-    return Boolean(record && (record.status === 'in' || record.status === 'present'));
-  }
-
-  function markAttendancePresent(email, name) {
-    const key = getTodayKey();
-    const records = JSON.parse(localStorage.getItem('nw_attendance') || '{}');
-    if (!records[key]) records[key] = {};
-    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    records[key][email] = { status: 'present', time, markedAt: new Date().toISOString() };
-    localStorage.setItem('nw_attendance', JSON.stringify(records));
-
-    if (window.NexusNotify && email === currentUser.email) {
-      window.NexusNotify.add({ icon: '✅', text: 'Attendance marked for today.', type: 'success' });
-    }
-
-    return records[key][email];
-  }
-
-  function clearAttendance(email) {
-    const key = getTodayKey();
-    const records = JSON.parse(localStorage.getItem('nw_attendance') || '{}');
-    if (records[key] && records[key][email]) {
-      delete records[key][email];
-      localStorage.setItem('nw_attendance', JSON.stringify(records));
-    }
-  }
-
+  /* ── Attendance (database-backed; no local state) ── */
+  let attendanceSnapshot = null;
   let attendanceBound = { admin: false, emp: false };
 
-  function initSimpleAttendance(role) {
+  async function loadAttendanceSnapshot() {
+    if (!api.fetchTodayAttendance) return null;
+    attendanceSnapshot = await api.fetchTodayAttendance();
+    return attendanceSnapshot;
+  }
+
+  function renderAttendance(role) {
     const isAdminRole = role === 'admin';
     const statusEl = document.getElementById(isAdminRole ? 'adminSelfAttendanceStatus' : 'empAttendanceStatus');
     const metaEl = document.getElementById(isAdminRole ? 'adminSelfAttendanceMeta' : 'empAttendanceMeta');
@@ -192,50 +158,88 @@
     const statEl = document.getElementById('empAttendanceStat');
     if (!btn || !statusEl) return;
 
-    function refreshUI() {
-      const present = isMarkedPresent(currentUser.email);
-      const record = getTodayAttendanceMap()[currentUser.email];
-      if (present) {
-        statusEl.textContent = 'Present today';
-        if (metaEl) metaEl.textContent = `Marked at ${record.time || '—'}. Click to undo.`;
-        btn.textContent = 'Undo Attendance';
-        btn.className = 'ghost-btn';
-      } else {
-        statusEl.textContent = 'Not marked today';
-        if (metaEl) metaEl.textContent = 'Click below to mark yourself present.';
-        btn.textContent = 'Mark Present';
-        btn.className = 'primary-btn';
-      }
-      if (statEl && !isAdminRole) statEl.textContent = present ? 'Yes' : 'No';
+    if (!attendanceSnapshot) {
+      statusEl.textContent = 'Attendance unavailable';
+      if (metaEl) metaEl.textContent = 'Could not reach the server. Check your connection and retry.';
+      btn.textContent = 'Retry';
+      btn.className = 'ghost-btn';
+      btn.disabled = false;
+      return;
     }
+
+    const self = attendanceSnapshot.self || {};
+    btn.disabled = false;
+    if (self.marked) {
+      statusEl.textContent = 'Present today';
+      if (metaEl) {
+        metaEl.textContent = `Marked at ${self.time || '—'} · ${self.monthlyRate || 0}% over the last ${attendanceSnapshot.rateWindowDays} days. Click to undo.`;
+      }
+      btn.textContent = 'Undo Attendance';
+      btn.className = 'ghost-btn';
+    } else {
+      statusEl.textContent = 'Not marked today';
+      if (metaEl) metaEl.textContent = 'Click below to mark yourself present.';
+      btn.textContent = 'Mark Present';
+      btn.className = 'primary-btn';
+    }
+    if (statEl && !isAdminRole) statEl.textContent = self.marked ? 'Yes' : 'No';
+
+    if (isAdminRole) {
+      const rateEl = document.getElementById('adminAttendanceRate');
+      if (rateEl) rateEl.textContent = `${attendanceSnapshot.attendanceRate}%`;
+      renderAdminAttendanceList(attendanceSnapshot);
+    }
+  }
+
+  function initSimpleAttendance(role) {
+    const btn = document.getElementById(role === 'admin' ? 'adminMarkAttendanceBtn' : 'empMarkAttendanceBtn');
+    if (!btn) return;
 
     if (!attendanceBound[role]) {
       attendanceBound[role] = true;
       btn.addEventListener('click', async () => {
-        if (isMarkedPresent(currentUser.email)) {
-          clearAttendance(currentUser.email);
-        } else {
-          markAttendancePresent(currentUser.email, currentUser.name);
-          if (api.markDatabaseAttendance) {
-            await api.markDatabaseAttendance().catch(() => {});
+        btn.disabled = true;
+        try {
+          if (!attendanceSnapshot) {
+            await loadAttendanceSnapshot();
+          } else if (attendanceSnapshot.self && attendanceSnapshot.self.marked) {
+            const res = api.clearDatabaseAttendance ? await api.clearDatabaseAttendance() : null;
+            if (res) attendanceSnapshot = res;
+          } else {
+            const res = api.markDatabaseAttendance ? await api.markDatabaseAttendance() : null;
+            if (res) {
+              attendanceSnapshot = res;
+              if (window.NexusNotify) {
+                window.NexusNotify.add({ icon: '✅', text: 'Attendance marked for today.', type: 'success' });
+              }
+            } else if (window.NexusNotify) {
+              window.NexusNotify.add({ icon: '⚠️', text: 'Could not save attendance. Please try again.', type: 'error' });
+            }
           }
-        }
-        refreshUI();
-        if (isAdminRole) {
-          api.getAllUsersInOrg(currentUser.organizationId).then((users) => {
-            renderAdminAttendanceList(users || [], getTodayAttendanceMap());
-          }).catch(() => {
-            renderAdminAttendanceList([currentUser], getTodayAttendanceMap());
-          });
+        } finally {
+          btn.disabled = false;
+          renderAttendance(role);
         }
       });
     }
 
-    refreshUI();
+    renderAttendance(role);
+  }
+
+  /** Pulls a fresh snapshot from the database and repaints whichever widget is on screen. */
+  async function refreshAttendance() {
+    if (!currentUser.organizationId) return;
+    await loadAttendanceSnapshot();
+    renderAttendance(currentUser.role === 'admin' ? 'admin' : 'emp');
   }
 
   /* ── Interactive Metric Card Modals ── */
+  let metricModalsBound = false;
+
   function setupMetricCardModals() {
+    if (metricModalsBound) return;
+    metricModalsBound = true;
+
     const onlineCard = document.getElementById('adminTotalEmployeesCard');
     const attendanceCard = document.getElementById('adminAttendanceRateCard');
 
@@ -328,49 +332,49 @@
     }).join('');
   }
 
-  function renderAdminAttendanceList(users, todayAttendance) {
+  function renderAdminAttendanceList(snapshot) {
     const container = document.getElementById('adminAttendanceList');
     if (!container) return;
 
-    if (!users.length) {
-      container.innerHTML = `<div class="empty-inline">No team members found.</div>`;
+    if (!snapshot) {
+      container.innerHTML = `<div class="empty-inline">Attendance is unavailable right now.</div>`;
       return;
     }
 
-    const presentUsers = users.filter((u) => {
-      const record = todayAttendance[u.email];
-      return record && (record.status === 'in' || record.status === 'present');
-    });
-
-    if (!presentUsers.length) {
-      container.innerHTML = `<div class="empty-inline">No attendance marked yet today.</div>`;
+    const roster = Array.isArray(snapshot.roster) ? snapshot.roster : [];
+    if (!roster.length) {
+      container.innerHTML = `<div class="empty-inline">No team members found.</div>`;
       return;
     }
 
     const esc = (s) => (typeof AppHelpers !== 'undefined' && AppHelpers.escapeHTML) ? AppHelpers.escapeHTML(s) : String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-    container.innerHTML = presentUsers.map((u) => {
-      const record = todayAttendance[u.email];
-      return `
-        <div class="attendance-admin-item">
-          <div style="display:flex;align-items:center;gap:0.6rem;">
-            <span style="font-size:0.9rem;">🟢</span>
-            <div>
-              <strong>${esc(u.name || u.email)}</strong>
-              <small style="display:block;color:var(--ink-soft);font-size:0.75rem;">${esc(u.email)}</small>
-            </div>
+    const ordered = roster.slice().sort((a, b) => Number(b.present) - Number(a.present));
+
+    container.innerHTML = ordered.map((u) => `
+      <div class="attendance-admin-item">
+        <div style="display:flex;align-items:center;gap:0.6rem;">
+          <span style="font-size:0.9rem;">${u.present ? '🟢' : '⚪'}</span>
+          <div>
+            <strong>${esc(u.name || u.email)}</strong>
+            <small style="display:block;color:var(--ink-soft);font-size:0.75rem;">${esc(u.email)} · ${u.monthlyRate}% last ${snapshot.rateWindowDays}d</small>
           </div>
-          <span class="attendance-time-tag">${esc(record.time || 'Present')}</span>
         </div>
-      `;
-    }).join('');
+        <span class="attendance-time-tag">${u.present ? esc(u.time || 'Present') : 'Absent'}</span>
+      </div>
+    `).join('');
   }
 
-  function renderAdminActivityFeed(user) {
+  async function renderAdminActivityFeed() {
     const container = document.getElementById('adminActivityFeed');
     if (!container) return;
 
-    const activity = user.activity || [];
+    const activity = api.fetchActivity ? await api.fetchActivity({ scope: 'org', limit: 12 }) : null;
+
+    if (!activity) {
+      container.innerHTML = `<div class="empty-inline">Could not load activity from the server.</div>`;
+      return;
+    }
     if (!activity.length) {
       container.innerHTML = `<div class="empty-inline">No recent activity logged.</div>`;
       return;
@@ -378,9 +382,10 @@
 
     const esc = (s) => (typeof AppHelpers !== 'undefined' && AppHelpers.escapeHTML) ? AppHelpers.escapeHTML(s) : String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-    container.innerHTML = activity.slice(0, 6).map(act => `
+    container.innerHTML = activity.slice(0, 6).map((act) => `
       <div class="activity-item">
-        <span>${esc(act.text || act.description || String(act))}</span>
+        <span>${esc(act.text)}</span>
+        <small style="display:block;color:var(--ink-soft);font-size:0.72rem;">${esc(act.userEmail || '')} · ${esc(new Date(act.createdAt).toLocaleString())}</small>
       </div>
     `).join('');
   }
@@ -429,7 +434,9 @@
     if (empCompletedEl) empCompletedEl.textContent = completedCount;
     if (empDeadlinesEl) empDeadlinesEl.textContent = upcomingDeadlines;
 
-    try { initSimpleAttendance('emp'); } catch (err) { console.warn('Attendance widget error:', err); }
+    loadAttendanceSnapshot()
+      .then(() => initSimpleAttendance('emp'))
+      .catch((err) => console.warn('Attendance widget error:', err));
     try { renderEmployeeCharts(tasksForDash); } catch (err) { console.warn('Employee charts error:', err); }
     try { renderEmployeeDeadlines(tasksForDash); } catch (err) { console.warn('Employee deadlines error:', err); }
     try { renderEmployeeNotifications(tasksForDash); } catch (err) { console.warn('Employee notifications error:', err); }
@@ -687,10 +694,6 @@
     const completedCount = completedTasks.length;
     const activeProjectsCount = projects.length;
     
-    // Focus hours from tracker / activity
-    const focusTracker = window.NexusTracker;
-    const focusHours = focusTracker ? focusTracker.calculateWorkingHours(currentUser.email, 'weekly') : Math.max(12, Math.round(completedCount * 1.4));
-
     // Velocity (completed in past 7 days)
     const now = new Date();
     const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000);
@@ -703,8 +706,13 @@
 
     if (completedEl) completedEl.textContent = completedCount;
     if (projectsEl) projectsEl.textContent = activeProjectsCount;
-    if (hoursEl) hoursEl.textContent = `${focusHours}h`;
     if (velocityEl) velocityEl.textContent = `${weeklyDone}/wk`;
+
+    if (hoursEl && api.fetchFocusSummary) {
+      api.fetchFocusSummary(7)
+        .then((summary) => { hoursEl.textContent = `${summary ? summary.totalHours : 0}h`; })
+        .catch(() => { hoursEl.textContent = '0h'; });
+    }
 
     // Render Heatmap
     renderPersonalHeatmap(userTasks);
@@ -888,6 +896,15 @@
   const socket = window.NexusSocket;
   if (socket) {
     socket.on('presence:update', refreshActiveDashboard);
-    socket.on('attendance:marked', refreshActiveDashboard);
+    socket.on('attendance:update', () => { refreshAttendance().catch(() => {}); });
+    socket.on('activity:update', () => {
+      if (currentUser.role === 'admin') renderAdminActivityFeed().catch(() => {});
+    });
   }
+
+  // Fallback for browsers/tabs without a live socket: keep attendance in step with the database.
+  setInterval(() => { refreshAttendance().catch(() => {}); }, 60000);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) refreshAttendance().catch(() => {});
+  });
 })();

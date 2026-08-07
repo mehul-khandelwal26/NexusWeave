@@ -177,7 +177,7 @@ router.patch('/me', requireAuth, async (req, res) => {
     const user = await User.findById(req.user.sub);
     if (!user) return res.status(404).json({ errors: ['User not found.'] });
 
-    const { name, bio, skills, department, theme } = req.body;
+    const { name, bio, skills, department, theme, boardBg } = req.body;
     if (name !== undefined) {
       const trimmed = String(name).trim();
       if (!trimmed) return res.status(400).json({ errors: ['Name cannot be empty.'] });
@@ -186,6 +186,7 @@ router.patch('/me', requireAuth, async (req, res) => {
     if (bio !== undefined) user.bio = String(bio);
     if (department !== undefined) user.department = String(department);
     if (theme !== undefined) user.theme = String(theme);
+    if (boardBg !== undefined) user.boardBg = String(boardBg);
     if (skills !== undefined) {
       if (Array.isArray(skills)) {
         user.skills = skills.map((s) => String(s).trim()).filter(Boolean);

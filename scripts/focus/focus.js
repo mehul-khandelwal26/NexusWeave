@@ -71,10 +71,22 @@
         customMinutesInput.disabled = false;
       }
 
-      const focusMins = customMinutesInput ? Math.max(1, parseInt(customMinutesInput.value, 10) || 25) : 25;
+      const focusMins = Math.max(1, Math.round(totalSeconds / 60));
       if (typeof showNotif === 'function') {
         showNotif(`Completed a ${focusMins}-minute Focus Sprint!`, 'success');
       }
+
+      if (window.NexusAPI && window.NexusAPI.logFocusSession) {
+        window.NexusAPI.logFocusSession(focusMins)
+          .then((saved) => {
+            if (!saved && typeof showNotif === 'function') {
+              showNotif('Session finished, but it could not be saved to the server.', 'error');
+            }
+            window.dispatchEvent(new CustomEvent('nexus:focus-logged'));
+          })
+          .catch(() => {});
+      }
+
       window.dispatchEvent(new CustomEvent('nexus:tasks-updated'));
 
       clearTimerState();

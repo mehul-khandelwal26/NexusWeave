@@ -8,6 +8,7 @@ const mongoose = require('mongoose');
 const WebSocket = require('ws');
 
 const { getJwtSecret, verifyToken } = require('./utils/jwt');
+const { ensureIndexes } = require('./utils/ensure-indexes');
 
 // Fail fast if JWT_SECRET is missing
 try {
@@ -24,6 +25,8 @@ const projectRoutes = require('./routes/projects');
 const taskRoutes = require('./routes/tasks');
 const messageRoutes = require('./routes/messages');
 const announcementRoutes = require('./routes/announcements');
+const activityRoutes = require('./routes/activity');
+const focusRoutes = require('./routes/focus');
 
 const User = require('./models/User');
 const Message = require('./models/Message');
@@ -42,6 +45,8 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/announcements', announcementRoutes);
+app.use('/api/activity', activityRoutes);
+app.use('/api/focus', focusRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({
@@ -114,7 +119,15 @@ function getOnlineUserIds() {
   return Array.from(onlineIds);
 }
 
+async function broadcastToOrg(organizationId, data) {
+  if (!organizationId) return;
+  const members = await User.find({ organizationId }, '_id');
+  members.forEach((member) => sendToUser(member._id.toString(), data));
+}
+
 app.set('getOnlineUserIds', getOnlineUserIds);
+app.set('sendToUser', sendToUser);
+app.set('broadcastToOrg', broadcastToOrg);
 
 wss.on('connection', async (ws, req) => {
   const urlParams = new URLSearchParams(req.url.replace(/^[^?]*\?/, ''));
@@ -151,6 +164,13 @@ wss.on('connection', async (ws, req) => {
   userSockets.get(userId).add(ws);
 
   ws.send(JSON.stringify({ type: 'connected', payload: { userId, email: userEmail } }));
+
+  if (existingUser.organizationId) {
+    broadcastToOrg(existingUser.organizationId, {
+      type: 'presence_update',
+      payload: { userId, email: userEmail, isOnline: true }
+    }).catch(() => {});
+  }
 
   ws.on('message', async (rawMessage) => {
     try {
@@ -243,6 +263,12 @@ wss.on('connection', async (ws, req) => {
       userSet.delete(ws);
       if (userSet.size === 0) {
         userSockets.delete(userId);
+        if (existingUser.organizationId) {
+          broadcastToOrg(existingUser.organizationId, {
+            type: 'presence_update',
+            payload: { userId, email: userEmail, isOnline: false }
+          }).catch(() => {});
+        }
       }
     }
   });
@@ -253,9 +279,10 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/nexusw
 
 mongoose
   .connect(MONGODB_URI)
-  .then(() => {
+  .then(async () => {
     const isAtlas = /mongodb\.net|atlas/i.test(MONGODB_URI);
     console.log(isAtlas ? '✅ Connected to MongoDB Atlas' : '✅ Connected to MongoDB');
+    await ensureIndexes();
     server.listen(PORT, () => {
       console.log(`🚀 NexusWeave Backend Server running on http://localhost:${PORT}`);
       console.log(`📡 WebSocket server initialized on ws://localhost:${PORT}/ws`);

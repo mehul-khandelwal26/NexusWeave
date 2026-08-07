@@ -5,7 +5,7 @@
   const helpers = window.AppHelpers;
   const api = window.NexusAPI;
 
-  const sessionEmail = localStorage.getItem(SESSION_KEY);
+  const sessionEmail = sessionStorage.getItem(SESSION_KEY);
   let database = JSON.parse(localStorage.getItem(DB_KEY) || '{}');
 
   function normalizeUser(user, fallbackEmail = sessionEmail) {
@@ -189,43 +189,6 @@
         
         persistUser();
       }
-    }
-  }
-
-  function pushNotificationToUser(targetEmail, text, icon = '📌') {
-    const users = JSON.parse(localStorage.getItem(DB_KEY) || '{}');
-    if (users[targetEmail]) {
-      if (!Array.isArray(users[targetEmail].activity)) users[targetEmail].activity = [];
-      users[targetEmail].activity.unshift({
-        id: `notif-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-        icon,
-        text,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        createdAt: new Date().toISOString()
-      });
-      users[targetEmail].activity = users[targetEmail].activity.slice(0, 20);
-      localStorage.setItem(DB_KEY, JSON.stringify(users));
-      database = users;
-    }
-
-    // Also write into the shared notification bell store
-    try {
-      const key = `nw_notifs_${targetEmail}`;
-      const notifs = JSON.parse(localStorage.getItem(key) || '[]');
-      notifs.unshift({
-        id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-        icon: icon || '🔔',
-        text,
-        type: 'info',
-        read: false,
-        timestamp: new Date().toISOString(),
-        timeStr: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      });
-      localStorage.setItem(key, JSON.stringify(notifs.slice(0, 30)));
-    } catch (_) { /* ignore */ }
-
-    if (window.NexusNotify && typeof window.NexusNotify.add === 'function' && targetEmail === sessionEmail) {
-      window.NexusNotify.add({ icon, text, type: 'info' });
     }
   }
 
@@ -985,8 +948,6 @@
     const closeBoardBgModal = document.getElementById('closeBoardBgModal');
     if (!changeBoardBgBtn || !boardBgModal) return;
 
-    const BOARD_BG_KEY = `nw_board_bg_${sessionEmail || 'guest'}`;
-
     function applyBoardBackground(bgVal) {
       const boardEl = document.getElementById('boardColumns');
       const panel = boardEl ? boardEl.closest('.page-panel') : document.querySelector('.page-panel');
@@ -1046,10 +1007,12 @@
       boardBgModal.style.display = '';
     }
 
-    try {
-      const savedBg = localStorage.getItem(BOARD_BG_KEY);
-      if (savedBg) applyBoardBackground(savedBg);
-    } catch (_) { /* ignore */ }
+    // The preference lives on the user record so it follows them across devices.
+    if (api && api.refreshMe) {
+      api.refreshMe()
+        .then((user) => { if (user && user.boardBg) applyBoardBackground(user.boardBg); })
+        .catch(() => {});
+    }
 
     changeBoardBgBtn.addEventListener('click', (e) => {
       e.preventDefault();
@@ -1073,7 +1036,9 @@
       if (!option) return;
       const bgVal = option.getAttribute('data-bg-value') || 'none';
       applyBoardBackground(bgVal);
-      try { localStorage.setItem(BOARD_BG_KEY, bgVal); } catch (_) { /* ignore */ }
+      if (api && api.updateProfile) {
+        api.updateProfile({ boardBg: bgVal }).catch(() => {});
+      }
       closeBoardBgModalFn();
     });
   })();

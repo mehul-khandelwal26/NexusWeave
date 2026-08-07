@@ -1,9 +1,40 @@
 const express = require('express');
 const Task = require('../models/Task');
+const User = require('../models/User');
 const requireAuth = require('../middleware/auth');
 const { isValidObjectId, sameOrg } = require('../utils/ids');
+const { logActivity } = require('../utils/activity-log');
 
 const router = express.Router();
+
+function actorName(user) {
+  return user.name || user.email.split('@')[0];
+}
+
+/** Pushes a live "you have a new task" notification to the assignee. */
+async function notifyAssignee(req, task) {
+  const assignee = task.assignedUserEmail;
+  if (!assignee || assignee === req.user.email) return;
+
+  const sendToUser = req.app.get('sendToUser');
+  if (!sendToUser) return;
+
+  try {
+    const user = await User.findOne({ email: assignee }, '_id');
+    if (!user) return;
+    sendToUser(user._id.toString(), {
+      type: 'task_assigned',
+      payload: {
+        taskId: task._id.toString(),
+        title: task.title,
+        assignedByName: actorName(req.user),
+        dueDate: task.dueDate || ''
+      }
+    });
+  } catch (err) {
+    console.error('Assignee notification error:', err.message);
+  }
+}
 
 function canViewTask(task, user) {
   if (!task || !user) return false;
@@ -154,6 +185,12 @@ router.post('/', requireAuth, async (req, res) => {
       attachments: attachments || []
     });
 
+    const assignedNote = task.assignedUserEmail && task.assignedUserEmail !== req.user.email
+      ? ` and assigned it to ${task.assignedUserEmail}`
+      : '';
+    logActivity(req, `${actorName(req.user)} created task "${task.title}"${assignedNote}.`);
+    notifyAssignee(req, task);
+
     res.status(201).json({ task });
   } catch (err) {
     if (err.name === 'ValidationError') {
@@ -185,6 +222,8 @@ router.put('/:id', requireAuth, async (req, res) => {
 
     const isCreator = task.userEmail === req.user.email;
     const isAdmin = req.user.role === 'admin' && sameOrg(task.organizationId, req.user.orgId);
+    const previousStatus = task.status;
+    const previousAssignee = task.assignedUserEmail;
 
     if (title !== undefined) {
       if (!title.trim()) return res.status(400).json({ errors: ['Task title cannot be empty.'] });
@@ -215,6 +254,15 @@ router.put('/:id', requireAuth, async (req, res) => {
     }
 
     await task.save();
+
+    if (task.status !== previousStatus) {
+      logActivity(req, `${actorName(req.user)} moved task "${task.title}" to ${task.status}.`);
+    }
+    if (task.assignedUserEmail !== previousAssignee && task.assignedUserEmail) {
+      logActivity(req, `${actorName(req.user)} assigned task "${task.title}" to ${task.assignedUserEmail}.`);
+      notifyAssignee(req, task);
+    }
+
     res.json({ task });
   } catch (err) {
     if (err.name === 'ValidationError') {
@@ -239,6 +287,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
     }
 
     await Task.findByIdAndDelete(req.params.id);
+    logActivity(req, `${actorName(req.user)} deleted task "${task.title}".`);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ errors: ['Failed to delete task.'] });

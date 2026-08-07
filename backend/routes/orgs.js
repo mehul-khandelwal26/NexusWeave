@@ -6,8 +6,14 @@ const Attendance = require('../models/Attendance');
 const requireAuth = require('../middleware/auth');
 const { signToken } = require('../utils/jwt');
 const { isValidObjectId } = require('../utils/ids');
+const { getDayKey, getClockTime } = require('../utils/dates');
+const { logActivity } = require('../utils/activity-log');
 
 const router = express.Router();
+
+function actorName(user) {
+  return user.name || user.email.split('@')[0];
+}
 
 function toSafeOrg(org, { includeKey = false } = {}) {
   const data = {
@@ -83,57 +89,146 @@ router.get('/online', requireAuth, async (req, res) => {
   }
 });
 
-// Get Today's Present Attendance & Present Member List
+const ATTENDANCE_RATE_WINDOW_DAYS = 30;
+
+/**
+ * Single source of truth for every attendance figure the UI shows. Returns
+ * today's roster for the whole organization plus the caller's own status, so
+ * clients never have to derive attendance state from local storage.
+ */
+async function buildAttendanceSnapshot(user) {
+  const todayKey = getDayKey();
+  const orgId = user.orgId;
+
+  const members = await User.find({ organizationId: orgId }, 'name email role department').sort({ name: 1 });
+
+  const windowStart = new Date();
+  windowStart.setDate(windowStart.getDate() - (ATTENDANCE_RATE_WINDOW_DAYS - 1));
+  const windowStartKey = getDayKey(windowStart);
+
+  const [todayRecords, windowRecords] = await Promise.all([
+    Attendance.find({ organizationId: orgId, dateKey: todayKey, status: 'present' }),
+    Attendance.find({
+      organizationId: orgId,
+      dateKey: { $gte: windowStartKey, $lte: todayKey },
+      status: 'present'
+    })
+  ]);
+
+  const todayByEmail = new Map(todayRecords.map((r) => [r.userEmail, r]));
+
+  const windowDaysByEmail = new Map();
+  windowRecords.forEach((r) => {
+    if (!windowDaysByEmail.has(r.userEmail)) windowDaysByEmail.set(r.userEmail, new Set());
+    windowDaysByEmail.get(r.userEmail).add(r.dateKey);
+  });
+
+  const roster = members.map((m) => {
+    const record = todayByEmail.get(m.email);
+    const daysPresent = (windowDaysByEmail.get(m.email) || new Set()).size;
+    return {
+      id: m._id.toString(),
+      name: m.name || m.email.split('@')[0],
+      email: m.email,
+      role: m.role || 'employee',
+      department: m.department || 'Engineering',
+      present: Boolean(record),
+      time: record ? record.markedAtTime || 'Present' : null,
+      monthlyRate: Math.round((daysPresent / ATTENDANCE_RATE_WINDOW_DAYS) * 100),
+      daysPresent
+    };
+  });
+
+  const presentUsers = roster
+    .filter((m) => m.present)
+    .sort((a, b) => String(a.time).localeCompare(String(b.time)));
+
+  const totalEmployees = roster.length;
+  const presentCount = presentUsers.length;
+  const self = roster.find((m) => m.email === user.email) || null;
+
+  return {
+    success: true,
+    dateKey: todayKey,
+    totalEmployees,
+    presentCount,
+    absentCount: Math.max(totalEmployees - presentCount, 0),
+    attendanceRate: totalEmployees > 0 ? Math.round((presentCount / totalEmployees) * 100) : 0,
+    rateWindowDays: ATTENDANCE_RATE_WINDOW_DAYS,
+    presentUsers,
+    roster,
+    self: {
+      email: user.email,
+      marked: Boolean(self && self.present),
+      time: self ? self.time : null,
+      monthlyRate: self ? self.monthlyRate : 0
+    }
+  };
+}
+
+function notifyOrgAttendanceChange(req, payload) {
+  const broadcastToOrg = req.app.get('broadcastToOrg');
+  if (!broadcastToOrg) return;
+  Promise.resolve(broadcastToOrg(req.user.orgId, { type: 'attendance_update', payload })).catch(() => {});
+}
+
+function emptyAttendanceSnapshot(user) {
+  return {
+    success: true,
+    dateKey: getDayKey(),
+    totalEmployees: 0,
+    presentCount: 0,
+    absentCount: 0,
+    attendanceRate: 0,
+    rateWindowDays: ATTENDANCE_RATE_WINDOW_DAYS,
+    presentUsers: [],
+    roster: [],
+    self: { email: user.email, marked: false, time: null, monthlyRate: 0 }
+  };
+}
+
+// Get Today's Attendance Snapshot (org roster, rate, and caller's own status)
 router.get('/attendance/today', requireAuth, async (req, res) => {
   if (!req.user.orgId) {
-    return res.json({
-      success: true,
-      presentCount: 0,
-      totalEmployees: 1,
-      attendanceRate: 0,
-      presentUsers: []
-    });
+    return res.json(emptyAttendanceSnapshot(req.user));
   }
 
   try {
-    const todayKey = new Date().toISOString().split('T')[0];
-    const totalEmployees = await User.countDocuments({ organizationId: req.user.orgId });
-
-    const attendanceRecords = await Attendance.find({
-      organizationId: req.user.orgId,
-      dateKey: todayKey,
-      status: 'present'
-    }).sort({ markedAtTime: 1, createdAt: 1 });
-
-    const userEmails = attendanceRecords.map((r) => r.userEmail);
-    const userDocs = await User.find({ email: { $in: userEmails } }, 'name email role department');
-    const userMap = new Map(userDocs.map((u) => [u.email, u]));
-
-    const presentUsers = attendanceRecords.map((rec) => {
-      const u = userMap.get(rec.userEmail);
-      return {
-        id: rec._id.toString(),
-        name: rec.userName || (u ? u.name : rec.userEmail.split('@')[0]),
-        email: rec.userEmail,
-        role: u ? u.role : 'employee',
-        department: u ? u.department : 'Engineering',
-        time: rec.markedAtTime || 'Present'
-      };
-    });
-
-    const presentCount = presentUsers.length;
-    const attendanceRate = totalEmployees > 0 ? Math.round((presentCount / totalEmployees) * 100) : 0;
-
-    res.json({
-      success: true,
-      presentCount,
-      totalEmployees,
-      attendanceRate,
-      presentUsers
-    });
+    res.json(await buildAttendanceSnapshot(req.user));
   } catch (err) {
     console.error('Error fetching today attendance:', err);
     res.status(500).json({ errors: ['Failed to fetch today attendance.'] });
+  }
+});
+
+// Caller's own attendance history (drives working-hours and streak metrics)
+router.get('/attendance/history', requireAuth, async (req, res) => {
+  const days = Math.min(Math.max(parseInt(req.query.days, 10) || 30, 1), 365);
+
+  try {
+    const start = new Date();
+    start.setDate(start.getDate() - (days - 1));
+
+    const records = await Attendance.find({
+      userEmail: req.user.email,
+      dateKey: { $gte: getDayKey(start), $lte: getDayKey() },
+      status: 'present'
+    }).sort({ dateKey: 1 });
+
+    res.json({
+      success: true,
+      days,
+      daysPresent: records.length,
+      rate: Math.round((records.length / days) * 100),
+      records: records.map((r) => ({
+        dateKey: r.dateKey,
+        time: r.markedAtTime,
+        status: r.status
+      }))
+    });
+  } catch (err) {
+    console.error('Error fetching attendance history:', err);
+    res.status(500).json({ errors: ['Failed to fetch attendance history.'] });
   }
 });
 
@@ -144,10 +239,12 @@ router.post('/attendance/mark', requireAuth, async (req, res) => {
   }
 
   try {
-    const todayKey = new Date().toISOString().split('T')[0];
-    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const todayKey = getDayKey();
 
-    const record = await Attendance.findOneAndUpdate(
+    // Keep the original check-in time if the user marks again from another device.
+    const existing = await Attendance.findOne({ userEmail: req.user.email, dateKey: todayKey });
+
+    await Attendance.findOneAndUpdate(
       { userEmail: req.user.email, dateKey: todayKey },
       {
         userId: req.user.sub,
@@ -155,16 +252,43 @@ router.post('/attendance/mark', requireAuth, async (req, res) => {
         userName: req.user.name || req.user.email.split('@')[0],
         organizationId: req.user.orgId,
         dateKey: todayKey,
-        markedAtTime: timeStr,
+        markedAtTime: existing && existing.status === 'present' && existing.markedAtTime
+          ? existing.markedAtTime
+          : getClockTime(),
         status: 'present'
       },
-      { upsert: true, new: true }
+      { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
-    res.json({ success: true, record });
+    const snapshot = await buildAttendanceSnapshot(req.user);
+    notifyOrgAttendanceChange(req, { email: req.user.email, dateKey: todayKey, status: 'present' });
+    if (!existing) {
+      logActivity(req, `${actorName(req.user)} marked attendance for ${todayKey}.`);
+    }
+    res.json(snapshot);
   } catch (err) {
     console.error('Error marking attendance:', err);
     res.status(500).json({ errors: ['Failed to mark attendance.'] });
+  }
+});
+
+// Undo Today's Attendance
+router.delete('/attendance/mark', requireAuth, async (req, res) => {
+  if (!req.user.orgId) {
+    return res.status(400).json({ errors: ['You are not part of an organization.'] });
+  }
+
+  try {
+    const todayKey = getDayKey();
+    await Attendance.deleteOne({ userEmail: req.user.email, dateKey: todayKey });
+
+    const snapshot = await buildAttendanceSnapshot(req.user);
+    notifyOrgAttendanceChange(req, { email: req.user.email, dateKey: todayKey, status: 'cleared' });
+    logActivity(req, `${actorName(req.user)} withdrew attendance for ${todayKey}.`);
+    res.json(snapshot);
+  } catch (err) {
+    console.error('Error clearing attendance:', err);
+    res.status(500).json({ errors: ['Failed to clear attendance.'] });
   }
 });
 
@@ -326,6 +450,8 @@ router.post('/join', requireAuth, async (req, res) => {
     user.role = 'employee';
     await user.save();
 
+    logActivity(req, `${actorName(req.user)} joined the organization.`, { organizationId: org._id.toString() });
+
     const token = signToken(user);
     res.json({
       success: true,
@@ -349,6 +475,7 @@ router.post('/leave', requireAuth, async (req, res) => {
       return res.status(400).json({ errors: ['You are not part of an organization.'] });
     }
 
+    const previousOrgId = user.organizationId;
     const org = await Organization.findById(user.organizationId);
     if (org) {
       const isAdmin = (org.admins || []).includes(userEmail);
@@ -365,6 +492,8 @@ router.post('/leave', requireAuth, async (req, res) => {
     user.organizationId = null;
     user.role = 'personal';
     await user.save();
+
+    logActivity(req, `${actorName(req.user)} left the organization.`, { organizationId: previousOrgId });
 
     const token = signToken(user);
     res.json({ success: true, token, user: user.toSafeObject() });
@@ -443,6 +572,8 @@ router.post('/:id/promote', requireAuth, async (req, res) => {
 
     // Re-issue token for the promoter (unchanged claims) — promotee must re-login or refresh /me
     // If promoting self somehow, refresh token; always return success
+    logActivity(req, `${actorName(req.user)} promoted ${emailToPromote} to admin.`);
+
     const actor = await User.findById(req.user.sub);
     const token = actor ? signToken(actor) : undefined;
     res.json({
@@ -484,6 +615,8 @@ router.delete('/:id/members/:email', requireAuth, async (req, res) => {
       user.role = 'personal';
       await user.save();
     }
+
+    logActivity(req, `${actorName(req.user)} removed ${emailToRemove} from the organization.`);
 
     const actor = await User.findById(req.user.sub);
     const token = actor ? signToken(actor) : undefined;

@@ -29,24 +29,43 @@
       const orgUsers = orgId ? await api.getAllUsersInOrg(orgId) : [currentUser];
       const orgInfo = orgId ? api.getOrganization(orgId) : null;
 
-      // Compile Employee Tasks & Metrics
-      const myTasks = currentUser.tasks || [];
-      const myProjects = currentUser.projects || [];
-      const myScore = tracker ? tracker.calculateProductivityScore(currentUser) : 85;
-      const myHours = tracker ? tracker.calculateWorkingHours(currentUser.email, 'weekly') : 38;
+      // Tasks and projects always come from the database, never the local cache.
+      const data = await api.getUserData();
+      const allVisibleTasks = (data && Array.isArray(data.tasks)) ? data.tasks : (currentUser.tasks || []);
+      const myProjects = (data && Array.isArray(data.projects)) ? data.projects : (currentUser.projects || []);
 
-      // Compile Org-wide Data for Admin
-      let allOrgTasks = [];
-      let underperformingMembers = [];
-      let membersWithMissedDeadlines = [];
+      const myTasks = allVisibleTasks.filter((t) => {
+        const owner = (t.assignedUserEmail || t.userEmail || '').toLowerCase();
+        return owner === currentUser.email.toLowerCase();
+      });
+
+      const myScore = tracker ? tracker.calculateProductivityScore({ tasks: myTasks }) : 0;
+      const focusSummary = api.fetchFocusSummary ? await api.fetchFocusSummary(7) : null;
+      const myHours = focusSummary ? focusSummary.totalHours : 0;
+
+      // An admin's task query returns every org task, so group them by owner
+      // instead of expecting the roster endpoint to carry tasks.
+      const tasksByEmail = new Map();
+      allVisibleTasks.forEach((t) => {
+        const owner = (t.assignedUserEmail || t.userEmail || '').toLowerCase();
+        if (!owner) return;
+        if (!tasksByEmail.has(owner)) tasksByEmail.set(owner, []);
+        tasksByEmail.get(owner).push(t);
+      });
+
+      const allOrgTasks = [];
+      const underperformingMembers = [];
+      const membersWithMissedDeadlines = [];
 
       const now = new Date();
 
-      orgUsers.forEach(u => {
-        const uTasks = u.tasks || [];
+      orgUsers.forEach((u) => {
+        const uTasks = tasksByEmail.get((u.email || '').toLowerCase()) || [];
         allOrgTasks.push(...uTasks.map(t => ({ ...t, userEmail: u.email, userName: u.name || u.email })));
 
-        const uScore = tracker ? tracker.calculateProductivityScore(u) : 85;
+        if (!uTasks.length) return;
+
+        const uScore = tracker ? tracker.calculateProductivityScore({ tasks: uTasks }) : 0;
         if (uScore < 70) {
           underperformingMembers.push({ name: u.name || u.email, score: uScore, email: u.email });
         }

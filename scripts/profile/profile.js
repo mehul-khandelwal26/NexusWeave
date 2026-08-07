@@ -64,37 +64,55 @@
 
     // Skills
     if (userProfileSkills) {
-      const skills = user.skills || ['JavaScript', 'Task Management', 'Agile Sprints', 'Collaboration'];
-      userProfileSkills.innerHTML = skills.map(s => `<span class="filter-chip">${s}</span>`).join('');
+      const skills = user.skills || [];
+      userProfileSkills.innerHTML = skills.length
+        ? skills.map(s => `<span class="filter-chip">${s}</span>`).join('')
+        : `<span class="empty-inline">No skills added yet.</span>`;
     }
 
     // Metrics
     const tasks = user.tasks || [];
     const completed = tasks.filter(t => t.status === 'Done').length;
-    const score = tracker ? tracker.calculateProductivityScore(user) : 85;
-    const hours = tracker ? tracker.calculateWorkingHours(user.email, 'weekly') : Math.max(12, Math.round(completed * 1.4));
+    const score = tracker ? tracker.calculateProductivityScore(user) : 0;
 
     if (profProjectsCount) profProjectsCount.textContent = (user.projects || []).length;
     if (profCompletedTasks) profCompletedTasks.textContent = completed;
-    if (profProductivityScore) profProductivityScore.textContent = `${score}%`;
-    if (profWeeklyHours) profWeeklyHours.textContent = `${hours}h`;
+    if (profProductivityScore) profProductivityScore.textContent = tasks.length ? `${score}%` : '—';
+
+    if (profWeeklyHours && api.fetchFocusSummary) {
+      api.fetchFocusSummary(7)
+        .then((summary) => { profWeeklyHours.textContent = `${summary ? summary.totalHours : 0}h`; })
+        .catch(() => { profWeeklyHours.textContent = '0h'; });
+    }
 
     // Render Profile Heatmap Grid
     renderProfileHeatmap(tasks);
+  }
 
-    // Activity Feed
-    if (userProfileActivityFeed) {
-      const activity = user.activity || [];
-      if (!activity.length) {
-        userProfileActivityFeed.innerHTML = `<div class="empty-inline">No recent activity logged.</div>`;
-      } else {
-        userProfileActivityFeed.innerHTML = activity.slice(0, 8).map(act => `
-          <div class="activity-item">
-            <span>${act.text || act.message || JSON.stringify(act)}</span>
-          </div>
-        `).join('');
-      }
+  async function renderActivityFeed() {
+    if (!userProfileActivityFeed) return;
+
+    const activity = api.fetchActivity ? await api.fetchActivity({ scope: 'me', limit: 12 }) : null;
+
+    if (!activity) {
+      userProfileActivityFeed.innerHTML = `<div class="empty-inline">Could not load activity from the server.</div>`;
+      return;
     }
+    if (!activity.length) {
+      userProfileActivityFeed.innerHTML = `<div class="empty-inline">No recent activity logged.</div>`;
+      return;
+    }
+
+    const esc = (s) => (typeof AppHelpers !== 'undefined' && AppHelpers.escapeHTML)
+      ? AppHelpers.escapeHTML(s)
+      : String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    userProfileActivityFeed.innerHTML = activity.slice(0, 8).map(act => `
+      <div class="activity-item">
+        <span>${esc(act.text)}</span>
+        <small style="display:block;color:var(--ink-soft);font-size:0.72rem;">${esc(new Date(act.createdAt).toLocaleString())}</small>
+      </div>
+    `).join('');
   }
 
   function renderProfileHeatmap(tasks) {
@@ -177,7 +195,7 @@
       if (editProfName) editProfName.value = user.name || '';
       if (editProfDepartment) editProfDepartment.value = user.department || 'Engineering';
       if (editProfBio) editProfBio.value = user.bio || '';
-      if (editProfSkills) editProfSkills.value = (user.skills || ['JavaScript', 'Agile Sprints']).join(', ');
+      if (editProfSkills) editProfSkills.value = (user.skills || []).join(', ');
       editProfileModal.classList.remove('hidden');
     });
   }
@@ -235,6 +253,7 @@
       console.warn('Profile refresh failed; showing local data.', err);
     }
     renderProfile();
+    renderActivityFeed();
   }
 
   // Render immediately, then refresh from server

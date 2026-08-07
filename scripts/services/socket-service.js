@@ -92,6 +92,18 @@
             } else if (type === 'messages_read') {
               emitLocal('message:seen', payload);
               broadcastCrossTab('message:seen', payload);
+            } else if (type === 'attendance_update') {
+              emitLocal('attendance:update', payload);
+              broadcastCrossTab('attendance:update', payload);
+            } else if (type === 'presence_update') {
+              emitLocal('presence:update', payload);
+              broadcastCrossTab('presence:update', payload);
+            } else if (type === 'activity_update') {
+              emitLocal('activity:update', payload);
+              broadcastCrossTab('activity:update', payload);
+            } else if (type === 'task_assigned') {
+              emitLocal('task:assigned', payload);
+              broadcastCrossTab('task:assigned', payload);
             } else if (type === 'connected') {
               emitLocal('socket:ready', payload);
             }
@@ -186,7 +198,7 @@
     const delay = Math.min(1000 * Math.pow(2, reconnectAttempts - 1), 15000); // 1s, 2s, 4s, 8s, max 15s
     reconnectTimer = setTimeout(() => {
       reconnectTimer = null;
-      if (localStorage.getItem('jwt')) {
+      if (sessionStorage.getItem('jwt')) {
         NexusSocket.connect();
       }
     }, delay);
@@ -195,10 +207,10 @@
   // Auto-connect if user JWT exists
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-      if (localStorage.getItem('jwt')) NexusSocket.connect();
+      if (sessionStorage.getItem('jwt')) NexusSocket.connect();
     });
   } else {
-    if (localStorage.getItem('jwt')) NexusSocket.connect();
+    if (sessionStorage.getItem('jwt')) NexusSocket.connect();
   }
 
   root.NexusSocket = NexusSocket;

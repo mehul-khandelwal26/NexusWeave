@@ -42,4 +42,7 @@ const attendanceSchema = new mongoose.Schema(
 // Composite index to enforce 1 attendance record per user per day
 attendanceSchema.index({ userEmail: 1, dateKey: 1 }, { unique: true });
 
+// Backs the org-wide "who is present today" lookup
+attendanceSchema.index({ organizationId: 1, dateKey: 1 });
+
 module.exports = mongoose.model('Attendance', attendanceSchema);

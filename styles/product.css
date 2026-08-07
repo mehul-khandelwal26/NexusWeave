@@ -1,27 +1,7 @@
+/* Shared colour tokens live in global.css so that every page — including the
+   ones that do not load this file — resolves them. */
 :root {
-  --surface-strong: #f6f6f6;
-  --text: var(--text-main);
-  --text-soft: var(--text-muted);
-  --primary: var(--accent-primary);
-  --primary-soft: rgba(124, 58, 237, 0.08);
-  --success: #059669;
-  --success-soft: #ecfdf5;
-  --warning: #d97706;
-  --warning-soft: #fffbeb;
-  --danger: #dc2626;
-  --danger-soft: #fef2f2;
   --radius-sm: 12px;
-}
-
-:root[data-theme='dark'] {
-  --surface-strong: #1a1a24;
-  --primary-soft: rgba(167, 139, 250, 0.16);
-  --success: #34d399;
-  --success-soft: rgba(52, 211, 153, 0.16);
-  --warning: #fbbf24;
-  --warning-soft: rgba(251, 191, 36, 0.16);
-  --danger: #f87171;
-  --danger-soft: rgba(248, 113, 113, 0.16);
 }
 
 .page-shell,
@@ -42,10 +22,10 @@
 .info-card,
 .sidebar-card,
 .welcome-card {
-  background: var(--bg-surface);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 10px 30px var(--shadow);
 }
 
 .btn,
@@ -58,6 +38,40 @@
   transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
+/* Defined here because create.css only reaches create.html, while ghost buttons
+   appear in every modal the app injects. */
+.ghost-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  background: var(--surface);
+  color: var(--text-main);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.62rem 1.1rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  line-height: 1;
+  transition: var(--transition);
+}
+
+.ghost-btn:hover {
+  background: var(--surface-muted);
+  border-color: var(--purple-border);
+  color: var(--purple-primary);
+}
+
+/* Close affordance in modal headers reads better as a round icon button. */
+.modal-head .ghost-btn[aria-label='Close'] {
+  width: 2.1rem;
+  height: 2.1rem;
+  padding: 0;
+  font-size: 1.25rem;
+  border-radius: 999px;
+  color: var(--text-muted);
+}
+
 .btn:hover,
 .secondary-btn:hover,
 .link-btn:hover {
@@ -66,7 +80,7 @@
 
 .secondary-btn,
 .link-btn {
-  background: var(--bg-surface);
+  background: var(--surface);
   color: var(--text-main);
 }
 
@@ -114,7 +128,7 @@
 }
 
 .surface-muted {
-  background: var(--bg-muted);
+  background: var(--surface-muted);
 }
 
 .input,
@@ -123,9 +137,22 @@ select,
 textarea {
   border: 1px solid var(--border);
   border-radius: 14px;
-  background: var(--bg-surface);
+  background: var(--bg-input);
   color: var(--text-main);
   padding: 0.8rem 0.9rem;
+}
+
+.input::placeholder,
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-subtle);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  background: var(--bg-input-focus);
+  border-color: var(--purple-border);
 }
 
 input:focus,

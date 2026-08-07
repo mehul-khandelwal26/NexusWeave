@@ -178,35 +178,24 @@
 
   /* ── Realtime Socket Event Listeners ── */
   if (socket) {
-    socket.on('task:completed', (data) => {
-      if (isAdmin && data.orgId === currentUser.organizationId) {
-        addNotification({ icon: '✅', text: `Task Completed: "${data.title}" by ${data.userName}`, type: 'success' });
-      }
-    });
-
-    socket.on('employee:joined', (data) => {
-      if (isAdmin && data.orgId === currentUser.organizationId) {
-        addNotification({ icon: '🎉', text: `${data.userName} (${data.userEmail}) joined your organization!`, type: 'info' });
-      }
-    });
-
-    socket.on('attendance:marked', (data) => {
-      if (isAdmin && data.orgId === currentUser.organizationId && data.userEmail !== currentUser.email) {
-        addNotification({ icon: '✅', text: `${data.userName} marked attendance for today`, type: 'info' });
-      }
+    socket.on('attendance:update', (data) => {
+      if (!data || !isAdmin) return;
+      if ((data.email || '').toLowerCase() === myEmail) return;
+      const who = (data.email || 'A team member').split('@')[0];
+      addNotification(
+        data.status === 'present'
+          ? { icon: '✅', text: `${who} marked attendance for today`, type: 'info' }
+          : { icon: '↩️', text: `${who} withdrew today's attendance`, type: 'info' }
+      );
     });
 
     socket.on('task:assigned', (data) => {
-      if (data.assigneeEmail === currentUser.email) {
-        addNotification({ icon: '📋', text: `New Task Assigned: "${data.title}" by ${data.assignedByName}`, type: 'warning' });
-      }
-    });
-
-    socket.on('deadline:reminder', (data) => {
-      // Only own deadlines
-      if ((data.userEmail || '').toLowerCase() === myEmail) {
-        addNotification({ icon: '⏰', text: `Upcoming Deadline: "${data.title}" is due ${data.dueText}`, type: 'warning' });
-      }
+      if (!data) return;
+      addNotification({
+        icon: '📋',
+        text: `New Task Assigned: "${data.title}" by ${data.assignedByName}`,
+        type: 'warning'
+      });
     });
 
     socket.on('message:new', (msg) => {
@@ -655,28 +644,11 @@
           if (window.NexusNotify) {
             window.NexusNotify.add({ icon: '📣', text: `Announcement published: "${title}"`, type: 'success' });
           }
-        } else {
-          // Offline fallback storage
-          const localAnnouncements = JSON.parse(localStorage.getItem(ANNOUNCEMENTS_CACHE_KEY) || '[]');
-          const newAnn = {
-            id: `ann_${Date.now()}`,
-            title,
-            content,
-            attachments: pendingAttachments,
-            createdBy: currentUser.email,
-            authorName: currentUser.name || currentUser.email.split('@')[0],
-            createdAt: new Date().toISOString()
-          };
-          localAnnouncements.unshift(newAnn);
-          localStorage.setItem(ANNOUNCEMENTS_CACHE_KEY, JSON.stringify(localAnnouncements));
-
-          titleInput.value = '';
-          contentInput.value = '';
-          if (fileInput) fileInput.value = '';
-          pendingAttachments = [];
-          renderFilePreviews();
-          closeCreateAnnouncementModal();
-          await loadAndRenderAnnouncements();
+        } else if (formError) {
+          // Never pretend a publish succeeded: an announcement saved only in this
+          // browser would be invisible to everyone else in the organization.
+          formError.textContent = (result && result.error) || 'Could not reach the server. The announcement was not published.';
+          formError.classList.remove('hidden');
         }
       } catch (err) {
         if (formError) {
@@ -740,7 +712,12 @@
       announcements = await api.fetchAnnouncements();
     }
 
-    if (!announcements) {
+    if (announcements) {
+      // Mirror the server response so the feed still renders while offline.
+      try {
+        localStorage.setItem(ANNOUNCEMENTS_CACHE_KEY, JSON.stringify(announcements));
+      } catch (_) { /* quota exceeded — the feed still works from memory */ }
+    } else {
       announcements = JSON.parse(localStorage.getItem(ANNOUNCEMENTS_CACHE_KEY) || '[]');
     }
 

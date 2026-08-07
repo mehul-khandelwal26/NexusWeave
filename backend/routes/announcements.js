@@ -1,6 +1,7 @@
 const express = require('express');
 const Announcement = require('../models/Announcement');
 const requireAuth = require('../middleware/auth');
+const { logActivity } = require('../utils/activity-log');
 
 const router = express.Router();
 
@@ -55,6 +56,7 @@ router.post('/', requireAuth, async (req, res) => {
       organizationId: req.user.orgId
     });
 
+    logActivity(req, `${announcement.authorName} published announcement "${announcement.title}".`);
     res.status(201).json({ success: true, announcement });
   } catch (err) {
     console.error('Error creating announcement:', err);

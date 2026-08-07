@@ -50,6 +50,69 @@
   --border-card: rgba(109, 40, 217, 0.2);
 }
 
+/* ── Application token layer ──
+   The app stylesheets (dashboard, sidebar, org, create, board, calendar,
+   realtime, ai, datetime-picker) are written against this older token set.
+   It is mapped onto the palette above so both naming schemes resolve to the
+   same colours. Without these, every `background: var(--surface)` and
+   `border: 1px solid var(--border)` collapses to transparent. */
+:root, :root[data-theme='dark'] {
+  --surface: var(--bg-card);
+  --surface-muted: var(--bg-input);
+  --surface-strong: #1a1a24;
+  --paper: var(--bg-page);
+  --paper-raised: var(--bg-card);
+  --bg-surface: var(--bg-card);
+  --bg-muted: var(--bg-input);
+
+  --ink: var(--text-main);
+  --ink-soft: var(--text-muted);
+  --text: var(--text-main);
+  --text-soft: var(--text-muted);
+
+  /* Readable as text on a dark background and as a fill behind dark text. */
+  --accent: #a78bfa;
+  --accent-strong: #c084fc;
+  --accent-primary: var(--purple-primary);
+  --primary: var(--purple-primary);
+  --primary-soft: rgba(167, 139, 250, 0.16);
+
+  --border: var(--border-subtle);
+  --shadow: rgba(0, 0, 0, 0.45);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+
+  --success: #34d399;
+  --success-soft: rgba(52, 211, 153, 0.16);
+  --warning: #fbbf24;
+  --warning-soft: rgba(251, 191, 36, 0.16);
+  --danger: #f87171;
+  --danger-soft: rgba(248, 113, 113, 0.16);
+
+  --radius: 18px;
+  --display: 'Space Grotesk', 'Inter', -apple-system, sans-serif;
+  --body: var(--font-family);
+}
+
+/* Only the tokens with literal values need a light-mode counterpart; the
+   var()-based aliases above already follow the light palette. */
+:root[data-theme='light'] {
+  --surface-strong: #f1f5f9;
+
+  --accent: #6d28d9;
+  --accent-strong: #5b21b6;
+  --primary-soft: rgba(109, 40, 217, 0.08);
+
+  --shadow: rgba(15, 23, 42, 0.08);
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+
+  --success: #059669;
+  --success-soft: #ecfdf5;
+  --warning: #d97706;
+  --warning-soft: #fffbeb;
+  --danger: #dc2626;
+  --danger-soft: #fef2f2;
+}
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; font-size: 16px; }
 

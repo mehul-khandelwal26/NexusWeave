@@ -2,8 +2,13 @@ const express = require('express');
 const Project = require('../models/Project');
 const requireAuth = require('../middleware/auth');
 const { isValidObjectId, sameOrg } = require('../utils/ids');
+const { logActivity } = require('../utils/activity-log');
 
 const router = express.Router();
+
+function actorName(user) {
+  return user.name || user.email.split('@')[0];
+}
 
 function canAccessProject(project, user) {
   if (!project || !user) return false;
@@ -50,6 +55,7 @@ router.post('/', requireAuth, async (req, res) => {
       organizationId: req.user.orgId || null
     });
 
+    logActivity(req, `${actorName(req.user)} created project "${project.name}".`);
     res.status(201).json({ project });
   } catch (err) {
     if (err.name === 'ValidationError') {
@@ -106,6 +112,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
     }
 
     await Project.findByIdAndDelete(req.params.id);
+    logActivity(req, `${actorName(req.user)} deleted project "${project.name}".`);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ errors: ['Failed to delete project.'] });

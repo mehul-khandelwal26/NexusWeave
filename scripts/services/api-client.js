@@ -75,6 +75,7 @@
       bio: backendUser.bio != null ? backendUser.bio : (existing.bio || ''),
       skills: backendUser.skills || existing.skills || [],
       theme: backendUser.theme || existing.theme || 'light',
+      boardBg: backendUser.boardBg || existing.boardBg || 'none',
       provider: backendUser.provider || provider || 'email',
       projects: existing.projects || [],
       tasks: existing.tasks || [],
@@ -672,6 +673,51 @@
       const res = await tryBackendRequest('/orgs/attendance/mark', { method: 'POST' });
       if (res && !res._error && res.success) {
         return res;
+      }
+      return null;
+    },
+
+    async fetchAttendanceHistory(days = 30) {
+      const res = await tryBackendRequest(`/orgs/attendance/history?days=${days}`, { method: 'GET' });
+      if (res && !res._error && res.success) {
+        return res;
+      }
+      return null;
+    },
+
+    async clearDatabaseAttendance() {
+      const res = await tryBackendRequest('/orgs/attendance/mark', { method: 'DELETE' });
+      if (res && !res._error && res.success) {
+        return res;
+      }
+      return null;
+    },
+
+    /* ── Focus Session API ── */
+    async logFocusSession(minutes, taskId = null) {
+      const res = await tryBackendRequest('/focus', {
+        method: 'POST',
+        body: JSON.stringify({ minutes, taskId })
+      });
+      if (res && !res._error && res.success) {
+        return res.session;
+      }
+      return null;
+    },
+
+    async fetchFocusSummary(days = 7) {
+      const res = await tryBackendRequest(`/focus/summary?days=${days}`, { method: 'GET' });
+      if (res && !res._error && res.success) {
+        return res;
+      }
+      return null;
+    },
+
+    /* ── Activity Feed API ── */
+    async fetchActivity({ scope = 'me', limit = 20 } = {}) {
+      const res = await tryBackendRequest(`/activity?scope=${encodeURIComponent(scope)}&limit=${limit}`, { method: 'GET' });
+      if (res && !res._error && Array.isArray(res.activity)) {
+        return res.activity;
       }
       return null;
     },

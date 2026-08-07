@@ -6,12 +6,17 @@
   const api = window.NexusAPI;
   const socket = window.NexusSocket;
 
-  const ATTENDANCE_KEY = 'nw_attendance';
   const PRESENCE_KEY = 'nw_user_presence';
   const LEAVES_KEY = 'nw_user_leaves';
 
+  const HOURS_PER_PRESENT_DAY = 8;
+
   let idleTimer = null;
   const IDLE_TIMEOUT_MS = 2 * 60 * 1000; // 2 minutes inactivity
+
+  // Attendance lives in MongoDB; this is only a read-through cache for the
+  // synchronous metric helpers the profile and dashboard pages call.
+  let attendanceHistory = null;
 
   function getStoredData(key) {
     return JSON.parse(localStorage.getItem(key) || '{}');
@@ -73,8 +78,8 @@
       };
       saveStoredData(PRESENCE_KEY, presenceData);
 
-      if (socket) {
-        socket.emit('presence:update', { email, status, lastSeen: presenceData[email].lastSeen });
+      if (socket && socket.emitRaw) {
+        socket.emitRaw('presence', { email, status, lastSeen: presenceData[email].lastSeen });
       }
     },
 
@@ -91,78 +96,32 @@
       return record;
     },
 
-    /* ── Attendance & Leave Logic ── */
-    markCheckIn(email) {
-      const todayKey = new Date().toISOString().split('T')[0];
-      const records = getStoredData(ATTENDANCE_KEY);
-      if (!records[todayKey]) records[todayKey] = {};
-
-      const now = new Date();
-      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-      // Late Arrival logic (after 09:15 AM)
-      const isLate = now.getHours() > 9 || (now.getHours() === 9 && now.getMinutes() > 15);
-
-      records[todayKey][email] = {
-        status: 'in',
-        checkInTime: timeStr,
-        checkInTimestamp: now.getTime(),
-        checkOutTime: null,
-        checkOutTimestamp: null,
-        isLate,
-        hours: 0
-      };
-
-      saveStoredData(ATTENDANCE_KEY, records);
-
-      if (socket) {
-        const user = api.getMe();
-        socket.emit('attendance:marked', {
-          orgId: user ? user.organizationId : null,
-          userName: user ? user.name : email,
-          userEmail: email,
-          status: 'in',
-          time: timeStr,
-          isLate
-        });
-      }
-
-      return records[todayKey][email];
+    /* ── Attendance (server-owned) ── */
+    async loadAttendanceHistory(days = 30) {
+      if (!api.fetchAttendanceHistory) return null;
+      attendanceHistory = await api.fetchAttendanceHistory(days);
+      return attendanceHistory;
     },
 
-    markCheckOut(email) {
-      const todayKey = new Date().toISOString().split('T')[0];
-      const records = getStoredData(ATTENDANCE_KEY);
-      if (!records[todayKey] || !records[todayKey][email]) return null;
-
-      const now = new Date();
-      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-      const checkInTs = records[todayKey][email].checkInTimestamp || now.getTime();
-      const hoursWorked = Math.max(0.5, parseFloat(((now.getTime() - checkInTs) / (1000 * 60 * 60)).toFixed(1)));
-
-      records[todayKey][email].status = 'out';
-      records[todayKey][email].checkOutTime = timeStr;
-      records[todayKey][email].checkOutTimestamp = now.getTime();
-      records[todayKey][email].hours = hoursWorked;
-
-      saveStoredData(ATTENDANCE_KEY, records);
-
-      if (socket) {
-        const user = api.getMe();
-        socket.emit('attendance:marked', {
-          orgId: user ? user.organizationId : null,
-          userName: user ? user.name : email,
-          userEmail: email,
-          status: 'out',
-          time: timeStr,
-          hours: hoursWorked
-        });
-      }
-
-      return records[todayKey][email];
+    getAttendanceHistory() {
+      return attendanceHistory;
     },
 
+    async markPresent() {
+      if (!api.markDatabaseAttendance) return null;
+      const result = await api.markDatabaseAttendance();
+      if (result) await this.loadAttendanceHistory();
+      return result;
+    },
+
+    async clearPresent() {
+      if (!api.clearDatabaseAttendance) return null;
+      const result = await api.clearDatabaseAttendance();
+      if (result) await this.loadAttendanceHistory();
+      return result;
+    },
+
+    /* ── Leave Logic ── */
     applyLeave(email, reason, startDate, endDate) {
       const leaves = getStoredData(LEAVES_KEY);
       if (!leaves[email]) leaves[email] = [];
@@ -186,34 +145,27 @@
     },
 
     /* ── Metrics & Calculations ── */
+    /** Reads the cached server history; call loadAttendanceHistory() first. */
     calculateWorkingHours(email, period = 'weekly') {
-      const records = getStoredData(ATTENDANCE_KEY);
-      const now = new Date();
-      let totalHours = 0;
+      if (!attendanceHistory || !Array.isArray(attendanceHistory.records)) return 0;
 
-      Object.keys(records).forEach(dateStr => {
-        const d = new Date(dateStr);
-        const record = records[dateStr][email];
-        if (!record) return;
+      const windowDays = period === 'daily' ? 1 : period === 'monthly' ? 30 : 7;
+      const cutoff = new Date();
+      cutoff.setHours(0, 0, 0, 0);
+      cutoff.setDate(cutoff.getDate() - (windowDays - 1));
 
-        const diffDays = (now - d) / (1000 * 60 * 60 * 24);
+      const daysPresent = attendanceHistory.records.filter((r) => {
+        const day = new Date(`${r.dateKey}T00:00:00`);
+        return !isNaN(day.getTime()) && day >= cutoff;
+      }).length;
 
-        if (period === 'daily' && diffDays < 1) {
-          totalHours += record.hours || (record.status === 'in' ? 8 : 0);
-        } else if (period === 'weekly' && diffDays <= 7) {
-          totalHours += record.hours || (record.status === 'in' ? 8 : 0);
-        } else if (period === 'monthly' && diffDays <= 30) {
-          totalHours += record.hours || (record.status === 'in' ? 8 : 0);
-        }
-      });
-
-      return Math.round(totalHours);
+      return daysPresent * HOURS_PER_PRESENT_DAY;
     },
 
     calculateProductivityScore(user) {
       if (!user) return 0;
       const tasks = user.tasks || [];
-      if (!tasks.length) return 85; // Default healthy score
+      if (!tasks.length) return 0;
 
       const total = tasks.length;
       const done = tasks.filter(t => t.status === 'Done').length;
@@ -232,7 +184,7 @@
 
     calculateAvgCompletionTime(user) {
       const tasks = (user.tasks || []).filter(t => t.status === 'Done' && t.createdAt && t.completedAt);
-      if (!tasks.length) return '1.5 days';
+      if (!tasks.length) return '—';
 
       let totalDiffMs = 0;
       tasks.forEach(t => {
