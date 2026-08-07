@@ -65,6 +65,43 @@ router.get('/heatmap', requireAuth, async (req, res) => {
   }
 });
 
+// Get Calendar Tasks & Deadline Counts (must be registered before /:id routes)
+router.get('/calendar', requireAuth, async (req, res) => {
+  try {
+    const tasks = await Task.find(buildTaskListQuery(req.user)).sort({ dueDate: 1, createdAt: -1 });
+
+    const countsByDate = {};
+    const formattedTasks = tasks.map((t) => {
+      let dateKey = '';
+      if (t.dueDate) {
+        if (t.dueDate instanceof Date) {
+          dateKey = t.dueDate.toISOString().split('T')[0];
+        } else {
+          dateKey = String(t.dueDate).split('T')[0];
+        }
+      }
+      if (dateKey) {
+        countsByDate[dateKey] = (countsByDate[dateKey] || 0) + 1;
+      }
+      return {
+        id: t._id.toString(),
+        title: t.title,
+        description: t.description || '',
+        dueDate: dateKey || (t.dueDate ? String(t.dueDate) : ''),
+        priority: t.priority || 'Medium',
+        status: t.status || 'Todo',
+        assignedUserEmail: t.assignedUserEmail || t.userEmail || '',
+        userEmail: t.userEmail
+      };
+    });
+
+    res.json({ success: true, tasks: formattedTasks, countsByDate });
+  } catch (err) {
+    console.error('Error fetching calendar tasks:', err);
+    res.status(500).json({ errors: ['Failed to fetch calendar tasks.'] });
+  }
+});
+
 // Get Tasks
 router.get('/', requireAuth, async (req, res) => {
   try {
@@ -84,6 +121,15 @@ router.post('/', requireAuth, async (req, res) => {
 
   if (!title || !title.trim()) {
     return res.status(400).json({ errors: ['Task title is required.'] });
+  }
+
+  // Past Date Validation (Time Travel Prevention)
+  if (dueDate) {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const taskDateStr = String(dueDate).split('T')[0];
+    if (taskDateStr < todayStr) {
+      return res.status(400).json({ errors: ['Cannot create tasks with a deadline in the past.'] });
+    }
   }
 
   const isDone = status === 'Done';

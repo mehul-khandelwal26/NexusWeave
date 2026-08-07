@@ -43,7 +43,7 @@
     if (!token) {
       throw new Error('Server authentication token is required');
     }
-    const sessions = JSON.parse(localStorage.getItem('nw_sessions')) || [];
+    const sessions = JSON.parse(sessionStorage.getItem('nw_sessions')) || [];
     const sessionId = generateId('sess');
     sessions.push({
       id: sessionId,
@@ -53,10 +53,10 @@
       createdAt: Date.now(),
       expiresAt: Date.now() + 24 * 60 * 60 * 1000
     });
-    localStorage.setItem('nw_sessions', JSON.stringify(sessions));
-    localStorage.setItem('session', user.email);
-    localStorage.setItem('jwt', token);
-    localStorage.setItem('authProvider', provider);
+    sessionStorage.setItem('nw_sessions', JSON.stringify(sessions));
+    sessionStorage.setItem('session', user.email);
+    sessionStorage.setItem('jwt', token);
+    sessionStorage.setItem('authProvider', provider);
   }
 
   function applyAuthResponse(backendUser, token, provider) {
@@ -88,9 +88,10 @@
   }
 
   function clearSession() {
-    localStorage.removeItem('session');
-    localStorage.removeItem('jwt');
-    localStorage.removeItem('authProvider');
+    sessionStorage.removeItem('session');
+    sessionStorage.removeItem('jwt');
+    sessionStorage.removeItem('authProvider');
+    sessionStorage.removeItem('nw_sessions');
   }
 
   // Relative /api when served by Express on :4000; absolute URL for Live Server / other ports
@@ -108,7 +109,7 @@
         signal: controller.signal,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('jwt') || ''}`,
+          'Authorization': `Bearer ${sessionStorage.getItem('jwt') || ''}`,
           ...(options.headers || {})
         }
       });
@@ -259,8 +260,8 @@
     },
 
     getMeSync() {
-      const email = localStorage.getItem('session');
-      const token = localStorage.getItem('jwt');
+      const email = sessionStorage.getItem('session');
+      const token = sessionStorage.getItem('jwt');
       if (!email || !token) return null;
 
       const users = getUsers();
@@ -287,16 +288,16 @@
 
     /** Async: refresh profile + JWT from server */
     async refreshMe() {
-      const email = localStorage.getItem('session');
-      const token = localStorage.getItem('jwt');
+      const email = sessionStorage.getItem('session');
+      const token = sessionStorage.getItem('jwt');
       if (!email || !token) return null;
 
       const res = await tryBackendRequest('/auth/me', { method: 'GET' });
       if (res && !res._error && res.user) {
         if (res.token) {
-          localStorage.setItem('jwt', res.token);
+          sessionStorage.setItem('jwt', res.token);
         }
-        const user = applyAuthResponse(res.user, res.token || token, localStorage.getItem('authProvider') || 'email');
+        const user = applyAuthResponse(res.user, res.token || token, sessionStorage.getItem('authProvider') || 'email');
         if (user && user.organizationId) {
           try {
             await this.fetchOrganization(user.organizationId);
@@ -320,13 +321,13 @@
       });
       if (!res) return { success: false, error: 'Backend offline.' };
       if (res._error) return { success: false, error: res.message || 'Failed to update profile.' };
-      const token = res.token || localStorage.getItem('jwt');
-      const user = applyAuthResponse(res.user, token, localStorage.getItem('authProvider') || 'email');
+      const token = res.token || sessionStorage.getItem('jwt');
+      const user = applyAuthResponse(res.user, token, sessionStorage.getItem('authProvider') || 'email');
       return { success: true, user };
     },
 
     isAuthenticated() {
-      return Boolean(localStorage.getItem('session') && localStorage.getItem('jwt'));
+      return Boolean(sessionStorage.getItem('session') && sessionStorage.getItem('jwt'));
     },
 
     getRole() {
@@ -442,8 +443,16 @@
       return [];
     },
 
+    async fetchBackendLeaderboard() {
+      const res = await tryBackendRequest('/orgs/leaderboard', { method: 'GET' });
+      if (res && !res._error && res.success && Array.isArray(res.leaderboard)) {
+        return res.leaderboard;
+      }
+      return null;
+    },
+
     async getUserData() {
-      const email = localStorage.getItem('session');
+      const email = sessionStorage.getItem('session');
       if (!email) return null;
 
       const [tasksRes, projectsRes] = await Promise.all([
@@ -461,7 +470,7 @@
     },
 
     saveUserData({ projects, tasks, activity }) {
-      const email = localStorage.getItem('session');
+      const email = sessionStorage.getItem('session');
       if (!email) return false;
       const users = getUsers();
       const user = users[email];
@@ -537,7 +546,7 @@
       });
       if (res && !res._error) {
         if (res.token && res.user) {
-          applyAuthResponse(res.user, res.token, localStorage.getItem('authProvider') || 'email');
+          applyAuthResponse(res.user, res.token, sessionStorage.getItem('authProvider') || 'email');
         }
         if (res.org) upsertLocalOrg(res.org);
         else if (orgId) await this.fetchOrganization(orgId);
@@ -550,10 +559,10 @@
       const res = await tryBackendRequest('/orgs/leave', { method: 'POST' });
       if (res && !res._error) {
         if (res.token && res.user) {
-          applyAuthResponse(res.user, res.token, localStorage.getItem('authProvider') || 'email');
+          applyAuthResponse(res.user, res.token, sessionStorage.getItem('authProvider') || 'email');
         } else {
           const users = getUsers();
-          const email = localStorage.getItem('session');
+          const email = sessionStorage.getItem('session');
           if (users[email]) {
             users[email].organizationId = null;
             users[email].role = 'personal';
@@ -569,7 +578,7 @@
     async removeMemberFromOrg(orgId, emailToRemove) {
       const res = await tryBackendRequest(`/orgs/${orgId}/members/${encodeURIComponent(emailToRemove)}`, { method: 'DELETE' });
       if (res && !res._error) {
-        if (res.token && res.user) applyAuthResponse(res.user, res.token, localStorage.getItem('authProvider') || 'email');
+        if (res.token && res.user) applyAuthResponse(res.user, res.token, sessionStorage.getItem('authProvider') || 'email');
         await this.fetchOrganization(orgId);
         return { success: true };
       }
@@ -582,7 +591,7 @@
         body: JSON.stringify({ emailToPromote })
       });
       if (res && !res._error) {
-        if (res.token && res.user) applyAuthResponse(res.user, res.token, localStorage.getItem('authProvider') || 'email');
+        if (res.token && res.user) applyAuthResponse(res.user, res.token, sessionStorage.getItem('authProvider') || 'email');
         await this.fetchOrganization(orgId);
         return { success: true };
       }
@@ -640,6 +649,72 @@
         return res;
       }
       return { total: 0, bySender: {} };
+    },
+
+    /* ── Announcement API ── */
+    async fetchAnnouncements() {
+      const res = await tryBackendRequest('/announcements', { method: 'GET' });
+      if (res && !res._error && res.success && Array.isArray(res.announcements)) {
+        return res.announcements;
+      }
+      return null;
+    },
+
+    async createAnnouncement({ title, content, attachments }) {
+      const res = await tryBackendRequest('/announcements', {
+        method: 'POST',
+        body: JSON.stringify({ title, content, attachments })
+      });
+      if (res && !res._error && res.success && res.announcement) {
+        return { success: true, announcement: res.announcement };
+      }
+      return { success: false, error: res ? (res.message || (res.errors && res.errors[0])) : 'Failed to create announcement' };
+    },
+
+    /* ── Online Users & Attendance API ── */
+    async fetchOnlineUsers() {
+      const res = await tryBackendRequest('/orgs/online', { method: 'GET' });
+      if (res && !res._error && res.success) {
+        return res;
+      }
+      return null;
+    },
+
+    async fetchTodayAttendance() {
+      const res = await tryBackendRequest('/orgs/attendance/today', { method: 'GET' });
+      if (res && !res._error && res.success) {
+        return res;
+      }
+      return null;
+    },
+
+    async markDatabaseAttendance() {
+      const res = await tryBackendRequest('/orgs/attendance/mark', { method: 'POST' });
+      if (res && !res._error && res.success) {
+        return res;
+      }
+      return null;
+    },
+
+    /* ── Calendar & Tasks API ── */
+    async fetchCalendarTasks(year, month) {
+      const query = (year && month) ? `?year=${year}&month=${month}` : '';
+      const res = await tryBackendRequest(`/tasks/calendar${query}`, { method: 'GET' });
+      if (res && !res._error && res.success) {
+        return res;
+      }
+      return { success: false, tasks: [], countsByDate: {} };
+    },
+
+    async createTask(taskData) {
+      const res = await tryBackendRequest('/tasks', {
+        method: 'POST',
+        body: JSON.stringify(taskData)
+      });
+      if (res && !res._error && (res.task || res.success)) {
+        return { success: true, task: res.task || res };
+      }
+      return { success: false, error: res ? (res.message || (res.errors && res.errors[0])) : 'Failed to create task' };
     }
   };
 

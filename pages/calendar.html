@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Workspace Calendar - Manage project deadlines and task schedules" />
+  <title>Calendar | NexusWeave</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../styles/global.css" />
+  <link rel="stylesheet" href="../styles/sidebar.css" />
+  <link rel="stylesheet" href="../styles/product.css" />
+  <link rel="stylesheet" href="../styles/dashboard.css" />
+  <link rel="stylesheet" href="../styles/calendar.css" />
+</head>
+<body class="app-body">
+  <div class="app-shell">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-mark"></div>
+        <div>
+          <p class="eyebrow">Productivity suite</p>
+          <h2>NexusWeave</h2>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav" aria-label="Primary navigation">
+        <a class="nav-item" href="dashboard.html">
+          <span class="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          </span>
+          <span>Dashboard</span>
+        </a>
+        <a class="nav-item active" href="calendar.html">
+          <span class="nav-icon" aria-hidden="true">📅</span>
+          <span>Calendar</span>
+        </a>
+        <a class="nav-item" href="create.html">
+          <span class="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v8"></path><path d="M8 12h8"></path></svg>
+          </span>
+          <span>Create</span>
+        </a>
+        <a class="nav-item" href="tasks.html">
+          <span class="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+          </span>
+          <span>Tasks</span>
+        </a>
+        <a class="nav-item" href="board.html">
+          <span class="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M8 7v10"></path><path d="M12 7v6"></path><path d="M16 7v4"></path></svg>
+          </span>
+          <span>Board</span>
+        </a>
+        <a class="nav-item" href="reports.html">
+          <span class="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"></path><path d="M7 14l3-3 2 2 5-6"></path></svg>
+          </span>
+          <span>Reports</span>
+        </a>
+        <a class="nav-item" href="org.html">
+          <span class="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          </span>
+          <span>Organization</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="profile-menu-wrapper">
+          <button class="profile-trigger" type="button" data-profile-menu-trigger aria-haspopup="menu" aria-expanded="false">
+            <span class="profile-avatar" data-profile-avatar>NW</span>
+            <span class="profile-meta">
+              <strong data-profile-name>Profile</strong>
+              <small data-profile-email>workspace</small>
+            </span>
+          </button>
+          <div class="profile-menu" data-profile-menu role="menu">
+            <button class="profile-menu-item" type="button" data-profile-action="change-photo">Change photo</button>
+            <button class="profile-menu-item" type="button" data-profile-action="copy-link">Copy link</button>
+            <button class="profile-menu-item" type="button" data-profile-action="settings">Settings</button>
+            <button class="profile-menu-item danger" type="button" data-profile-action="logout">Logout</button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Shell -->
+    <div class="content-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Workspace Schedule</p>
+          <h1>Calendar & Deadlines</h1>
+        </div>
+        <div class="header-actions">
+          <a class="ghost-btn" href="focus.html" style="padding: 0.6rem 1rem; border-radius: 999px; text-decoration: none; border: 1px solid var(--border); display: flex; align-items: center; gap: 0.4rem; font-size: 0.9rem; font-weight: 500; color: inherit;">
+            ⏱ Focus
+          </a>
+          <button class="theme-toggle-btn" type="button" data-theme-toggle aria-label="Toggle dark mode">
+            <span class="toggle-icon"></span>
+            <span>Theme</span>
+          </button>
+        </div>
+      </header>
+
+      <main class="main-content">
+        <div class="calendar-page-container">
+          <!-- Calendar Top Bar / Month Controls -->
+          <div class="calendar-top-bar">
+            <div class="calendar-nav-group">
+              <button type="button" id="prevMonthBtn" class="calendar-icon-btn" title="Previous Month">‹</button>
+              <h2 id="calendarMonthTitle" class="calendar-month-title">August 2026</h2>
+              <button type="button" id="nextMonthBtn" class="calendar-icon-btn" title="Next Month">›</button>
+            </div>
+            <button type="button" id="todayJumpBtn" class="today-jump-btn">Today</button>
+          </div>
+
+          <!-- Calendar Grid Card -->
+          <div class="calendar-card-wrapper">
+            <div class="calendar-grid" id="calendarGrid">
+              <!-- Day Headers -->
+              <div class="calendar-day-header">Sun</div>
+              <div class="calendar-day-header">Mon</div>
+              <div class="calendar-day-header">Tue</div>
+              <div class="calendar-day-header">Wed</div>
+              <div class="calendar-day-header">Thu</div>
+              <div class="calendar-day-header">Fri</div>
+              <div class="calendar-day-header">Sat</div>
+              <!-- Grid cells injected by JS -->
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Date Click Task List Modal -->
+  <div id="dateTasksModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal-card date-tasks-modal-card">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">Task Schedule</p>
+          <h3 id="dateModalTitle">Tasks Due on Date</h3>
+        </div>
+        <button type="button" id="closeDateTasksModal" class="ghost-btn" aria-label="Close">×</button>
+      </div>
+      <div id="dateTasksList" class="date-tasks-list">
+        <div class="empty-inline">Loading tasks…</div>
+      </div>
+      <div class="task-modal-footer">
+        <button type="button" id="openCalendarCreateModalBtn" class="primary-btn">+ Add Task</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pre-filled Task Creation Modal -->
+  <div id="calendarCreateTaskModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal-card calendar-create-card">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">Integrated Workflow</p>
+          <h3>Create Task for Date</h3>
+        </div>
+        <button type="button" id="closeCalendarCreateModal" class="ghost-btn" aria-label="Close">×</button>
+      </div>
+      <form id="calendarTaskForm" style="margin-top: 1rem;">
+        <div class="field-group">
+          <label for="newTaskTitle">Task Title *</label>
+          <input type="text" id="newTaskTitle" required placeholder="e.g. Prepare Sprint Review Deck" />
+        </div>
+        <div class="field-group">
+          <label for="newTaskDueDate">Deadline Date *</label>
+          <input type="date" id="newTaskDueDate" required />
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem;">
+          <div class="field-group">
+            <label for="newTaskPriority">Priority</label>
+            <select id="newTaskPriority">
+              <option value="Medium">Medium</option>
+              <option value="High">High</option>
+              <option value="Low">Low</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label for="newTaskStatus">Status</label>
+            <select id="newTaskStatus">
+              <option value="Todo">Todo</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Done">Done</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-group">
+          <label for="newTaskDesc">Description (Optional)</label>
+          <textarea id="newTaskDesc" rows="3" placeholder="Add task context or notes..."></textarea>
+        </div>
+        <div class="modal-actions" style="margin-top: 1.2rem; display: flex; justify-content: flex-end; gap: 0.6rem;">
+          <button type="button" id="cancelCalendarCreateBtn" class="ghost-btn">Cancel</button>
+          <button type="submit" class="primary-btn">Create Task</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="../scripts/services/api-client.js"></script>
+  <script src="../scripts/services/socket-service.js"></script>
+  <script src="../scripts/shared/notification-system.js"></script>
+  <script src="../scripts/shared/theme.js"></script>
+  <script src="../scripts/shared/profile-menu.js"></script>
+  <script src="../scripts/calendar/calendar.js"></script>
+</body>
+</html>

@@ -255,12 +255,12 @@
 
             <!-- Admin Stats Grid -->
             <section class="stats-grid admin-stats-grid">
-              <article class="stat-card glass-card">
+              <article class="stat-card glass-card clickable-card" id="adminTotalEmployeesCard" title="Click to view online employees">
                 <div class="stat-card-head">
                   <span class="stat-icon">👥</span>
-                  <span class="stat-trend positive">+100%</span>
+                  <span class="stat-trend positive">Online</span>
                 </div>
-                <h3 id="adminTotalEmployees">0</h3>
+                <h3 id="adminTotalEmployees">0/0</h3>
                 <p>Total Employees</p>
               </article>
 
@@ -288,51 +288,18 @@
                 <p>Pending Tasks</p>
               </article>
 
-              <article class="stat-card glass-card">
+              <article class="stat-card glass-card clickable-card" id="adminAttendanceRateCard" title="Click to view present members today">
                 <div class="stat-card-head">
                   <span class="stat-icon">📅</span>
+                  <span class="stat-trend positive">Present</span>
                 </div>
                 <h3 id="adminAttendanceRate">0%</h3>
                 <p>Attendance Today</p>
               </article>
             </section>
 
-            <!-- Admin Main Grid: Productivity Graph & Leaderboard -->
-            <div class="dashboard-grid-split">
-              <!-- Productivity Graph (Chart.js) -->
-              <section class="panel glass-card">
-                <div class="panel-head">
-                  <div>
-                    <h2>Organization Productivity</h2>
-                    <p class="text-soft">Weekly task completions vs targets across all teams</p>
-                  </div>
-                  <div class="chart-legend-pills">
-                    <span class="legend-pill pill-completed">Completed</span>
-                    <span class="legend-pill pill-target">Target</span>
-                  </div>
-                </div>
-                <div class="chart-container" style="position: relative; height:280px; width:100%;">
-                  <canvas id="adminProductivityChart"></canvas>
-                </div>
-              </section>
-
-              <!-- Employee Leaderboard -->
-              <section class="panel glass-card">
-                <div class="panel-head">
-                  <div>
-                    <h2>Top Performers</h2>
-                    <p class="text-soft">Employee Leaderboard by completed work</p>
-                  </div>
-                  <a href="org.html" class="ghost-btn" style="font-size:0.82rem;padding:0.3rem 0.7rem;text-decoration:none;">View All →</a>
-                </div>
-                <div id="adminLeaderboardList" class="leaderboard-list">
-                  <div class="empty-inline">Loading leaderboard…</div>
-                </div>
-              </section>
-            </div>
-
             <!-- Attendance & Org Activity Split -->
-            <div class="dashboard-grid-split" style="margin-top:1.2rem;">
+            <div class="dashboard-grid-split">
               <section class="panel glass-card">
                 <div class="panel-head">
                   <div>
@@ -556,6 +523,38 @@
                   <button type="submit" id="projectSubmitBtn" class="primary-btn">Create project</button>
                 </div>
               </form>
+            </div>
+          </div>
+
+          <!-- Online Employees Modal -->
+          <div id="onlineUsersModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+            <div class="modal-card">
+              <div class="modal-head">
+                <div>
+                  <p class="eyebrow">Organization Status</p>
+                  <h3>🟢 Online Employees</h3>
+                </div>
+                <button type="button" id="closeOnlineUsersModal" class="ghost-btn" aria-label="Close">×</button>
+              </div>
+              <div id="onlineUsersList" class="user-modal-list">
+                <div class="empty-inline">Loading online users…</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Attendance Today Modal -->
+          <div id="todayAttendanceModal" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+            <div class="modal-card">
+              <div class="modal-head">
+                <div>
+                  <p class="eyebrow">Daily Attendance</p>
+                  <h3>📅 Present Today</h3>
+                </div>
+                <button type="button" id="closeTodayAttendanceModal" class="ghost-btn" aria-label="Close">×</button>
+              </div>
+              <div id="todayAttendanceList" class="user-modal-list">
+                <div class="empty-inline">Loading attendance list…</div>
+              </div>
             </div>
           </div>
 

@@ -23,6 +23,7 @@ const orgRoutes = require('./routes/orgs');
 const projectRoutes = require('./routes/projects');
 const taskRoutes = require('./routes/tasks');
 const messageRoutes = require('./routes/messages');
+const announcementRoutes = require('./routes/announcements');
 
 const User = require('./models/User');
 const Message = require('./models/Message');
@@ -32,7 +33,7 @@ const server = http.createServer(app);
 const rootDir = path.join(__dirname, '..');
 
 app.use(cors({ origin: process.env.CLIENT_ORIGIN || '*' }));
-app.use(express.json());
+app.use(express.json({ limit: '15mb' }));
 
 // API routes
 app.use('/api/auth', authRoutes);
@@ -40,6 +41,7 @@ app.use('/api/orgs', orgRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/announcements', announcementRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({
@@ -98,6 +100,21 @@ function sendToUser(userId, data) {
     });
   }
 }
+
+function getOnlineUserIds() {
+  const onlineIds = new Set();
+  userSockets.forEach((sockets, userId) => {
+    for (const ws of sockets) {
+      if (ws.readyState === WebSocket.OPEN) {
+        onlineIds.add(userId.toString());
+        break;
+      }
+    }
+  });
+  return Array.from(onlineIds);
+}
+
+app.set('getOnlineUserIds', getOnlineUserIds);
 
 wss.on('connection', async (ws, req) => {
   const urlParams = new URLSearchParams(req.url.replace(/^[^?]*\?/, ''));

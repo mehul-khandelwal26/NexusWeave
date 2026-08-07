@@ -91,6 +91,7 @@
      ADMIN DASHBOARD IMPLEMENTATION
   ───────────────────────────────────────────── */
   let adminChartInstance = null;
+  const rankIcons = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'];
 
   async function initAdminDashboard() {
     const orgId = currentUser.organizationId;
@@ -105,29 +106,22 @@
 
     const totalEmployees = orgUsers.length;
 
-    // Org tasks come from getUserData (admin JWT sees all org tasks) — org user API has no embedded tasks
+    // Org tasks come from getUserData (admin JWT sees all org tasks)
     const allOrgTasks = Array.isArray(currentUser.tasks) ? currentUser.tasks.slice() : [];
-
-    // Attach tasks to each member for leaderboard scoring
-    const usersWithTasks = orgUsers.map((u) => {
-      const email = (u.email || '').toLowerCase();
-      const memberTasks = allOrgTasks.filter((t) => {
-        const owner = (t.assignedUserEmail || t.userEmail || '').toLowerCase();
-        return owner === email;
-      });
-      return { ...u, tasks: memberTasks };
-    });
 
     const tasksAssigned = allOrgTasks.length;
     const completedTasks = allOrgTasks.filter((t) => t.status === 'Done').length;
     const pendingTasks = allOrgTasks.filter((t) => t.status !== 'Done').length;
 
-    const todayAttendance = getTodayAttendanceMap();
-    const presentCount = Object.keys(todayAttendance).filter((e) => {
-      const s = todayAttendance[e] && todayAttendance[e].status;
-      return s === 'in' || s === 'present';
-    }).length;
-    const attendanceRate = totalEmployees > 0 ? Math.round((presentCount / totalEmployees) * 100) : 0;
+    // Fetch Online Users & Today Attendance from Backend Database API
+    const [onlineRes, attendanceRes] = await Promise.all([
+      api.fetchOnlineUsers ? api.fetchOnlineUsers() : Promise.resolve(null),
+      api.fetchTodayAttendance ? api.fetchTodayAttendance() : Promise.resolve(null)
+    ]);
+
+    const onlineCount = (onlineRes && onlineRes.success) ? onlineRes.onlineCount : 1;
+    const totalCount = (onlineRes && onlineRes.success) ? onlineRes.totalCount : Math.max(totalEmployees, 1);
+    const attendanceRate = (attendanceRes && attendanceRes.success) ? attendanceRes.attendanceRate : 0;
 
     const adminTotalEl = document.getElementById('adminTotalEmployees');
     const adminAssignedEl = document.getElementById('adminTasksAssigned');
@@ -135,130 +129,19 @@
     const adminPendingEl = document.getElementById('adminPendingTasks');
     const adminAttendanceEl = document.getElementById('adminAttendanceRate');
 
-    if (adminTotalEl) adminTotalEl.textContent = totalEmployees;
+    // Requirement 1: Ratio format [Online Count]/[Total Count]
+    if (adminTotalEl) adminTotalEl.textContent = `${onlineCount}/${totalCount}`;
     if (adminAssignedEl) adminAssignedEl.textContent = tasksAssigned;
     if (adminCompletedEl) adminCompletedEl.textContent = completedTasks;
     if (adminPendingEl) adminPendingEl.textContent = pendingTasks;
     if (adminAttendanceEl) adminAttendanceEl.textContent = `${attendanceRate}%`;
 
-    renderAdminProductivityChart(allOrgTasks);
-    renderAdminLeaderboard(usersWithTasks);
+    // Setup Clickable Metric Card Modals
+    setupMetricCardModals();
+
     initSimpleAttendance('admin');
     renderAdminAttendanceList(orgUsers, getTodayAttendanceMap());
     renderAdminActivityFeed(currentUser);
-  }
-
-  function renderAdminProductivityChart(allTasks) {
-    const ctx = document.getElementById('adminProductivityChart');
-    if (!ctx) return;
-
-    if (adminChartInstance) {
-      adminChartInstance.destroy();
-    }
-
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const today = new Date();
-    const completedByDay = [0, 0, 0, 0, 0, 0, 0];
-
-    // Compute completions over the past week
-    allTasks.filter(t => t.status === 'Done').forEach(t => {
-      const date = t.completedAt ? new Date(t.completedAt) : new Date();
-      const dayIdx = (date.getDay() + 6) % 7; // Mon=0, Sun=6
-      completedByDay[dayIdx] += 1;
-    });
-
-    const targetByDay = [5, 8, 12, 10, 15, 6, 4];
-
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    const accentColor = isDark ? '#a78bfa' : '#5b21b6';
-    const textColor = isDark ? '#94a3b8' : '#64748b';
-
-    adminChartInstance = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: days,
-        datasets: [
-          {
-            label: 'Completed Tasks',
-            data: completedByDay,
-            backgroundColor: accentColor,
-            borderRadius: 8,
-            borderSkipped: false
-          },
-          {
-            label: 'Target Goal',
-            data: targetByDay,
-            backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
-            borderRadius: 8,
-            borderSkipped: false
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false }
-        },
-        scales: {
-          x: {
-            grid: { display: false },
-            ticks: { color: textColor, font: { family: 'Inter', size: 12 } }
-          },
-          y: {
-            beginAtZero: true,
-            suggestedMax: Math.max(5, ...completedByDay, 1),
-            grid: { color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' },
-            ticks: { color: textColor, font: { family: 'Inter', size: 12 }, precision: 0 }
-          }
-        }
-      }
-    });
-  }
-
-  function renderAdminLeaderboard(users) {
-    const container = document.getElementById('adminLeaderboardList');
-    if (!container) return;
-
-    // Calculate score per user
-    const ranked = users.map(u => {
-      const tasks = u.tasks || [];
-      const done = tasks.filter(t => t.status === 'Done').length;
-      const total = tasks.length;
-      const rate = total > 0 ? Math.round((done / total) * 100) : 0;
-      return {
-        name: u.name || u.email.split('@')[0],
-        email: u.email,
-        role: u.role || 'employee',
-        done,
-        total,
-        score: done * 10 + rate
-      };
-    }).sort((a, b) => b.score - a.score);
-
-    if (!ranked.length) {
-      container.innerHTML = `<div class="empty-inline">No employees found.</div>`;
-      return;
-    }
-
-    const esc = (s) => (typeof AppHelpers !== 'undefined' && AppHelpers.escapeHTML) ? AppHelpers.escapeHTML(s) : String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-
-    container.innerHTML = ranked.slice(0, 5).map((user, idx) => `
-      <div class="leaderboard-item">
-        <div class="leaderboard-rank rank-${idx + 1}">${rankIcons[idx] || '#' + (idx + 1)}</div>
-        <div class="leaderboard-user">
-          <span class="leaderboard-avatar">${esc(user.name.charAt(0).toUpperCase())}</span>
-          <div class="leaderboard-meta">
-            <strong>${esc(user.name)}</strong>
-            <small>${esc(user.email)}</small>
-          </div>
-        </div>
-        <div class="leaderboard-score">
-          <strong>${user.done} Done</strong>
-          <small>${user.total} total tasks</small>
-        </div>
-      </div>
-    `).join('');
   }
 
   function getTodayKey() {
@@ -328,11 +211,14 @@
 
     if (!attendanceBound[role]) {
       attendanceBound[role] = true;
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         if (isMarkedPresent(currentUser.email)) {
           clearAttendance(currentUser.email);
         } else {
           markAttendancePresent(currentUser.email, currentUser.name);
+          if (api.markDatabaseAttendance) {
+            await api.markDatabaseAttendance().catch(() => {});
+          }
         }
         refreshUI();
         if (isAdminRole) {
@@ -346,6 +232,100 @@
     }
 
     refreshUI();
+  }
+
+  /* ── Interactive Metric Card Modals ── */
+  function setupMetricCardModals() {
+    const onlineCard = document.getElementById('adminTotalEmployeesCard');
+    const attendanceCard = document.getElementById('adminAttendanceRateCard');
+
+    const onlineModal = document.getElementById('onlineUsersModal');
+    const closeOnlineBtn = document.getElementById('closeOnlineUsersModal');
+
+    const attendanceModal = document.getElementById('todayAttendanceModal');
+    const closeAttendanceBtn = document.getElementById('closeTodayAttendanceModal');
+
+    if (onlineCard && onlineModal) {
+      onlineCard.addEventListener('click', () => openOnlineUsersModal());
+    }
+    if (closeOnlineBtn && onlineModal) {
+      closeOnlineBtn.addEventListener('click', () => onlineModal.classList.add('hidden'));
+    }
+
+    if (attendanceCard && attendanceModal) {
+      attendanceCard.addEventListener('click', () => openTodayAttendanceModal());
+    }
+    if (closeAttendanceBtn && attendanceModal) {
+      closeAttendanceBtn.addEventListener('click', () => attendanceModal.classList.add('hidden'));
+    }
+  }
+
+  async function openOnlineUsersModal() {
+    const modal = document.getElementById('onlineUsersModal');
+    const listEl = document.getElementById('onlineUsersList');
+    if (!modal || !listEl) return;
+
+    modal.classList.remove('hidden');
+    listEl.innerHTML = `<div class="empty-inline">Fetching online members from database…</div>`;
+
+    const res = api.fetchOnlineUsers ? await api.fetchOnlineUsers() : null;
+    const onlineUsers = (res && res.success && Array.isArray(res.onlineUsers)) ? res.onlineUsers : [currentUser];
+
+    const esc = (s) => (typeof AppHelpers !== 'undefined' && AppHelpers.escapeHTML) ? AppHelpers.escapeHTML(s) : String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+    if (!onlineUsers.length) {
+      listEl.innerHTML = `<div class="empty-inline">No employees are currently online.</div>`;
+      return;
+    }
+
+    listEl.innerHTML = onlineUsers.map((u) => {
+      const name = u.name || (u.email ? u.email.split('@')[0] : 'Employee');
+      const initial = name.charAt(0).toUpperCase();
+      return `
+        <div class="user-modal-item">
+          <div class="user-modal-avatar">${esc(initial)}</div>
+          <div class="user-modal-info">
+            <strong>${esc(name)}</strong>
+            <small>${esc(u.email || '')}</small>
+          </div>
+          <span class="online-status-pill">🟢 Online</span>
+        </div>
+      `;
+    }).join('');
+  }
+
+  async function openTodayAttendanceModal() {
+    const modal = document.getElementById('todayAttendanceModal');
+    const listEl = document.getElementById('todayAttendanceList');
+    if (!modal || !listEl) return;
+
+    modal.classList.remove('hidden');
+    listEl.innerHTML = `<div class="empty-inline">Fetching today's attendance from database…</div>`;
+
+    const res = api.fetchTodayAttendance ? await api.fetchTodayAttendance() : null;
+    const presentUsers = (res && res.success && Array.isArray(res.presentUsers)) ? res.presentUsers : [];
+
+    const esc = (s) => (typeof AppHelpers !== 'undefined' && AppHelpers.escapeHTML) ? AppHelpers.escapeHTML(s) : String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+    if (!presentUsers.length) {
+      listEl.innerHTML = `<div class="empty-inline">No employees have marked attendance today.</div>`;
+      return;
+    }
+
+    listEl.innerHTML = presentUsers.map((u) => {
+      const name = u.name || (u.email ? u.email.split('@')[0] : 'Employee');
+      const initial = name.charAt(0).toUpperCase();
+      return `
+        <div class="user-modal-item">
+          <div class="user-modal-avatar">${esc(initial)}</div>
+          <div class="user-modal-info">
+            <strong>${esc(name)}</strong>
+            <small>${esc(u.email || '')}</small>
+          </div>
+          <span class="attendance-time-pill">📅 ${esc(u.time || 'Present')}</span>
+        </div>
+      `;
+    }).join('');
   }
 
   function renderAdminAttendanceList(users, todayAttendance) {

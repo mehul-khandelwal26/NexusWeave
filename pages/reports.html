@@ -11,8 +11,11 @@
   <link rel="stylesheet" href="../styles/product.css" />
   <link rel="stylesheet" href="../styles/dashboard.css" />
   <link rel="stylesheet" href="../styles/sidebar.css" />
+  <link rel="stylesheet" href="../styles/org.css" />
   <link rel="stylesheet" href="../styles/realtime.css" />
   <link rel="stylesheet" href="../styles/ai.css" />
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="app-body">
   <div class="app-shell">
@@ -161,6 +164,42 @@
                 </div>
               </div>
             </section>
+          </div>
+
+          <!-- Admin Executive Reports Section (Organization Productivity & Top Performers) -->
+          <div id="adminReportsSection" class="hidden" style="margin-top: 1.2rem; margin-bottom: 1.2rem;">
+            <div class="dashboard-grid-split">
+              <!-- Productivity Graph (Chart.js) -->
+              <section class="panel glass-card">
+                <div class="panel-head">
+                  <div>
+                    <h2>Organization Productivity</h2>
+                    <p class="text-soft">Weekly task completions vs targets across all teams</p>
+                  </div>
+                  <div class="chart-legend-pills">
+                    <span class="legend-pill pill-completed">Completed</span>
+                    <span class="legend-pill pill-target">Target</span>
+                  </div>
+                </div>
+                <div class="chart-container" style="position: relative; height:280px; width:100%;">
+                  <canvas id="adminProductivityChart"></canvas>
+                </div>
+              </section>
+
+              <!-- Employee Leaderboard -->
+              <section class="panel glass-card">
+                <div class="panel-head">
+                  <div>
+                    <h2>Top Performers</h2>
+                    <p class="text-soft">Employee Leaderboard by completed work</p>
+                  </div>
+                  <a href="org.html" class="ghost-btn" style="font-size:0.82rem;padding:0.3rem 0.7rem;text-decoration:none;">View All →</a>
+                </div>
+                <div id="adminLeaderboardList" class="leaderboard-list">
+                  <div class="empty-inline">Loading leaderboard…</div>
+                </div>
+              </section>
+            </div>
           </div>
 
           <!-- Project Wise Progress -->

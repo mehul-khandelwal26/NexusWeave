@@ -52,7 +52,7 @@
 
   const NexusSocket = {
     connect(token) {
-      const jwtToken = token || localStorage.getItem('jwt');
+      const jwtToken = token || sessionStorage.getItem('jwt');
       if (!jwtToken) return;
 
       if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {

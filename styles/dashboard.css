@@ -1186,6 +1186,211 @@
   border-radius: 2px;
 }
 
+/* ── Announcement System Styles ── */
+.megaphone-btn {
+  font-size: 1.1rem;
+}
+
+.announcement-modal-card {
+  max-width: 680px;
+  width: 90%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.announcement-feed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  margin-top: 1rem;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 0.3rem;
+}
+
+.announcement-accordion-item {
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+  border-radius: 12px;
+  background: var(--bg-card, rgba(255, 255, 255, 0.03));
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.announcement-accordion-item:hover {
+  border-color: var(--accent, #8b5cf6);
+}
+
+.announcement-accordion-item.is-expanded {
+  border-color: var(--accent, #8b5cf6);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.announcement-accordion-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.9rem 1.1rem;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  gap: 1rem;
+}
+
+.announcement-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.98rem;
+}
+
+.announcement-icon {
+  font-size: 1.1rem;
+}
+
+.announcement-meta-right {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  color: var(--ink-soft, #94a3b8);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.accordion-arrow {
+  font-size: 0.75rem;
+  transition: transform 0.2s ease;
+}
+
+.announcement-accordion-body {
+  padding: 0 1.1rem 1.1rem 1.1rem;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--ink-normal, #cbd5e1);
+  border-top: 1px dashed var(--border, rgba(255, 255, 255, 0.08));
+  margin-top: 0.2rem;
+  padding-top: 0.8rem;
+}
+
+.announcement-body-text {
+  word-break: break-word;
+}
+
+.attachment-download-chip:hover {
+  filter: brightness(1.15);
+  border-color: var(--accent, #8b5cf6);
+}
+
+/* ── Interactive Metric Cards & Detail Modals ── */
+.clickable-card {
+  cursor: pointer;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.22s ease, box-shadow 0.22s ease;
+  user-select: none;
+}
+
+.clickable-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--accent, #7c3aed);
+  box-shadow: 0 12px 30px rgba(124, 58, 237, 0.22);
+}
+
+.user-modal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 0.2rem;
+}
+
+.user-modal-item {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  background: var(--bg-card, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.user-modal-item:hover {
+  border-color: var(--accent, #7c3aed);
+  background: var(--bg-input-focus, rgba(255, 255, 255, 0.07));
+}
+
+.user-modal-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #7c3aed, #6d28d9);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+}
+
+.user-modal-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.user-modal-info strong {
+  font-size: 0.95rem;
+  color: var(--text-main, #ffffff);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-modal-info small {
+  font-size: 0.8rem;
+  color: var(--text-muted, #94a3b8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.online-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  white-space: nowrap;
+}
+
+.attendance-time-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(124, 58, 237, 0.15);
+  color: #a78bfa;
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  white-space: nowrap;
+}
+
+
+
 
 
 

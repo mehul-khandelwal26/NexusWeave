@@ -8,7 +8,7 @@
   if (!trigger || !menu) return;
 
   function updateProfile() {
-    const sessionEmail = localStorage.getItem('session');
+    const sessionEmail = sessionStorage.getItem('session');
     const users = JSON.parse(localStorage.getItem('users') || '{}');
     const user = sessionEmail ? users[sessionEmail] : null;
 
@@ -58,10 +58,10 @@
           window.alert('Clipboard is not available in this browser.');
         }
       } else if (action === 'logout') {
-        localStorage.removeItem('session');
-        localStorage.removeItem('jwt');
-        localStorage.removeItem('authProvider');
-        localStorage.removeItem('nw_sessions');
+        sessionStorage.removeItem('session');
+        sessionStorage.removeItem('jwt');
+        sessionStorage.removeItem('authProvider');
+        sessionStorage.removeItem('nw_sessions');
         window.location.href = 'index.html';
       }
     });

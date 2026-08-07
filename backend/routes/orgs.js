@@ -1,6 +1,8 @@
 const express = require('express');
 const Organization = require('../models/Organization');
 const User = require('../models/User');
+const Task = require('../models/Task');
+const Attendance = require('../models/Attendance');
 const requireAuth = require('../middleware/auth');
 const { signToken } = require('../utils/jwt');
 const { isValidObjectId } = require('../utils/ids');
@@ -27,6 +29,219 @@ async function loadFreshUser(emailOrId) {
   }
   return User.findOne({ email: emailOrId });
 }
+
+// Get Online Users Ratio & Online Member List
+router.get('/online', requireAuth, async (req, res) => {
+  if (!req.user.orgId) {
+    return res.json({
+      success: true,
+      onlineCount: 1,
+      totalCount: 1,
+      onlineUsers: [{ email: req.user.email, name: req.user.name || 'Admin', role: req.user.role }],
+      totalUsers: [{ email: req.user.email, name: req.user.name || 'Admin', role: req.user.role }]
+    });
+  }
+
+  try {
+    const allUsers = await User.find({ organizationId: req.user.orgId }, 'name email role department');
+    const getOnlineUserIds = req.app.get('getOnlineUserIds');
+    const activeSocketIds = getOnlineUserIds ? new Set(getOnlineUserIds()) : new Set();
+
+    // The current requester is always online since they are making an active API call
+    const currentUserId = req.user.sub ? req.user.sub.toString() : null;
+
+    const onlineUsers = [];
+    const totalUsers = [];
+
+    allUsers.forEach((u) => {
+      const uId = u._id.toString();
+      const isOnline = activeSocketIds.has(uId) || uId === currentUserId;
+      const userObj = {
+        id: u._id.toString(),
+        name: u.name || u.email.split('@')[0],
+        email: u.email,
+        role: u.role || 'employee',
+        department: u.department || 'Engineering',
+        isOnline
+      };
+      totalUsers.push(userObj);
+      if (isOnline) {
+        onlineUsers.push(userObj);
+      }
+    });
+
+    res.json({
+      success: true,
+      onlineCount: onlineUsers.length,
+      totalCount: totalUsers.length,
+      onlineUsers,
+      totalUsers
+    });
+  } catch (err) {
+    console.error('Error fetching online users:', err);
+    res.status(500).json({ errors: ['Failed to fetch online users.'] });
+  }
+});
+
+// Get Today's Present Attendance & Present Member List
+router.get('/attendance/today', requireAuth, async (req, res) => {
+  if (!req.user.orgId) {
+    return res.json({
+      success: true,
+      presentCount: 0,
+      totalEmployees: 1,
+      attendanceRate: 0,
+      presentUsers: []
+    });
+  }
+
+  try {
+    const todayKey = new Date().toISOString().split('T')[0];
+    const totalEmployees = await User.countDocuments({ organizationId: req.user.orgId });
+
+    const attendanceRecords = await Attendance.find({
+      organizationId: req.user.orgId,
+      dateKey: todayKey,
+      status: 'present'
+    }).sort({ markedAtTime: 1, createdAt: 1 });
+
+    const userEmails = attendanceRecords.map((r) => r.userEmail);
+    const userDocs = await User.find({ email: { $in: userEmails } }, 'name email role department');
+    const userMap = new Map(userDocs.map((u) => [u.email, u]));
+
+    const presentUsers = attendanceRecords.map((rec) => {
+      const u = userMap.get(rec.userEmail);
+      return {
+        id: rec._id.toString(),
+        name: rec.userName || (u ? u.name : rec.userEmail.split('@')[0]),
+        email: rec.userEmail,
+        role: u ? u.role : 'employee',
+        department: u ? u.department : 'Engineering',
+        time: rec.markedAtTime || 'Present'
+      };
+    });
+
+    const presentCount = presentUsers.length;
+    const attendanceRate = totalEmployees > 0 ? Math.round((presentCount / totalEmployees) * 100) : 0;
+
+    res.json({
+      success: true,
+      presentCount,
+      totalEmployees,
+      attendanceRate,
+      presentUsers
+    });
+  } catch (err) {
+    console.error('Error fetching today attendance:', err);
+    res.status(500).json({ errors: ['Failed to fetch today attendance.'] });
+  }
+});
+
+// Mark Attendance for Today in Database
+router.post('/attendance/mark', requireAuth, async (req, res) => {
+  if (!req.user.orgId) {
+    return res.status(400).json({ errors: ['You are not part of an organization.'] });
+  }
+
+  try {
+    const todayKey = new Date().toISOString().split('T')[0];
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    const record = await Attendance.findOneAndUpdate(
+      { userEmail: req.user.email, dateKey: todayKey },
+      {
+        userId: req.user.sub,
+        userEmail: req.user.email,
+        userName: req.user.name || req.user.email.split('@')[0],
+        organizationId: req.user.orgId,
+        dateKey: todayKey,
+        markedAtTime: timeStr,
+        status: 'present'
+      },
+      { upsert: true, new: true }
+    );
+
+    res.json({ success: true, record });
+  } catch (err) {
+    console.error('Error marking attendance:', err);
+    res.status(500).json({ errors: ['Failed to mark attendance.'] });
+  }
+});
+
+// Get Organization Leaderboard (Top Performers by Completed Tasks)
+router.get('/leaderboard', requireAuth, async (req, res) => {
+  if (!req.user.orgId) {
+    return res.status(400).json({ errors: ['You are not part of an organization.'] });
+  }
+
+  try {
+    const pipeline = [
+      {
+        $match: {
+          organizationId: req.user.orgId,
+          status: 'Done'
+        }
+      },
+      {
+        $addFields: {
+          userEmailEffective: {
+            $cond: {
+              if: {
+                $and: [
+                  { $ne: ['$assignedUserEmail', null] },
+                  { $ne: ['$assignedUserEmail', ''] }
+                ]
+              },
+              then: '$assignedUserEmail',
+              else: '$userEmail'
+            }
+          }
+        }
+      },
+      {
+        $group: {
+          _id: '$userEmailEffective',
+          completedTaskCount: { $sum: 1 }
+        }
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: '_id',
+          foreignField: 'email',
+          as: 'userDetails'
+        }
+      },
+      {
+        $unwind: {
+          path: '$userDetails',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $sort: {
+          completedTaskCount: -1
+        }
+      },
+      {
+        $project: {
+          _id: 0,
+          email: '$_id',
+          completedTaskCount: 1,
+          name: { $ifNull: ['$userDetails.name', '$_id'] },
+          role: { $ifNull: ['$userDetails.role', 'employee'] },
+          department: '$userDetails.department'
+        }
+      }
+    ];
+
+    const leaderboard = await Task.aggregate(pipeline);
+    res.json({ success: true, leaderboard });
+  } catch (err) {
+    console.error('Leaderboard error:', err);
+    res.status(500).json({ errors: ['Failed to compute organization leaderboard.'] });
+  }
+});
 
 // Get Users in Organization
 router.get('/users', requireAuth, async (req, res) => {
