@@ -42,6 +42,15 @@ let projects = [];
 let labels = [...DEFAULT_LABELS];
 let orgUsers = [];
 
+// Determine active entity synchronously
+const params = new URLSearchParams(window.location.search);
+const type = params.get('type');
+if (type === 'project') {
+  setActiveEntity('project');
+} else {
+  setActiveEntity('task');
+}
+
 let selectedLabels = [];
 let selectedAttachments = [];
 let selectedTasksForNewProject = [];
@@ -723,7 +732,6 @@ async function init() {
   syncTimeInputStates();
   renderSelectedLabels();
   renderAttachments();
-  setActiveEntity('task');
   populateProjectDropdown();
   updateSelectedTasksCount();
 }
