@@ -459,7 +459,10 @@
 
 /* ── High-Impact Final CTA Banner ── */
 .final-cta-card {
-  background: linear-gradient(135deg, rgba(124, 58, 237, 0.15) 0%, rgba(168, 85, 247, 0.15) 100%);
+  position: relative;
+  z-index: 1;
+  background-color: var(--bg-card);
+  background-image: linear-gradient(135deg, rgba(124, 58, 237, 0.15) 0%, rgba(168, 85, 247, 0.15) 100%);
   border: 1px solid var(--purple-border);
   border-radius: var(--radius-lg);
   padding: 4rem 2rem;

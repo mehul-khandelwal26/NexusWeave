@@ -39,7 +39,7 @@ router.get('/', requireAuth, async (req, res) => {
 
 // Create Project
 router.post('/', requireAuth, async (req, res) => {
-  const { name, description, deadline, timeline, boardBg } = req.body;
+  const { name, description, deadline, timeline, boardBg, labels, attachments } = req.body;
   if (!name || !name.trim()) {
     return res.status(400).json({ errors: ['Project name is required.'] });
   }
@@ -52,7 +52,9 @@ router.post('/', requireAuth, async (req, res) => {
       timeline: timeline || 'Execution',
       boardBg: boardBg || 'none',
       userEmail: req.user.email,
-      organizationId: req.user.orgId || null
+      organizationId: req.user.orgId || null,
+      labels: labels || [],
+      attachments: attachments || []
     });
 
     logActivity(req, `${actorName(req.user)} created project "${project.name}".`);
@@ -78,7 +80,7 @@ router.put('/:id', requireAuth, async (req, res) => {
       return res.status(403).json({ errors: ['You do not have permission to update this project.'] });
     }
 
-    const { name, description, deadline, timeline, boardBg } = req.body;
+    const { name, description, deadline, timeline, boardBg, labels, attachments } = req.body;
     if (name !== undefined) {
       if (!String(name).trim()) return res.status(400).json({ errors: ['Project name cannot be empty.'] });
       project.name = String(name).trim();
@@ -87,6 +89,8 @@ router.put('/:id', requireAuth, async (req, res) => {
     if (deadline !== undefined) project.deadline = deadline;
     if (timeline !== undefined) project.timeline = timeline;
     if (boardBg !== undefined) project.boardBg = boardBg;
+    if (labels !== undefined) project.labels = labels;
+    if (attachments !== undefined) project.attachments = attachments;
 
     await project.save();
     res.json({ project });

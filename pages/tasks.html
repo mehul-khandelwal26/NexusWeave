@@ -252,12 +252,18 @@
             </select>
           </label>
           <label class="field-row">
+            <span>Project</span>
+            <select id="taskProject">
+              <option value="">General (No Project)</option>
+            </select>
+          </label>
+          <label class="field-row">
             <span>Labels</span>
             <input id="taskLabels" type="text" placeholder="Frontend, Bug, Design" />
           </label>
           <label class="field-row" style="grid-column: span 2;">
             <span>Attachments</span>
-            <input id="taskAttachments" type="text" placeholder="brief.pdf, design.png" />
+            <input id="taskAttachments" type="file" multiple />
           </label>
         </div>
         <div class="modal-actions">

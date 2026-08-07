@@ -269,17 +269,19 @@
                 <div class="form-grid">
                   <div class="field">
                     <span class="field-label">Labels</span>
-                    <div class="upload-pill" role="button" aria-label="Add label">
+                    <div class="upload-pill" role="button" data-open-label-modal aria-label="Add label">
                       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
                       <span>Add Label</span>
                     </div>
+                    <div class="selected-chips" data-label-chips></div>
                   </div>
                   <div class="field">
                     <span class="field-label">Attachments</span>
-                    <div class="upload-pill" role="button" aria-label="Upload attachment">
+                    <div class="upload-pill" role="button" data-open-attachments aria-label="Upload attachment">
                       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4"></path><path d="M7 7l5-5 5 5"></path><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"></path></svg>
                       <span>Upload file</span>
                     </div>
+                    <div class="attachment-list" data-attachment-list></div>
                   </div>
                 </div>
               </div>

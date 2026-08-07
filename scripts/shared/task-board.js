@@ -104,6 +104,7 @@
   const taskStatusInput = document.getElementById('taskStatus');
   const taskRecurringInput = document.getElementById('taskRecurring');
   const taskLabelsInput = document.getElementById('taskLabels');
+  const taskProjectInput = document.getElementById('taskProject');
   const taskAttachmentsInput = document.getElementById('taskAttachments');
   const taskModalTitle = document.getElementById('taskModalTitle');
   const taskSubmitButton = document.getElementById('taskSubmitBtn');
@@ -643,6 +644,14 @@
   }
 
   function openTaskModal(taskIdToEdit = null) {
+    if (taskProjectInput) {
+      const projects = state.currentUser.projects || [];
+      taskProjectInput.innerHTML = `
+        <option value="">General (No Project)</option>
+        ${projects.map(p => `<option value="${p.id || p._id}">${p.name}</option>`).join('')}
+      `;
+    }
+
     if (taskIdToEdit) {
       const task = state.currentUser.tasks.find((t) => t.id === taskIdToEdit);
       if (!task) return;
@@ -650,6 +659,10 @@
       taskTitleInput.value = task.title;
       taskDescriptionInput.value = task.description || '';
       taskPriorityInput.value = task.priority || 'Medium';
+
+      if (taskProjectInput) {
+        taskProjectInput.value = task.projectId || '';
+      }
 
       const assigneeInput = document.getElementById('taskAssignee');
       if (assigneeInput) {
@@ -710,6 +723,7 @@
     const reminderDate = document.getElementById('taskReminderDate')?.value || '';
     const reminderTime = document.getElementById('taskReminderTime')?.value || '';
     const status = taskStatusInput.value;
+    const projectId = taskProjectInput?.value || null;
     
     const assigneeSelectValue = document.getElementById('taskAssignee')?.value || '';
     let isOrgTask = false;
@@ -718,6 +732,19 @@
        isOrgTask = true;
     } else if (assigneeSelectValue) {
        assignedUserEmail = assigneeSelectValue;
+    }
+
+    const labelsStr = taskLabelsInput?.value.trim() || '';
+    const labels = labelsStr ? labelsStr.split(',').map(l => l.trim()).filter(Boolean) : [];
+
+    let attachments = [];
+    if (taskAttachmentsInput) {
+      if (taskAttachmentsInput.type === 'file' && taskAttachmentsInput.files) {
+        attachments = Array.from(taskAttachmentsInput.files).map(f => f.name);
+      } else {
+        const attStr = taskAttachmentsInput.value.trim();
+        attachments = attStr ? attStr.split(',').map(a => a.trim()).filter(Boolean) : [];
+      }
     }
 
     if (editingId) {
@@ -732,6 +759,9 @@
         task.reminderDate = reminderDate;
         task.reminderTime = reminderTime;
         task.status = status;
+        task.projectId = projectId;
+        task.labels = labels;
+        task.attachments = attachments;
         if (state.currentUser.role === 'admin') {
            task.isOrgTask = isOrgTask;
            task.assignedUserEmail = assignedUserEmail;
@@ -741,8 +771,8 @@
         if (api && api.updateBackendTask && task._id) {
           try {
             await api.updateBackendTask(task._id, { 
-              title, description, priority, status, dueDate, dueTime, reminderDate, reminderTime,
-              isOrgTask: task.isOrgTask, assignedUserEmail: task.assignedUserEmail
+              title, description, priority, status, dueDate, dueTime, reminderDate, reminderTime, projectId,
+              isOrgTask: task.isOrgTask, assignedUserEmail: task.assignedUserEmail, labels, attachments
             });
           } catch (err) {
             console.warn('Backend task update failed:', err);
@@ -755,8 +785,8 @@
       if (api && api.createBackendTask) {
         try {
           createdTask = await api.createBackendTask({ 
-            title, description, priority, dueDate, dueTime, reminderDate, reminderTime, status,
-            isOrgTask, assignedUserEmail
+            title, description, priority, dueDate, dueTime, reminderDate, reminderTime, status, projectId,
+            isOrgTask, assignedUserEmail, labels, attachments
           });
         } catch (err) {
           console.warn('Backend task creation failed:', err);
@@ -768,6 +798,9 @@
         _id: createdTask?._id,
         title,
         description,
+        projectId,
+        labels,
+        attachments,
         assigneeName: assignedUserEmail
           ? assignedUserEmail.split('@')[0]
           : (createdTask?.assignedUser?.username || currentUser.name),

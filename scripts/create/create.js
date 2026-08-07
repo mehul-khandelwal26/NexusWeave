@@ -17,10 +17,10 @@ const labelSearchInput = document.querySelector('[data-label-search]');
 const newLabelInput = document.querySelector('[data-new-label-input]');
 const createLabelButton = document.querySelector('[data-create-label]');
 const labelOptionsContainer = document.querySelector('[data-label-options]');
-const selectedLabelContainer = document.querySelector('[data-label-chips]');
+const selectedLabelContainers = Array.from(document.querySelectorAll('[data-label-chips]'));
 const attachmentInput = document.querySelector('[data-attachment-input]');
-const attachmentList = document.querySelector('[data-attachment-list]');
-const openAttachmentsButton = document.querySelector('[data-open-attachments]');
+const attachmentLists = Array.from(document.querySelectorAll('[data-attachment-list]'));
+const openAttachmentsButtons = Array.from(document.querySelectorAll('[data-open-attachments]'));
 
 // Session and User-Scoped Database Setup
 const DB_KEY = 'users';
@@ -131,6 +131,8 @@ function buildProjectObject(values) {
     deadline: values.deadline,
     timeline: 'Planning',
     boardBg: aiSuggestedBg || 'none',
+    labels: [...selectedLabels],
+    attachments: [...selectedAttachments],
     createdAt: new Date().toISOString(),
   };
 }
@@ -138,6 +140,10 @@ function buildProjectObject(values) {
 function resetProjectForm() {
   if (!projectForm) return;
   projectForm.reset();
+  selectedLabels = [];
+  selectedAttachments = [];
+  renderSelectedLabels();
+  renderAttachments();
   showFeedback('');
 }
 
@@ -341,40 +347,39 @@ function resetTaskForm() {
 }
 
 function renderSelectedLabels() {
-  if (!selectedLabelContainer) return;
-  if (!selectedLabels.length) {
-    selectedLabelContainer.innerHTML = '';
-    return;
-  }
-
-  selectedLabelContainer.innerHTML = selectedLabels
-    .map((label) => `
-      <button class="chip" type="button" data-remove-label="${escapeHtml(label)}">
-        <span>${escapeHtml(label)}</span>
-        <span>×</span>
-      </button>
-    `)
-    .join('');
+  const containers = document.querySelectorAll('[data-label-chips]');
+  containers.forEach(container => {
+    container.innerHTML = selectedLabels
+      .map((label) => `
+        <button class="chip" type="button" data-remove-label="${escapeHtml(label)}">
+          <span>${escapeHtml(label)}</span>
+          <span>×</span>
+        </button>
+      `)
+      .join('');
+  });
 }
 
 function renderAttachments() {
-  if (!attachmentList) return;
-  if (!selectedAttachments.length) {
-    attachmentList.innerHTML = '<p class="empty-state-inline">No attachments selected</p>';
-    return;
-  }
+  const lists = document.querySelectorAll('[data-attachment-list]');
+  lists.forEach(list => {
+    if (!selectedAttachments.length) {
+      list.innerHTML = '<p class="empty-state-inline">No attachments selected</p>';
+      return;
+    }
 
-  attachmentList.innerHTML = selectedAttachments
-    .map((attachment, index) => `
-      <div class="attachment-item">
-        <div>
-          <strong>${escapeHtml(attachment.name)}</strong>
-          <span>${escapeHtml(attachment.type || 'unknown')} • ${(attachment.size / 1024).toFixed(1)} KB</span>
+    list.innerHTML = selectedAttachments
+      .map((attachment, index) => `
+        <div class="attachment-item">
+          <div>
+            <strong>${escapeHtml(attachment.name)}</strong>
+            <span>${escapeHtml(attachment.type || 'unknown')} • ${(attachment.size / 1024).toFixed(1)} KB</span>
+          </div>
+          <button class="chip" type="button" data-remove-attachment="${index}">×</button>
         </div>
-        <button class="chip" type="button" data-remove-attachment="${index}">×</button>
-      </div>
-    `)
-    .join('');
+      `)
+      .join('');
+  });
 }
 
 function renderLabelOptions() {
@@ -676,7 +681,9 @@ newLabelInput?.addEventListener('keydown', (event) => {
   }
 });
 
-openAttachmentsButton?.addEventListener('click', () => attachmentInput?.click());
+openAttachmentsButtons.forEach(btn => {
+  btn.addEventListener('click', () => attachmentInput?.click());
+});
 attachmentInput?.addEventListener('change', (event) => {
   const files = Array.from(event.target.files || []);
   selectedAttachments = [
