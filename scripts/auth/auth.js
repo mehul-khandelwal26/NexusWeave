@@ -245,6 +245,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const res = await api.login({ email, password, role });
       if (res.success) {
+        const explicitTheme = sessionStorage.getItem('explicit-theme');
+        if (explicitTheme && explicitTheme !== res.user.theme) {
+          await api.updateProfile({ theme: explicitTheme });
+        }
+        sessionStorage.removeItem('explicit-theme');
         window.location.href = 'dashboard.html';
       } else {
         showError(res.error || 'Login failed');
@@ -258,7 +263,8 @@ document.addEventListener('DOMContentLoaded', () => {
         orgName: orgName ? orgName.value : '',
         orgKey: role === 'admin' ? (orgKey ? orgKey.value : '') : (employeeOrgKey ? employeeOrgKey.value : ''),
         orgVisibility: orgVisibility ? orgVisibility.value : 'public',
-        orgId: orgSelect ? orgSelect.value : ''
+        orgId: orgSelect ? orgSelect.value : '',
+        theme: localStorage.getItem('nexus-theme') || 'dark'
       };
 
       const { valid, errors } = helpers.validateSignupFields(formData);

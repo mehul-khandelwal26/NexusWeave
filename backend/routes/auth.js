@@ -31,7 +31,7 @@ function handleMongooseError(err, res, fallback) {
 }
 
 router.post(['/signup', '/register'], async (req, res) => {
-  const { name, username, email, password, role = 'personal', orgName, orgKey, orgVisibility, orgId } = req.body;
+  const { name, username, email, password, role = 'personal', orgName, orgKey, orgVisibility, orgId, theme } = req.body;
   const userName = name || username;
 
   if (!email || !EMAIL_RE.test(email)) {
@@ -100,7 +100,8 @@ router.post(['/signup', '/register'], async (req, res) => {
       password,
       role,
       organizationId: assignedOrgId,
-      provider: 'email'
+      provider: 'email',
+      theme: theme || 'dark'
     });
 
     const token = signToken(user);
