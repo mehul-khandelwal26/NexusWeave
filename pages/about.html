@@ -1,6 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <script>
+  (function() {
+    const theme = localStorage.getItem('nexus-theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', theme);
+  })();
+</script>
   <meta charset="UTF-8" />
   <meta http-equiv="refresh" content="0;url=index.html#about" />
   <title>About Us | NexusWeave</title>
@@ -12,3 +18,5 @@
   <p>Redirecting to <a href="index.html#about">About NexusWeave</a>...</p>
 </body>
 </html>
+
+
