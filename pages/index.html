@@ -276,6 +276,12 @@
             </svg>
             <span>Continue with Google</span>
           </button>
+
+          <script src="https://accounts.google.com/gsi/client" async defer></script>
+          <!-- Real Google Identity Services button lives here, hidden, and is
+               programmatically clicked by the styled button above so the UI
+               keeps its own look while still using Google's official widget. -->
+          <div id="gsiButtonContainer" style="position:absolute;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none;"></div>
         </form>
 
         <div class="switch-row">

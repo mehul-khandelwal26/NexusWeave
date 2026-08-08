@@ -18,8 +18,21 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: true,
+      required: function passwordRequired() {
+        // Google-authenticated accounts have no local password.
+        return this.provider !== 'google';
+      },
       minlength: 6
+    },
+    googleId: {
+      type: String,
+      default: null,
+      index: true,
+      sparse: true
+    },
+    avatar: {
+      type: String,
+      default: ''
     },
     role: {
       type: String,
@@ -84,6 +97,7 @@ userSchema.methods.toSafeObject = function toSafeObject() {
     bio: this.bio,
     skills: this.skills,
     provider: this.provider,
+    avatar: this.avatar,
     theme: this.theme,
     boardBg: this.boardBg,
     createdAt: this.createdAt
