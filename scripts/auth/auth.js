@@ -61,6 +61,15 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('a[href="#auth"], a[href="#hero"], a[href="#loginForm"]').forEach((link) => {
     link.addEventListener('click', (e) => {
       e.preventDefault();
+      
+      if (link.classList.contains('primary-link') || link.textContent.includes('Get Started')) {
+        loginMode = false;
+        updateFormVisibility();
+        setTimeout(() => {
+          if (signupName) signupName.focus({ preventScroll: true });
+        }, 150);
+      }
+      
       scrollToSignIn();
     });
   });
