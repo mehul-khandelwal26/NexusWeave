@@ -19,7 +19,7 @@
   <div class="app-shell">
     <aside class="sidebar">
       <div class="sidebar-brand">
-        <div class="brand-mark"></div>
+        <div class="brand-mark" aria-hidden="true"></div>
         <div>
           <p class="eyebrow">Productivity suite</p>
           <h2>NexusWeave</h2>
@@ -27,6 +27,7 @@
       </div>
 
       <nav class="sidebar-nav" aria-label="Primary navigation">
+        <div class="nav-category-header">📌 MAIN</div>
         <a class="nav-item" href="dashboard.html">
           <span class="nav-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
@@ -37,9 +38,11 @@
           <span class="nav-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v8"></path><path d="M8 12h8"></path></svg>
           </span>
-          <span>Create</span>
+          <span>Create Task</span>
         </a>
-                <a class="nav-item" href="projects.html">
+
+        <div class="nav-category-header" style="margin-top:0.6rem;">💼 WORKSPACE</div>
+        <a class="nav-item" href="projects.html">
           <span class="nav-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
           </span>
@@ -57,7 +60,14 @@
           </span>
           <span>Board</span>
         </a>
+        <a class="nav-item" href="focus.html">
+          <span class="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          </span>
+          <span>Focus Mode</span>
+        </a>
 
+        <div class="nav-category-header" style="margin-top:0.6rem;">📊 ANALYTICS & TEAM</div>
         <a class="nav-item" href="reports.html">
           <span class="nav-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M7 14l3-3 2 2 5-6"></path></svg>
@@ -66,9 +76,15 @@
         </a>
         <a class="nav-item" href="org.html">
           <span class="nav-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 1 0 7.75"></path></svg>
           </span>
           <span>Organization</span>
+        </a>
+        <a class="nav-item" href="profile.html">
+          <span class="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          </span>
+          <span>Profile</span>
         </a>
       </nav>
 
@@ -82,10 +98,10 @@
             </span>
           </button>
           <div class="profile-menu" data-profile-menu role="menu">
-            <button class="profile-menu-item" type="button" data-profile-action="change-photo">Change photo</button>
-            <button class="profile-menu-item" type="button" data-profile-action="copy-link">Copy link</button>
-            <button class="profile-menu-item" type="button" data-profile-action="settings">Settings</button>
-            <button class="profile-menu-item danger" type="button" data-profile-action="logout">Logout</button>
+            <button class="profile-menu-item" type="button" data-profile-action="change-photo" role="menuitem">Change photo</button>
+            <button class="profile-menu-item" type="button" data-profile-action="copy-link" role="menuitem">Copy link</button>
+            <button class="profile-menu-item" type="button" data-profile-action="settings" role="menuitem">Settings</button>
+            <button class="profile-menu-item danger" type="button" data-profile-action="logout" role="menuitem">Logout</button>
           </div>
         </div>
       </div>
@@ -175,7 +191,7 @@
           <p class="eyebrow">Task workspace</p>
           <h3 id="taskModalTitle">Create task</h3>
         </div>
-        <button type="button" id="closeTaskModal" class="ghost-btn" aria-label="Close">×</button>
+        <button type="button" id="closeTaskModal" class="ghost-btn" aria-label="Close modal"><span aria-hidden="true">×</span></button>
       </div>
       <form id="taskForm" class="task-form">
         <input type="hidden" id="taskId" />
@@ -192,7 +208,7 @@
             <span>Assignee</span>
             <input type="text" id="taskAssignee" name="taskAssignee" list="assigneeList" placeholder="Search employee email/name..." autocomplete="off">
             <datalist id="assigneeList">
-              <option value="">Myself (Unassigned)</option>
+              <option value="UNASSIGNED">Myself (Unassigned)</option>
             </datalist>
           </label>
           <label class="field-row">
@@ -205,17 +221,17 @@
             </select>
           </label>
           <div class="field-row" style="grid-column: span 2;">
-            <span style="display:block;margin-bottom:0.3rem;font-weight:600;font-size:0.88rem;">Deadline (Date & Time)</span>
+            <span style="display:block;margin-bottom:0.3rem;font-weight:600;font-size:0.88rem;" id="deadlineLabel">Deadline (Date & Time)</span>
             <div class="field">
-              <input id="taskDueDate" type="date" />
-              <input id="taskDueTime" type="time" />
+              <input id="taskDueDate" type="date" aria-labelledby="deadlineLabel" />
+              <input id="taskDueTime" type="time" aria-labelledby="deadlineLabel" />
             </div>
           </div>
           <div class="field-row" style="grid-column: span 2;">
-            <span style="display:block;margin-bottom:0.3rem;font-weight:600;font-size:0.88rem;">Reminder (Date & Time)</span>
+            <span style="display:block;margin-bottom:0.3rem;font-weight:600;font-size:0.88rem;" id="reminderLabel">Reminder (Date & Time)</span>
             <div class="field">
-              <input id="taskReminderDate" type="date" />
-              <input id="taskReminderTime" type="time" />
+              <input id="taskReminderDate" type="date" aria-labelledby="reminderLabel" />
+              <input id="taskReminderTime" type="time" aria-labelledby="reminderLabel" />
             </div>
           </div>
           <label class="field-row">
@@ -282,7 +298,7 @@
           <p class="eyebrow">Task details</p>
           <h3 id="drawerTitle">Task</h3>
         </div>
-        <button type="button" id="closeDrawer" class="ghost-btn" aria-label="Close">×</button>
+        <button type="button" id="closeDrawer" class="ghost-btn" aria-label="Close task drawer"><span aria-hidden="true">×</span></button>
       </div>
       <p id="drawerMeta" class="text-soft"></p>
       <p id="drawerDescription" class="drawer-description"></p>
@@ -297,29 +313,29 @@
           <p class="eyebrow">Board customization</p>
           <h3 id="boardBgModalTitle">Board Background</h3>
         </div>
-        <button type="button" id="closeBoardBgModal" class="close-btn" style="border: 0; background: transparent; font-size: 1.5rem; cursor: pointer; color: var(--ink-soft);" aria-label="Close modal">&times;</button>
+        <button type="button" id="closeBoardBgModal" class="ghost-btn" aria-label="Close modal"><span aria-hidden="true">×</span></button>
       </div>
       <div class="modal-body" style="padding-top: 1rem;">
         <p class="meta" style="margin-bottom: 1.2rem; color: var(--ink-soft); font-size: 0.9rem;">Choose a background style for your Kanban board workspace.</p>
         
         <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; max-height: 320px; overflow-y: auto; padding-right: 0.2rem;">
-          <div class="bg-option bg-none" data-bg-value="none">
+          <div class="bg-option bg-none" data-bg-value="none" role="button" tabindex="0" aria-label="None">
             None
           </div>
-          <div class="bg-option" data-bg-value="linear-gradient(135deg, #09090e 0%, #1f1d36 100%)" style="background: linear-gradient(135deg, #09090e 0%, #1f1d36 100%);" title="Midnight"></div>
-          <div class="bg-option" data-bg-value="linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)" style="background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);" title="Blush"></div>
-          <div class="bg-option" data-bg-value="linear-gradient(135deg, #a78bfa 0%, #5b21b6 100%)" style="background: linear-gradient(135deg, #a78bfa 0%, #5b21b6 100%);" title="Violet"></div>
-          <div class="bg-option" data-bg-value="linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%)" style="background: linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%);" title="Ocean"></div>
-          <div class="bg-option" data-bg-value="linear-gradient(135deg, #34d399 0%, #059669 100%)" style="background: linear-gradient(135deg, #34d399 0%, #059669 100%);" title="Forest"></div>
+          <div class="bg-option" data-bg-value="linear-gradient(135deg, #09090e 0%, #1f1d36 100%)" style="background: linear-gradient(135deg, #09090e 0%, #1f1d36 100%);" title="Midnight" role="button" tabindex="0" aria-label="Midnight"></div>
+          <div class="bg-option" data-bg-value="linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)" style="background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);" title="Blush" role="button" tabindex="0" aria-label="Blush"></div>
+          <div class="bg-option" data-bg-value="linear-gradient(135deg, #a78bfa 0%, #5b21b6 100%)" style="background: linear-gradient(135deg, #a78bfa 0%, #5b21b6 100%);" title="Violet" role="button" tabindex="0" aria-label="Violet"></div>
+          <div class="bg-option" data-bg-value="linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%)" style="background: linear-gradient(135deg, #0ea5e9 0%, #0369a1 100%);" title="Ocean" role="button" tabindex="0" aria-label="Ocean"></div>
+          <div class="bg-option" data-bg-value="linear-gradient(135deg, #34d399 0%, #059669 100%)" style="background: linear-gradient(135deg, #34d399 0%, #059669 100%);" title="Forest" role="button" tabindex="0" aria-label="Forest"></div>
 
-          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?auto=format&fit=crop&w=1600&q=80')" style="background: url('https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?auto=format&fit=crop&w=400&q=60') center/cover no-repeat;" title="Stars"></div>
-          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&w=1600&q=80')" style="background: url('https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&w=400&q=60') center/cover no-repeat;" title="Gradient mesh"></div>
-          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1600&q=80')" style="background: url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=400&q=60') center/cover no-repeat;" title="Abstract"></div>
-          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1464802686167-b939a6910659?auto=format&fit=crop&w=1600&q=80')" style="background: url('https://images.unsplash.com/photo-1464802686167-b939a6910659?auto=format&fit=crop&w=400&q=60') center/cover no-repeat;" title="Galaxy"></div>
-          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1600&q=80')" style="background: url('https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=400&q=60') center/cover no-repeat;" title="Office light"></div>
-          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&w=1600&q=80')" style="background: url('https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&w=400&q=60') center/cover no-repeat;" title="Workspace"></div>
-          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=format&fit=crop&w=1600&q=80')" style="background: url('https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=format&fit=crop&w=400&q=60') center/cover no-repeat;" title="Laptop desk"></div>
-          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1600&q=80')" style="background: url('https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=400&q=60') center/cover no-repeat;" title="Mountains"></div>
+          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?auto=format&fit=crop&w=1600&q=80')" style="background: url('https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?auto=format&fit=crop&w=400&q=60') center/cover no-repeat;" title="Stars" role="button" tabindex="0" aria-label="Stars"></div>
+          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&w=1600&q=80')" style="background: url('https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&w=400&q=60') center/cover no-repeat;" title="Gradient mesh" role="button" tabindex="0" aria-label="Gradient mesh"></div>
+          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1600&q=80')" style="background: url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=400&q=60') center/cover no-repeat;" title="Abstract" role="button" tabindex="0" aria-label="Abstract"></div>
+          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1464802686167-b939a6910659?auto=format&fit=crop&w=1600&q=80')" style="background: url('https://images.unsplash.com/photo-1464802686167-b939a6910659?auto=format&fit=crop&w=400&q=60') center/cover no-repeat;" title="Galaxy" role="button" tabindex="0" aria-label="Galaxy"></div>
+          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1600&q=80')" style="background: url('https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=400&q=60') center/cover no-repeat;" title="Office light" role="button" tabindex="0" aria-label="Office light"></div>
+          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&w=1600&q=80')" style="background: url('https://images.unsplash.com/photo-1497215728101-856f4ea42174?auto=format&fit=crop&w=400&q=60') center/cover no-repeat;" title="Workspace" role="button" tabindex="0" aria-label="Workspace"></div>
+          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=format&fit=crop&w=1600&q=80')" style="background: url('https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=format&fit=crop&w=400&q=60') center/cover no-repeat;" title="Laptop desk" role="button" tabindex="0" aria-label="Laptop desk"></div>
+          <div class="bg-option" data-bg-value="url('https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1600&q=80')" style="background: url('https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=400&q=60') center/cover no-repeat;" title="Mountains" role="button" tabindex="0" aria-label="Mountains"></div>
         </div>
       </div>
     </div>

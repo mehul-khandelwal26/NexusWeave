@@ -61,6 +61,15 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('a[href="#auth"], a[href="#hero"], a[href="#loginForm"]').forEach((link) => {
     link.addEventListener('click', (e) => {
       e.preventDefault();
+      
+      if (link.classList.contains('primary-link') || link.textContent.includes('Get Started')) {
+        loginMode = false;
+        updateFormVisibility();
+        setTimeout(() => {
+          if (signupName) signupName.focus({ preventScroll: true });
+        }, 150);
+      }
+      
       scrollToSignIn();
     });
   });
@@ -122,7 +131,12 @@ document.addEventListener('DOMContentLoaded', () => {
       formErrors.classList.add('hidden');
     }
 
-    // Portal Tabs UI
+    // Portal Tabs UI & Sliding Pill
+    const pill = document.getElementById('portalTabPill');
+    if (pill) {
+      pill.style.transform = portalScope === 'personal' ? 'translateX(0)' : 'translateX(100%)';
+    }
+
     if (portalScope === 'personal') {
       portalPersonalBtn?.classList.add('active');
       portalOrgBtn?.classList.remove('active');
@@ -154,7 +168,6 @@ document.addEventListener('DOMContentLoaded', () => {
       nameField?.classList.add('hidden');
       adminOrgFields?.classList.add('hidden');
       employeeOrgFields?.classList.add('hidden');
-      if (googleLoginBtn) googleLoginBtn.style.display = '';
 
       if (panelTitle) panelTitle.textContent = portalScope === 'personal' ? 'Welcome Back' : `Welcome Back (${orgRole.toUpperCase()})`;
       if (authSubtitle) authSubtitle.textContent = portalScope === 'personal' ? 'Log into your personal workspace' : `Log into your ${orgRole} team portal`;
@@ -163,7 +176,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (submitBtn) submitBtn.textContent = 'Log In';
     } else {
       nameField?.classList.remove('hidden');
-      if (googleLoginBtn) googleLoginBtn.style.display = 'none';
 
       if (panelTitle) panelTitle.textContent = portalScope === 'personal' ? 'Create Personal Account' : `Create ${orgRole === 'admin' ? 'Organization' : 'Employee'} Account`;
       if (authSubtitle) authSubtitle.textContent = portalScope === 'personal' ? 'Start managing your personal tasks & heatmap' : 'Join or create your company workspace';
@@ -171,6 +183,28 @@ document.addEventListener('DOMContentLoaded', () => {
       if (toggleModeBtn) toggleModeBtn.textContent = 'Log in';
       if (submitBtn) submitBtn.textContent = 'Sign Up';
     }
+  }
+
+  // Real-Time Inline Email Validation
+  if (emailInput) {
+    const feedback = document.getElementById('emailFeedback');
+    emailInput.addEventListener('input', () => {
+      const val = emailInput.value.trim();
+      if (!feedback) return;
+      if (!val) {
+        feedback.textContent = '';
+        feedback.className = 'email-feedback-badge';
+        return;
+      }
+      const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(val);
+      if (isValid) {
+        feedback.textContent = '✓ Valid email format';
+        feedback.className = 'email-feedback-badge valid';
+      } else {
+        feedback.textContent = '✕ Please enter a valid work email (name@company.com)';
+        feedback.className = 'email-feedback-badge invalid';
+      }
+    });
   }
 
   function toggleMode() {

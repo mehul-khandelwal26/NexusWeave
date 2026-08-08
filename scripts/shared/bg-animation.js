@@ -1,18 +1,19 @@
 /**
- * Interactive Background Canvas Animation for NexusWeave
- * Creates floating particles with interactive cursor tracking and connecting lines.
- * Supports dynamic light and dark theme adaptation.
+ * High-Performance Interactive Ambient Aurora & Constellation Animation
+ * Features floating glowing energy orbs, interactive cursor magnetic tracking,
+ * and dual light/dark theme adaptation.
  */
 
 (function () {
   let canvas, ctx;
   let particles = [];
-  let mouse = { x: null, y: null, radius: 180 };
+  let orbs = [];
+  let mouse = { x: null, y: null, radius: 220 };
   let animationFrameId;
   let isDarkMode = true;
 
-  const PARTICLE_COUNT = 60;
-  const CONNECT_DISTANCE = 130;
+  const PARTICLE_COUNT = 30;
+  const CONNECT_DISTANCE = 160;
 
   function updateThemeState() {
     const theme = document.documentElement.getAttribute('data-theme') || 'dark';
@@ -26,8 +27,6 @@
       canvas.id = 'bgCanvas';
       document.body.prepend(canvas);
     }
-    // A negative index keeps the weave behind in-flow content while still
-    // painting above the page background propagated from <body>.
     canvas.style.position = 'fixed';
     canvas.style.top = '0';
     canvas.style.left = '0';
@@ -38,13 +37,53 @@
     ctx = canvas.getContext('2d');
     updateThemeState();
     resizeCanvas();
-    createParticles();
+    createElements();
   }
 
   function resizeCanvas() {
     if (!canvas) return;
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
+  }
+
+  class GlowingOrb {
+    constructor(color) {
+      this.color = color;
+      this.reset();
+    }
+
+    reset() {
+      this.x = Math.random() * (canvas ? canvas.width : window.innerWidth);
+      this.y = Math.random() * (canvas ? canvas.height : window.innerHeight);
+      this.radius = Math.random() * 180 + 120;
+      this.vx = (Math.random() - 0.5) * 0.3;
+      this.vy = (Math.random() - 0.5) * 0.3;
+      this.alpha = Math.random() * 0.15 + 0.08;
+    }
+
+    update() {
+      this.x += this.vx;
+      this.y += this.vy;
+
+      if (this.x < -100) this.x = canvas.width + 100;
+      if (this.x > canvas.width + 100) this.x = -100;
+      if (this.y < -100) this.y = canvas.height + 100;
+      if (this.y > canvas.height + 100) this.y = -100;
+    }
+
+    draw() {
+      ctx.save();
+      ctx.globalCompositeOperation = isDarkMode ? 'screen' : 'multiply';
+      const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius);
+      gradient.addColorStop(0, this.color.replace('ALPHA', isDarkMode ? this.alpha : this.alpha * 0.6));
+      gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+      ctx.fillStyle = gradient;
+      ctx.fill();
+      ctx.restore();
+    }
   }
 
   class Particle {
@@ -55,10 +94,11 @@
     reset() {
       this.x = Math.random() * canvas.width;
       this.y = Math.random() * canvas.height;
-      this.size = Math.random() * 2 + 1;
-      this.vx = (Math.random() - 0.5) * 0.6;
-      this.vy = (Math.random() - 0.5) * 0.6;
-      this.alpha = Math.random() * 0.5 + 0.3;
+      this.size = Math.random() * 2.2 + 1;
+      this.vx = (Math.random() - 0.5) * 0.7;
+      this.vy = (Math.random() - 0.5) * 0.7;
+      this.alpha = Math.random() * 0.6 + 0.3;
+      this.hue = Math.random() > 0.5 ? 265 : 195; // Purple or Cyan
     }
 
     update() {
@@ -77,8 +117,8 @@
         if (dist < mouse.radius) {
           const force = (mouse.radius - dist) / mouse.radius;
           const angle = Math.atan2(dy, dx);
-          this.x -= Math.cos(angle) * force * 1.5;
-          this.y -= Math.sin(angle) * force * 1.5;
+          this.x -= Math.cos(angle) * force * 2;
+          this.y -= Math.sin(angle) * force * 2;
         }
       }
     }
@@ -86,15 +126,28 @@
     draw() {
       ctx.beginPath();
       ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-      ctx.fillStyle = isDarkMode
-        ? `rgba(167, 139, 250, ${this.alpha})`
-        : `rgba(124, 58, 237, ${this.alpha * 0.7})`;
+      if (isDarkMode) {
+        ctx.fillStyle = `hsla(${this.hue}, 90%, 75%, ${this.alpha})`;
+        ctx.shadowColor = `hsla(${this.hue}, 90%, 65%, 0.8)`;
+        ctx.shadowBlur = 8;
+      } else {
+        ctx.fillStyle = `hsla(${this.hue}, 80%, 45%, ${this.alpha * 0.8})`;
+        ctx.shadowBlur = 0;
+      }
       ctx.fill();
+      ctx.shadowBlur = 0;
     }
   }
 
-  function createParticles() {
+  function createElements() {
     particles = [];
+    orbs = [
+      new GlowingOrb('rgba(124, 58, 237, ALPHA)'),
+      new GlowingOrb('rgba(56, 189, 248, ALPHA)'),
+      new GlowingOrb('rgba(168, 85, 247, ALPHA)'),
+      new GlowingOrb('rgba(236, 72, 153, ALPHA)')
+    ];
+
     for (let i = 0; i < PARTICLE_COUNT; i++) {
       particles.push(new Particle());
     }
@@ -103,6 +156,13 @@
   function animate() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    // Draw ambient glowing orbs
+    orbs.forEach(orb => {
+      orb.update();
+      orb.draw();
+    });
+
+    // Draw constellation nodes & links
     for (let i = 0; i < particles.length; i++) {
       particles[i].update();
       particles[i].draw();
@@ -113,14 +173,14 @@
         const dist = Math.sqrt(dx * dx + dy * dy);
 
         if (dist < CONNECT_DISTANCE) {
-          const opacity = (1 - dist / CONNECT_DISTANCE) * (isDarkMode ? 0.25 : 0.18);
+          const opacity = (1 - dist / CONNECT_DISTANCE) * (isDarkMode ? 0.3 : 0.2);
           ctx.beginPath();
           ctx.moveTo(particles[i].x, particles[i].y);
           ctx.lineTo(particles[j].x, particles[j].y);
           ctx.strokeStyle = isDarkMode
-            ? `rgba(124, 58, 237, ${opacity})`
+            ? `rgba(168, 85, 247, ${opacity})`
             : `rgba(109, 40, 217, ${opacity})`;
-          ctx.lineWidth = 0.8;
+          ctx.lineWidth = 0.9;
           ctx.stroke();
         }
       }
@@ -130,14 +190,14 @@
         const dy = particles[i].y - mouse.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
         if (dist < mouse.radius) {
-          const opacity = (1 - dist / mouse.radius) * (isDarkMode ? 0.4 : 0.3);
+          const opacity = (1 - dist / mouse.radius) * (isDarkMode ? 0.5 : 0.35);
           ctx.beginPath();
           ctx.moveTo(particles[i].x, particles[i].y);
           ctx.lineTo(mouse.x, mouse.y);
           ctx.strokeStyle = isDarkMode
-            ? `rgba(192, 132, 252, ${opacity})`
-            : `rgba(147, 51, 234, ${opacity})`;
-          ctx.lineWidth = 1;
+            ? `rgba(56, 189, 248, ${opacity})`
+            : `rgba(124, 58, 237, ${opacity})`;
+          ctx.lineWidth = 1.2;
           ctx.stroke();
         }
       }

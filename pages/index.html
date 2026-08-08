@@ -51,7 +51,7 @@
         <a href="#roi-calculator" class="nav-item">ROI Calc</a>
         <a href="#faq" class="nav-item">FAQ</a>
         <a href="#about" class="nav-item">Architecture</a>
-        <a href="#hero" class="nav-sign-in-btn">Sign In</a>
+        <a href="#hero" class="nav-ghost-btn">Sign In</a>
         <button class="theme-toggle-btn" type="button" data-theme-toggle aria-label="Toggle theme">
           <svg class="sun-icon hidden" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
           <svg class="moon-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
@@ -77,6 +77,9 @@
           </a>
           <a class="secondary-link" href="#features">Explore Workflow</a>
         </div>
+
+
+
       </div>
 
       <!-- Dashboard Mockup Showcase -->
@@ -164,6 +167,7 @@
       <div class="panel-card">
         <!-- Dual Portal Tabs Switcher -->
         <div class="portal-tabs" role="tablist" aria-label="Account scope selector">
+          <div class="portal-tab-pill" id="portalTabPill"></div>
           <button type="button" class="portal-tab active" id="portalPersonalBtn" role="tab" aria-selected="true">
             <span>Personal</span>
             <span class="portal-tab-subtitle">Individual workspace</span>
@@ -201,6 +205,7 @@
               <button type="button" class="email-domain-btn" id="gmailAppendBtn" title="Auto fill @gmail.com">+ @gmail.com</button>
             </div>
             <input type="email" id="email" placeholder="you@company.com" autocomplete="email" list="emailDomains" required />
+            <div id="emailFeedback" class="email-feedback-badge"></div>
             <datalist id="emailDomains">
               <option value="@gmail.com"></option>
               <option value="@outlook.com"></option>
@@ -253,8 +258,10 @@
           </div>
 
           <button class="login-btn" type="submit">Sign In with Email</button>
-          
-          <button class="google-btn" type="button" id="demoLoginBtn" style="margin-top:0.6rem;background:rgba(124,58,237,0.12);border-color:var(--purple-border);color:var(--purple-primary);font-weight:700;">
+
+          <div class="demo-divider">or try instantly</div>
+
+          <button class="google-btn" type="button" id="demoLoginBtn" style="margin-top:0;background:rgba(124,58,237,0.08);border-color:var(--purple-border);color:var(--purple-primary);font-weight:600;">
             <span>⚡ Demo One-Click Sign In</span>
           </button>
 
@@ -499,42 +506,38 @@
       </div>
     </div>
 
-    <!-- 4 Architectural Pillars Grid with Code Sandbox -->
-    <div class="arch-pillars-grid">
-      <div class="arch-pillar-card">
-        <h4><span>⏱️</span> Accurate Focus Timer</h4>
-        <p>Standard browser timers slow down when you switch tabs. NexusWeave uses exact timestamps so your focus timer is always accurate.</p>
-        <div class="arch-code-box">
-          <span class="cm">// Accurate timer calculation</span><br/>
-          <span class="kw">const</span> remainingSec = Math.<span class="fn">max</span>(<span class="str">0</span>, Math.<span class="fn">round</span>((targetTimestamp - Date.<span class="fn">now</span>()) / <span class="str">1000</span>));
-        </div>
+    <!-- 4 Architectural Pillars Grid with Interactive Syntax Code Showcase -->
+    <div class="arch-blueprint-card" style="margin-top: 2.5rem;">
+      <div class="arch-blueprint-title">
+        <h3>💻 Engineering Implementation Showcase</h3>
+        <span class="announcement-badge" style="background:rgba(56,189,248,0.12);color:var(--cyan-accent);border-color:rgba(56,189,248,0.3);">Open Source Standards</span>
       </div>
 
-      <div class="arch-pillar-card">
-        <h4><span>🛡️</span> Team & Privacy Controls</h4>
-        <p>Organize your work safely with clear role permissions. Admins and team members only see the projects and channels they belong to.</p>
-        <div class="arch-code-box">
-          <span class="cm">// Team permission check</span><br/>
-          <span class="kw">if</span> (req.user.organizationId !== targetOrgId) { <span class="kw">throw new</span> <span class="fn">Error</span>(<span class="str">'Access Denied'</span>); }
-        </div>
+      <!-- Tab Buttons Nav -->
+      <div class="arch-code-tabs-nav">
+        <button type="button" class="arch-code-tab-btn active" data-code-tab="timer">⏱️ Focus Timer</button>
+        <button type="button" class="arch-code-tab-btn" data-code-tab="rbac">🛡️ RBAC Permissions</button>
+        <button type="button" class="arch-code-tab-btn" data-code-tab="xss">🔒 XSS Sanitization</button>
+        <button type="button" class="arch-code-tab-btn" data-code-tab="offline">🔄 Offline Sync</button>
       </div>
 
-      <div class="arch-pillar-card">
-        <h4><span>🔒</span> Safe & Clean Text</h4>
-        <p>Every task title, comment, and chat message is automatically cleaned before display to keep your workspace safe from harmful scripts.</p>
-        <div class="arch-code-box">
-          <span class="cm">// Automatic text cleaning</span><br/>
-          <span class="kw">const</span> safeText = rawInput.<span class="fn">replace</span>(/&/g, <span class="str">'&amp;'</span>).<span class="fn">replace</span>(/&lt;/g, <span class="str">'&amp;lt;'</span>);
+      <!-- Syntax Code Header & Box -->
+      <div class="arch-code-header-bar">
+        <div class="arch-code-dots">
+          <span class="arch-code-dot red"></span>
+          <span class="arch-code-dot yellow"></span>
+          <span class="arch-code-dot green"></span>
         </div>
+        <span id="archCodeTitle" style="font-weight:700;color:var(--text-main);">Precision Focus Timer Timestamp Engine</span>
+        <span id="archCodeFilename" class="arch-code-filename">focus-engine.js</span>
       </div>
-
-      <div class="arch-pillar-card">
-        <h4><span>🔄</span> Works Offline & Online</h4>
-        <p>Your sprint board stays interactive even if your internet connection dips. Your changes automatically sync back when reconnected.</p>
-        <div class="arch-code-box">
-          <span class="cm">// Automatic offline fallback</span><br/>
-          <span class="kw">const</span> data = <span class="kw">await</span> api.<span class="fn">fetchBackendTasks</span>() || localStorage.<span class="fn">getItem</span>(<span class="str">'tasks'</span>);
-        </div>
+      <div class="arch-code-box" id="archCodeBox">
+        <span class="cm">// Eliminate JavaScript background tab throttle drift</span>
+        <span class="kw">function</span> <span class="fn">calculateRemainingSeconds</span>(targetEndTimestamp) {
+          <span class="kw">const</span> now = Date.<span class="fn">now</span>();
+          <span class="kw">const</span> remainingMs = Math.<span class="fn">max</span>(<span class="str">0</span>, targetEndTimestamp - now);
+          <span class="kw">return</span> Math.<span class="fn">round</span>(remainingMs / <span class="str">1000</span>);
+        }
       </div>
     </div>
   </section>
@@ -633,6 +636,7 @@
   <script src="../scripts/shared/workflow-stepper.js"></script>
   <script src="../scripts/shared/roi-calculator.js"></script>
   <script src="../scripts/shared/faq-accordion.js"></script>
+  <script src="../scripts/shared/arch-code-tabs.js"></script>
   <script src="../scripts/shared/theme.js"></script>
   <script src="../scripts/services/api-client.js"></script>
   <script src="../scripts/auth/auth.js"></script>

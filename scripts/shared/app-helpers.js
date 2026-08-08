@@ -53,7 +53,7 @@
   });
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   function isValidEmail(email) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
   }
 
   function validateAuthFields(email, password) {
