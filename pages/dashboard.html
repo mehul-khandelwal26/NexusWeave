@@ -30,6 +30,7 @@
       </div>
 
       <nav class="sidebar-nav" aria-label="Primary navigation">
+        <div class="nav-category-header">📌 MAIN</div>
         <a class="nav-item active" href="dashboard.html">
           <span class="nav-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
@@ -40,9 +41,11 @@
           <span class="nav-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v8"></path><path d="M8 12h8"></path></svg>
           </span>
-          <span>Create</span>
+          <span>Create Task</span>
         </a>
-                <a class="nav-item" href="projects.html">
+
+        <div class="nav-category-header" style="margin-top:0.6rem;">💼 WORKSPACE</div>
+        <a class="nav-item" href="projects.html">
           <span class="nav-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
           </span>
@@ -60,6 +63,14 @@
           </span>
           <span>Board</span>
         </a>
+        <a class="nav-item" href="focus.html">
+          <span class="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          </span>
+          <span>Focus Mode</span>
+        </a>
+
+        <div class="nav-category-header" style="margin-top:0.6rem;">📊 ANALYTICS & TEAM</div>
         <a class="nav-item" href="reports.html">
           <span class="nav-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M7 14l3-3 2 2 5-6"></path></svg>
@@ -71,6 +82,12 @@
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
           </span>
           <span>Organization</span>
+        </a>
+        <a class="nav-item" href="profile.html">
+          <span class="nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          </span>
+          <span>Profile</span>
         </a>
       </nav>
 
@@ -102,7 +119,12 @@
         </div>
         <div class="header-actions">
           <span id="roleBadgeHeader" class="profile-role-badge"></span>
-          <a class="ghost-btn" href="focus.html" style="padding: 0.6rem 1rem; border-radius: 999px; text-decoration: none; border: 1px solid var(--border); display: flex; align-items: center; gap: 0.4rem; font-size: 0.9rem; font-weight: 500; color: inherit;">
+          <button id="cmdKBtn" type="button" class="ghost-btn" style="padding: 0.5rem 0.85rem; border-radius: 999px; border: 1px solid var(--border); display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--text-soft);">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <span>Search...</span>
+            <kbd class="cmd-kbd-badge">⌘K</kbd>
+          </button>
+          <a class="ghost-btn" href="focus.html" style="padding: 0.5rem 0.9rem; border-radius: 999px; text-decoration: none; border: 1px solid var(--border); display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; font-weight: 500; color: inherit;">
             ⏱ Focus
           </a>
           <button class="theme-toggle-btn" type="button" data-theme-toggle aria-label="Toggle dark mode">
@@ -130,6 +152,50 @@
                 <a href="create.html" class="primary-btn" style="text-decoration:none;text-align:center;">+ New Task</a>
                 <a href="focus.html" class="ghost-btn" style="text-decoration:none;text-align:center;">⏱ Focus Session</a>
                 <a href="board.html" class="ghost-btn" style="text-decoration:none;text-align:center;">📊 Personal Board</a>
+              </div>
+            </section>
+
+            <!-- Onboarding Milestone Progress Checklist Card -->
+            <section id="onboardingChecklistCard" class="onboarding-card" style="margin-bottom: 1.2rem;">
+              <div class="onboarding-head">
+                <div class="onboarding-title-group">
+                  <h2>🎯 Workspace Onboarding Milestones</h2>
+                  <p>Complete these initial steps to unlock your full productivity engine velocity.</p>
+                </div>
+                <span id="onboardingProgressBadge" class="onboarding-badge">0/4 Milestones Completed</span>
+              </div>
+              <div class="onboarding-progress-bar">
+                <div id="onboardingProgressFill" class="onboarding-progress-fill"></div>
+              </div>
+              <div class="onboarding-steps-grid">
+                <div id="stepTask" class="onboarding-step-item">
+                  <div class="onboarding-step-head">
+                    <span class="step-checkmark">✓</span>
+                    <span class="step-label">Create 1st Task</span>
+                  </div>
+                  <a href="create.html" class="step-shortcut-btn">+ Add Task</a>
+                </div>
+                <div id="stepFocus" class="onboarding-step-item">
+                  <div class="onboarding-step-head">
+                    <span class="step-checkmark">✓</span>
+                    <span class="step-label">Launch Focus Sprint</span>
+                  </div>
+                  <a href="focus.html" class="step-shortcut-btn">⏱ Start Focus</a>
+                </div>
+                <div id="stepProject" class="onboarding-step-item">
+                  <div class="onboarding-step-head">
+                    <span class="step-checkmark">✓</span>
+                    <span class="step-label">Setup Workspace</span>
+                  </div>
+                  <a href="projects.html" class="step-shortcut-btn">📁 Setup Project</a>
+                </div>
+                <div id="stepProfile" class="onboarding-step-item">
+                  <div class="onboarding-step-head">
+                    <span class="step-checkmark">✓</span>
+                    <span class="step-label">Personalize Profile</span>
+                  </div>
+                  <a href="profile.html" class="step-shortcut-btn">👤 View Profile</a>
+                </div>
               </div>
             </section>
 

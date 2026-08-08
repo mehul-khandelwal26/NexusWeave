@@ -6,7 +6,7 @@
   const api = window.NexusAPI;
   const tracker = window.NexusTracker;
 
-  const currentUser = api.getMe();
+  const currentUser = api ? api.getMe() : null;
   if (!currentUser) {
     window.location.href = 'index.html';
     return;
@@ -46,7 +46,13 @@
     const isAdmin = user.role === 'admin';
     const orgInfo = user.organizationId ? api.getOrganization(user.organizationId) : null;
 
-    if (userProfileAvatar) userProfileAvatar.textContent = (user.name || user.email).charAt(0).toUpperCase();
+    if (userProfileAvatar) {
+      if (user.photo) {
+        userProfileAvatar.innerHTML = `<img src="${user.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`;
+      } else {
+        userProfileAvatar.textContent = (user.name || user.email || 'U').charAt(0).toUpperCase();
+      }
+    }
     if (userProfileName) userProfileName.textContent = user.name || 'User';
     if (userProfileEmail) userProfileEmail.textContent = user.email;
     if (userProfileRoleBadge) {
@@ -56,7 +62,15 @@
     }
 
     if (userProfileDepartment) userProfileDepartment.textContent = `🏢 ${user.department || (user.role === 'personal' ? 'Individual' : 'Engineering')}`;
-    if (userProfileOrg) userProfileOrg.textContent = orgInfo ? orgInfo.name : 'Personal Workspace';
+    if (user.organizationId && api.fetchOrganization) {
+      api.fetchOrganization(user.organizationId).then(orgInfo => {
+        if (userProfileOrg) userProfileOrg.textContent = orgInfo ? orgInfo.name : 'Personal Workspace';
+      }).catch(() => {
+        if (userProfileOrg) userProfileOrg.textContent = 'Personal Workspace';
+      });
+    } else {
+      if (userProfileOrg) userProfileOrg.textContent = 'Personal Workspace';
+    }
 
     if (userProfileBio) {
       userProfileBio.textContent = user.bio || 'No bio written yet. Click "Edit Profile" to add your bio and role description.';
@@ -65,14 +79,15 @@
     // Skills
     if (userProfileSkills) {
       const skills = user.skills || [];
+      const esc = (s) => (typeof AppHelpers !== 'undefined' && AppHelpers.escapeHTML) ? AppHelpers.escapeHTML(s) : String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
       userProfileSkills.innerHTML = skills.length
-        ? skills.map(s => `<span class="filter-chip">${s}</span>`).join('')
+        ? skills.map(s => `<span class="filter-chip">${esc(s)}</span>`).join('')
         : `<span class="empty-inline">No skills added yet.</span>`;
     }
 
     // Metrics
     const tasks = user.tasks || [];
-    const completed = tasks.filter(t => t.status === 'Done').length;
+    const completed = tasks.filter(t => t && t.status === 'Done').length;
     const score = tracker ? tracker.calculateProductivityScore(user) : 0;
 
     if (profProjectsCount) profProjectsCount.textContent = (user.projects || []).length;
@@ -81,7 +96,7 @@
 
     if (profWeeklyHours && api.fetchFocusSummary) {
       api.fetchFocusSummary(7)
-        .then((summary) => { profWeeklyHours.textContent = `${summary ? summary.totalHours : 0}h`; })
+        .then((summary) => { profWeeklyHours.textContent = `${summary?.totalHours || 0}h`; })
         .catch(() => { profWeeklyHours.textContent = '0h'; });
     }
 
@@ -94,7 +109,7 @@
 
     const activity = api.fetchActivity ? await api.fetchActivity({ scope: 'me', limit: 12 }) : null;
 
-    if (!activity) {
+    if (!activity || !Array.isArray(activity)) {
       userProfileActivityFeed.innerHTML = `<div class="empty-inline">Could not load activity from the server.</div>`;
       return;
     }
@@ -121,9 +136,14 @@
 
     const completionMap = {};
     tasks.forEach(t => {
-      if (t.status === 'Done' && t.completedAt) {
-        const dateKey = new Date(t.completedAt).toISOString().split('T')[0];
-        completionMap[dateKey] = (completionMap[dateKey] || 0) + 1;
+      if (t && t.status === 'Done' && t.completedAt) {
+        try {
+          const date = new Date(t.completedAt);
+          if (!isNaN(date.getTime())) {
+            const dateKey = date.toISOString().split('T')[0];
+            completionMap[dateKey] = (completionMap[dateKey] || 0) + 1;
+          }
+        } catch (e) {}
       }
     });
 
@@ -138,6 +158,23 @@
     let currentStreak = 0;
     let longestStreak = 0;
     let tempStreak = 0;
+
+    const monthsEl = document.getElementById('profHeatmapMonths');
+    let monthLabelsHTML = '';
+    let lastMonth = -1;
+
+    for (let w = 0; w < 53; w++) {
+      const weekStart = new Date(startDate.getTime() + w * 7 * 86400000);
+      if (weekStart > today) break;
+      const m = weekStart.getMonth();
+      if (m !== lastMonth) {
+        monthLabelsHTML += `<div style="width: 20px; font-size: 0.75rem; color: var(--text-soft); overflow: visible; white-space: nowrap;">${weekStart.toLocaleDateString(undefined, { month: 'short' })}</div>`;
+        lastMonth = m;
+      } else {
+        monthLabelsHTML += `<div style="width: 20px;"></div>`;
+      }
+    }
+    if (monthsEl) monthsEl.innerHTML = monthLabelsHTML;
 
     for (let d = 0; d < 365; d++) {
       const currentDate = new Date(startDate.getTime() + d * 86400000);
@@ -216,8 +253,8 @@
         bio: editProfBio.value.trim(),
         skills: editProfSkills.value.split(',').map(s => s.trim()).filter(Boolean)
       });
-      if (!result.success) {
-        alert(result.error || 'Failed to save profile.');
+      if (!result || !result.success) {
+        alert(result ? (result.error || 'Failed to save profile.') : 'Failed to save profile.');
         return;
       }
       closeEditModal();
@@ -232,6 +269,25 @@
       }).catch(() => {
         alert('Copied profile URL!');
       });
+    });
+  }
+
+  const editAvatarBtn = document.getElementById('editAvatarBtn');
+  const avatarFileInput = document.getElementById('avatarFileInput');
+
+  if (editAvatarBtn && avatarFileInput) {
+    editAvatarBtn.addEventListener('click', () => avatarFileInput.click());
+    avatarFileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async (ev) => {
+        const base64 = ev.target.result;
+        currentUser.photo = base64;
+        await api.updateProfile({ photo: base64 });
+        renderProfile();
+      };
+      reader.readAsDataURL(file);
     });
   }
 

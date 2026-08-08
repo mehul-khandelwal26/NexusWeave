@@ -6,9 +6,10 @@
 
 (function () {
   const api = window.NexusAPI;
+  const esc = (s) => (typeof AppHelpers !== 'undefined' && AppHelpers.escapeHTML) ? AppHelpers.escapeHTML(s) : String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
   /* ── Auth Guard ── */
-  let currentUser = api.getMe();
+  let currentUser = api ? api.getMe() : null;
   let searchDebounceTimer = null;
   if (!currentUser) {
     window.location.href = 'index.html';
@@ -38,12 +39,12 @@
   const pageRoleLabel = document.getElementById('pageRoleLabel');
 
   if (isAdmin) {
-    adminPanel.classList.remove('hidden');
-    employeePanel.classList.add('hidden');
+    if (adminPanel) adminPanel.classList.remove('hidden');
+    if (employeePanel) employeePanel.classList.add('hidden');
     if (pageRoleLabel) pageRoleLabel.textContent = '🛡️ Admin Panel';
   } else {
-    adminPanel.classList.add('hidden');
-    employeePanel.classList.remove('hidden');
+    if (adminPanel) adminPanel.classList.add('hidden');
+    if (employeePanel) employeePanel.classList.remove('hidden');
     if (pageRoleLabel) pageRoleLabel.textContent = currentUser.role === 'personal' ? '👤 Personal Account — Join Org' : '👤 Member Panel';
   }
 
@@ -58,7 +59,7 @@
     notif.className = `org-notif org-notif-${type}`;
     notif.innerHTML = `
       <span class="org-notif-icon">${type === 'success' ? '✅' : type === 'error' ? '❌' : type === 'warning' ? '⚠️' : 'ℹ️'}</span>
-      <span>${message}</span>
+      <span>${esc(message)}</span>
       <button class="org-notif-close" type="button">×</button>
     `;
     notif.querySelector('.org-notif-close').addEventListener('click', () => notif.remove());
@@ -80,7 +81,7 @@
   if (isAdmin) {
     const orgNameDisplay = document.getElementById('orgNameDisplay');
     const orgVisibilityDisplay = document.getElementById('orgVisibilityDisplay');
-    const orgKeyDisplay = document.getElementById('orgKeyDisplay');
+    const orgVisibilityDisplay = document.getElementById('orgVisibilityDisplay');
     const orgKeyValue = document.getElementById('orgKeyValue');
     const toggleKeyBtn = document.getElementById('toggleKeyVisibility');
     const copyKeyBtn = document.getElementById('copyOrgKey');
@@ -119,6 +120,10 @@
       if (!memberList) return;
 
       const allUsers = await api.getAllUsersInOrg(org.id);
+      if (!allUsers) {
+        memberList.innerHTML = `<div class="empty-inline">Failed to load members.</div>`;
+        return;
+      }
       const filtered = filter
         ? allUsers.filter(u =>
             u.name.toLowerCase().includes(filter.toLowerCase()) ||
@@ -141,7 +146,7 @@
         return `
           <div class="member-row" data-email="${esc(member.email)}">
             <div class="member-info">
-              <span class="member-avatar">${esc((member.name || member.email).charAt(0).toUpperCase())}</span>
+              <span class="member-avatar">${esc((member.name || member.email || 'U').charAt(0).toUpperCase())}</span>
               <div class="member-details">
                 <strong>${esc(member.name || 'Unknown')}</strong>
                 <small>${esc(member.email)}</small>
@@ -171,7 +176,7 @@
     async function handleRemoveMember(email) {
       if (!confirm(`Remove ${email} from the organization?`)) return;
       const result = await api.removeMemberFromOrg(currentUser.organizationId, email);
-      if (result.success) {
+      if (result && result.success) {
         showNotif(`${email} has been removed from the organization.`, 'success');
         loadAdminOrg();
       } else {
@@ -183,7 +188,7 @@
     async function handlePromoteMember(email) {
       if (!confirm(`Promote ${email} to Admin? They will gain full org management access.`)) return;
       const result = await api.promoteToAdmin(currentUser.organizationId, email);
-      if (result.success) {
+      if (result && result.success) {
         showNotif(`${email} has been promoted to Admin.`, 'success');
         loadAdminOrg();
       } else {
@@ -218,7 +223,7 @@
       regenKeyBtn.addEventListener('click', async () => {
         if (!confirm('Regenerate the organization key? Employees with the old key will not be able to join with it.')) return;
         const result = await api.regenerateOrgKey(currentUser.organizationId);
-        if (result.success) {
+        if (result && result.success) {
           if (orgKeyValue) orgKeyValue.value = result.newKey;
           showNotif('Organization key regenerated successfully!', 'success');
         } else {
@@ -230,12 +235,12 @@
     // Save org settings
     if (saveOrgBtn) {
       saveOrgBtn.addEventListener('click', async () => {
-        const newName = editOrgNameInput?.value.trim();
+        const newName = (editOrgNameInput?.value || '').trim();
         const newVisibility = editOrgVisibilityInput?.value;
         if (!newName) { showNotif('Organization name cannot be empty.', 'error'); return; }
 
         const result = await api.updateOrgSettings(currentUser.organizationId, { name: newName, visibility: newVisibility });
-        if (result.success) {
+        if (result && result.success) {
           showNotif('Organization settings saved!', 'success');
           loadAdminOrg();
         } else {
@@ -246,9 +251,12 @@
 
     // Member search
     if (orgMemberSearch) {
-      orgMemberSearch.addEventListener('input', async () => {
-        const org = await api.fetchOrganization(currentUser.organizationId);
-        if (org) renderMembers(org, orgMemberSearch.value);
+      orgMemberSearch.addEventListener('input', () => {
+        clearTimeout(searchDebounceTimer);
+        searchDebounceTimer = setTimeout(async () => {
+          const org = await api.fetchOrganization(currentUser.organizationId);
+          if (org) renderMembers(org, orgMemberSearch.value);
+        }, 300);
       });
     }
 
@@ -305,6 +313,7 @@
       const all = await api.searchOrganizations(query);
       if (!orgResultsList) return;
 
+      if (!all) return;
       if (!all.length) {
         orgResultsList.innerHTML = `<div class="empty-inline">${query ? 'No organizations match your search.' : 'No organizations exist yet. Ask an admin to create one.'}</div>`;
         return;
@@ -315,14 +324,14 @@
         return `
           <div class="org-result-card">
             <div class="org-result-info">
-              <strong>${org.name}</strong>
+              <strong>${esc(org.name)}</strong>
               <span class="org-badge ${org.visibility === 'private' ? 'badge-private' : 'badge-public'}">${org.visibility === 'private' ? '🔒 Private' : '🌐 Public'}</span>
               <small class="org-result-meta">${org.memberCount} member${org.memberCount !== 1 ? 's' : ''}</small>
             </div>
             <div>
               ${isCurrentOrg
                 ? '<span class="org-badge badge-current">✓ Joined</span>'
-                : `<button class="primary-btn org-join-btn" data-org-id="${org.id}" data-org-name="${org.name}" data-org-visibility="${org.visibility}">Join</button>`
+                : `<button class="primary-btn org-join-btn" data-org-id="${esc(org.id)}" data-org-name="${esc(org.name)}" data-org-visibility="${esc(org.visibility)}">Join</button>`
               }
             </div>
           </div>
@@ -384,9 +393,9 @@
         confirmJoinBtn.disabled = false;
         confirmJoinBtn.textContent = 'Join Organization';
 
-        if (result.success) {
+        if (result && result.success) {
           closeJoinModalFn();
-          showNotif(`🎉 You've joined ${result.orgName} successfully!`, 'success');
+          showNotif(`🎉 You've joined ${esc(result.orgName)} successfully!`, 'success');
           const freshUser = api.getMe();
           if (freshUser) {
             currentUser.organizationId = freshUser.organizationId;
@@ -423,7 +432,7 @@
       leaveOrgBtn.addEventListener('click', async () => {
         if (!confirm('Leave your current organization? You can re-join later.')) return;
         const result = await api.leaveOrganization();
-        if (result.success) {
+        if (result && result.success) {
           showNotif('You have left the organization.', 'info');
           currentUser.organizationId = null;
           renderCurrentOrg();

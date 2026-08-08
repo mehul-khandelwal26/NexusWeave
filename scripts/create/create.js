@@ -23,14 +23,10 @@ const attachmentLists = Array.from(document.querySelectorAll('[data-attachment-l
 const openAttachmentsButtons = Array.from(document.querySelectorAll('[data-open-attachments]'));
 
 // Session and User-Scoped Database Setup
-const DB_KEY = 'users';
-const SESSION_KEY = 'session';
-const JWT_KEY = 'jwt';
 const DEFAULT_LABELS = ['Work', 'College', 'Personal', 'Urgent', 'Meeting'];
 
-const sessionEmail = sessionStorage.getItem(SESSION_KEY);
 
-let currentUser = window.NexusAPI ? window.NexusAPI.getMe() : null;
+let currentUser = (window.NexusAPI && typeof window.NexusAPI.getMe === 'function') ? window.NexusAPI.getMe() : null;
 
 // Auth Redirect
 if (!currentUser) {
@@ -151,9 +147,11 @@ function resetProjectForm() {
   projectForm.reset();
   selectedLabels = [];
   selectedAttachments = [];
+  selectedTasksForNewProject = [];
   renderSelectedLabels();
   renderAttachments();
-  showFeedback('');
+  updateSelectedTasksCount();
+  showFeedback('', 'success', projectFeedback);
 }
 
 async function handleProjectSubmit(event) {
@@ -299,8 +297,9 @@ function validateTaskForm(values) {
 function buildTaskObject(values) {
   let priority = 'Medium';
   if (values.priority === 'high') priority = 'High';
-  if (values.priority === 'low') priority = 'Low';
-  if (values.priority === 'medium') priority = 'Medium';
+  else if (values.priority === 'low') priority = 'Low';
+  else if (values.priority === 'medium') priority = 'Medium';
+  else if (values.priority === 'none') priority = 'None';
 
   let status = 'Todo';
   if (values.status === 'todo') status = 'Todo';
@@ -329,7 +328,7 @@ function buildTaskObject(values) {
     isOrgTask: isOrgTask,
     assignedUserEmail: assignedUserEmail,
     labels: [...selectedLabels],
-    attachments: selectedAttachments.map(a => a.name),
+    attachments: selectedAttachments.map(a => typeof a === 'string' ? a : a.name),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
@@ -522,6 +521,7 @@ function renderExistingTasksForModal() {
 }
 
 function updateSelectedTasksCount() {
+  if (!projectForm) return;
   const placeholder = projectForm.querySelector('.placeholder-state');
   if (!placeholder) return;
 
@@ -657,17 +657,21 @@ dateInputs.forEach((input) => {
   input.addEventListener('input', syncInputState);
 });
 
-selectedLabelContainer?.addEventListener('click', (event) => {
-  const button = event.target.closest('[data-remove-label]');
-  if (!button) return;
-  removeLabelSelection(button.dataset.removeLabel);
+selectedLabelContainers.forEach(container => {
+  container.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-remove-label]');
+    if (!button) return;
+    removeLabelSelection(button.dataset.removeLabel);
+  });
 });
 
-attachmentList?.addEventListener('click', (event) => {
-  const button = event.target.closest('[data-remove-attachment]');
-  if (!button) return;
-  selectedAttachments.splice(Number(button.dataset.removeAttachment), 1);
-  renderAttachments();
+attachmentLists.forEach(list => {
+  list.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-remove-attachment]');
+    if (!button) return;
+    selectedAttachments.splice(Number(button.dataset.removeAttachment), 1);
+    renderAttachments();
+  });
 });
 
 labelOptionsContainer?.addEventListener('change', (event) => {
@@ -709,20 +713,30 @@ attachmentInput?.addEventListener('change', (event) => {
 
 // Init page
 async function init() {
-  if (window.NexusAPI) {
-    const data = await window.NexusAPI.getUserData();
-    if (data) {
-      tasks = data.tasks || [];
-      projects = data.projects || [];
+  if (window.NexusAPI && typeof window.NexusAPI.getUserData === 'function') {
+    try {
+      const data = await window.NexusAPI.getUserData();
+      if (data) {
+        tasks = Array.isArray(data.tasks) ? data.tasks : [];
+        projects = Array.isArray(data.projects) ? data.projects : [];
+      }
+    } catch (err) {
+      console.warn('Failed to load user data:', err);
     }
-    if (currentUser && currentUser.role === 'admin' && window.NexusAPI.fetchBackendOrgUsers) {
-      orgUsers = await window.NexusAPI.fetchBackendOrgUsers();
+    if (currentUser && currentUser.role === 'admin' && typeof window.NexusAPI.fetchBackendOrgUsers === 'function') {
+      try {
+        orgUsers = await window.NexusAPI.fetchBackendOrgUsers();
+        orgUsers = Array.isArray(orgUsers) ? orgUsers : [];
+      } catch (err) {
+        console.warn('Failed to fetch org users:', err);
+        orgUsers = [];
+      }
       const assigneeList = document.getElementById('assigneeList');
       if (assigneeList) {
         let optionsHTML = `<option value="">Myself (Unassigned)</option>`;
         optionsHTML += `<option value="ORG_TASK">Entire Organization</option>`;
         orgUsers.forEach(u => {
-          optionsHTML += `<option value="${u.email}">${u.name} (${u.email})</option>`;
+          optionsHTML += `<option value="${escapeHtml(u.email)}">${escapeHtml(u.name || '')} (${escapeHtml(u.email)})</option>`;
         });
         assigneeList.innerHTML = optionsHTML;
       }

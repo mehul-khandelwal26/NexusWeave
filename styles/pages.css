@@ -485,7 +485,75 @@
   margin: 0 auto 2rem;
 }
 
-/* ── Technical Architecture Deep-Dive Styling ── */
+/* ── Technical Architecture Deep-Dive & Interactive Code Showcase ── */
+.arch-code-tabs-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 0.75rem;
+}
+
+.arch-code-tab-btn {
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.4rem 0.85rem;
+  border-radius: 8px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-soft);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.arch-code-tab-btn:hover {
+  color: var(--text-main);
+  border-color: var(--purple-border);
+}
+
+.arch-code-tab-btn.active {
+  background: rgba(124, 58, 237, 0.15);
+  border-color: var(--purple-primary);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.arch-code-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.85rem;
+  background: rgba(15, 16, 24, 0.95);
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+  border: 1px solid var(--border-subtle);
+  border-bottom: none;
+  font-size: 0.8rem;
+}
+
+.arch-code-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.arch-code-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.arch-code-dot.red { background: #ff5f56; }
+.arch-code-dot.yellow { background: #ffbd2e; }
+.arch-code-dot.green { background: #27c93f; }
+
+.arch-code-filename {
+  font-family: 'Consolas', 'Fira Code', monospace;
+  font-size: 0.78rem;
+  color: var(--text-soft);
+}
 
 .arch-blueprint-card {
   background: var(--bg-card);
@@ -611,14 +679,15 @@
 .arch-code-box {
   background: #0d0e15;
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
+  border-bottom-left-radius: var(--radius-md);
+  border-bottom-right-radius: var(--radius-md);
   padding: 1.25rem;
   font-family: 'Consolas', 'Fira Code', monospace;
-  font-size: 0.82rem;
+  font-size: 0.84rem;
   color: #e2e8f0;
   line-height: 1.6;
   overflow-x: auto;
-  margin-top: 1rem;
+  min-height: 110px;
 }
 
 .arch-code-box .kw { color: #c084fc; font-weight: 700; }

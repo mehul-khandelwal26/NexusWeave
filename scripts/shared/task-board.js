@@ -2,12 +2,16 @@
   const DB_KEY = 'users';
   const SESSION_KEY = 'session';
   const VIEW_STATE_KEY = 'nexus-task-view-state';
-  const helpers = window.AppHelpers;
+  const helpers = window.AppHelpers || { escapeHTML: (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;') };
   const api = window.NexusAPI;
+  const esc = helpers.escapeHTML;
 
   const sessionEmail = sessionStorage.getItem(SESSION_KEY);
-  let database = JSON.parse(localStorage.getItem(DB_KEY) || '{}');
-
+  let database = {};
+  try {
+    database = JSON.parse(localStorage.getItem(DB_KEY) || '{}');
+  } catch(e) {}
+  
   function normalizeUser(user, fallbackEmail = sessionEmail) {
     const resolvedEmail = fallbackEmail || user?.email || 'demo@nexusweave.app';
     return {
@@ -49,7 +53,6 @@
 
   const state = {
     currentUser: normalizeUser(currentUser, sessionEmail),
-    selectedProjectId: currentUser.projects?.[0]?.id || null,
     filters: loadViewState(),
     pendingDeleteTaskId: null,
     activeDrawerTaskId: null
@@ -226,7 +229,7 @@
   }
 
   function getProjectName(projectId) {
-    return state.currentUser.projects.find((p) => p.id === projectId)?.name || 'General';
+    return state.currentUser.projects.find((p) => (p.id || p._id) === projectId)?.name || 'General';
   }
 
   function getTaskStatusGroup(task) {
@@ -300,20 +303,16 @@
     }
     
     // Populate Assignee Dropdown if Admin
-    if (state.currentUser && state.currentUser.role === 'admin' && api.fetchBackendOrgUsers) {
-      async function updateOrgUsers() {
-        orgUsers = await api.fetchBackendOrgUsers();
-        const assigneeList = document.getElementById('assigneeList');
-        if (assigneeList) {
-          let optionsHTML = `<option value="">Myself (Unassigned)</option>`;
-          optionsHTML += `<option value="ORG_TASK">Entire Organization</option>`;
-          orgUsers.forEach(u => {
-            optionsHTML += `<option value="${u.email}">${u.name} (${u.email})</option>`;
-          });
-          assigneeList.innerHTML = optionsHTML;
-        }
+    if (state.currentUser && state.currentUser.role === 'admin') {
+      const assigneeList = document.getElementById('assigneeList');
+      if (assigneeList && orgUsers.length > 0) {
+        let optionsHTML = `<option value="">Myself (Unassigned)</option>`;
+        optionsHTML += `<option value="ORG_TASK">Entire Organization</option>`;
+        orgUsers.forEach(u => {
+          optionsHTML += `<option value="${esc(u.email)}">${esc(u.name)} (${esc(u.email)})</option>`;
+        });
+        assigneeList.innerHTML = optionsHTML;
       }
-      updateOrgUsers();
     }
   }
 
@@ -336,6 +335,8 @@
 
     if (prevPageBtn) prevPageBtn.disabled = state.filters.currentPage <= 1;
     if (nextPageBtn) nextPageBtn.disabled = state.filters.currentPage >= totalPages;
+    
+    paginationBar.classList.remove('hidden');
   }
 
   function getPaginatedTasks(tasks) {
@@ -353,6 +354,7 @@
 
     if (!allVisible.length) {
       emptyStateEl?.classList.remove('hidden');
+      if (paginationBar) paginationBar.classList.add('hidden');
       taskGroupsEl.innerHTML = '';
       return;
     }
@@ -398,15 +400,15 @@
                   <span class="status-pill ${helpers.getTaskStatusTone(task.status)}">${task.status}</span>
                 </div>
               </div>
-              <div class="task-meta">${task.description || 'No description yet.'} ${labelsPills}</div>
+              <div class="task-meta">${esc(task.description || 'No description yet.')} ${labelsPills}</div>
             </div>
             <div class="task-side-meta">
-              <div>${getProjectName(task.projectId)}</div>
+              <div>${esc(getProjectName(task.projectId))}</div>
               <div>${helpers.formatDisplayDate(task.dueDate)}</div>
               <div class="task-row-actions">
-                <button class="icon-btn" type="button" data-edit-task="${task.id}">✎</button>
-                <button class="icon-btn" type="button" data-open-drawer="${task.id}">↗</button>
-                <button class="icon-btn danger" type="button" data-delete-task="${task.id}">🗑</button>
+                <button class="icon-btn" type="button" data-edit-task="${esc(task.id)}">✎</button>
+                <button class="icon-btn" type="button" data-open-drawer="${esc(task.id)}">↗</button>
+                <button class="icon-btn danger" type="button" data-delete-task="${esc(task.id)}">🗑</button>
               </div>
             </div>
           </article>
@@ -454,10 +456,10 @@
             if (task.isOrgTask) {
               assigneeBadge = `<span class="org-badge badge-employee" style="font-size:0.7rem;">🌐 Org Task</span>`;
             } else if (task.assignedUserEmail) {
-               const assignedUser = orgUsers.find(u => u.email === task.assignedUserEmail) || { name: task.assigneeName || task.assignedUserEmail.split('@')[0] };
-               assigneeBadge = `<span class="org-badge badge-employee" style="font-size:0.7rem;">👤 ${assignedUser.name.split(' ')[0]}</span>`;
+               const assignedUser = orgUsers.find(u => u.email === task.assignedUserEmail) || { name: task.assigneeName || (task.assignedUserEmail || '').split('@')[0] };
+               assigneeBadge = `<span class="org-badge badge-employee" style="font-size:0.7rem;">👤 ${esc((assignedUser.name || 'User').split(' ')[0])}</span>`;
             } else if (task.assigneeName) {
-               assigneeBadge = `<span class="org-badge badge-employee" style="font-size:0.7rem;">👤 ${task.assigneeName.split(' ')[0]}</span>`;
+               assigneeBadge = `<span class="org-badge badge-employee" style="font-size:0.7rem;">👤 ${esc((task.assigneeName || 'User').split(' ')[0])}</span>`;
             }
 
             const canComplete = canModifyTask(task);
@@ -486,9 +488,9 @@
                   <span>${helpers.formatDisplayDate(task.dueDate)}</span>
                   ${assigneeBadge}
                   <div class="task-row-actions">
-                    <button class="icon-btn" type="button" data-edit-task="${task.id}">✎</button>
-                    <button class="icon-btn" type="button" data-open-drawer="${task.id}">↗</button>
-                    <button class="icon-btn danger" type="button" data-delete-task="${task.id}">🗑</button>
+                    <button class="icon-btn" type="button" data-edit-task="${esc(task.id)}">✎</button>
+                    <button class="icon-btn" type="button" data-open-drawer="${esc(task.id)}">↗</button>
+                    <button class="icon-btn danger" type="button" data-delete-task="${esc(task.id)}">🗑</button>
                   </div>
                 </div>
               </article>
@@ -513,7 +515,11 @@
     boardColumnsEl.querySelectorAll('.board-column').forEach((column) => {
       column.addEventListener('dragover', (event) => event.preventDefault());
       column.addEventListener('dragenter', () => column.classList.add('is-drop-target'));
-      column.addEventListener('dragleave', () => column.classList.remove('is-drop-target'));
+      column.addEventListener('dragleave', (event) => {
+        if (!column.contains(event.relatedTarget)) {
+          column.classList.remove('is-drop-target');
+        }
+      });
       column.addEventListener('drop', (event) => {
         event.preventDefault();
         column.classList.remove('is-drop-target');
@@ -568,8 +574,9 @@
   function canModifyTask(task) {
     if (state.currentUser.role === 'admin') return true;
     if (task.isOrgTask) return true; // Anyone in org can mark it complete
-    if (task.assignedUserEmail === state.currentUser.email) return true; // Assigned user
-    if (!task.assignedUserEmail && !task.isOrgTask) return true; // Personal task or legacy task
+    const currentUserEmail = (state.currentUser.email || '').toLowerCase();
+    if (task.assignedUserEmail && task.assignedUserEmail.toLowerCase() === currentUserEmail) return true;
+    if (!task.assignedUserEmail && !task.isOrgTask && (task.userEmail || '').toLowerCase() === currentUserEmail) return true;
     return false;
   }
 
@@ -629,9 +636,9 @@
 
     drawerDetailsEl.innerHTML = `
       <div style="flex-direction:column;align-items:stretch;gap:0.75rem;">
-        <div><strong>Status</strong><span>${task.status}</span></div>
-        <div><strong>Priority</strong><span class="priority-pill ${helpers.getPriorityTone(task.priority)}">${task.priority}</span></div>
-        <div><strong>Assignee</strong><span>${task.assigneeName || 'Unassigned'}</span></div>
+        <div><strong>Status</strong><span>${esc(task.status)}</span></div>
+        <div><strong>Priority</strong><span class="priority-pill ${helpers.getPriorityTone(task.priority)}">${esc(task.priority)}</span></div>
+        <div><strong>Assignee</strong><span>${esc(task.assigneeName || 'Unassigned')}</span></div>
       </div>
     `;
 
@@ -679,6 +686,7 @@
       if (document.getElementById('taskDueTime')) document.getElementById('taskDueTime').value = task.dueTime || '';
       if (document.getElementById('taskReminderDate')) document.getElementById('taskReminderDate').value = task.reminderDate || '';
       if (document.getElementById('taskReminderTime')) document.getElementById('taskReminderTime').value = task.reminderTime || '';
+      if (taskRecurringInput) taskRecurringInput.value = task.recurring || 'none';
       taskStatusInput.value = task.status || 'Todo';
       taskModalTitle.textContent = 'Edit task';
       taskSubmitButton.textContent = 'Save changes';
@@ -688,6 +696,7 @@
       if (document.getElementById('taskDueTime')) document.getElementById('taskDueTime').value = '';
       if (document.getElementById('taskReminderDate')) document.getElementById('taskReminderDate').value = '';
       if (document.getElementById('taskReminderTime')) document.getElementById('taskReminderTime').value = '';
+      if (taskRecurringInput) taskRecurringInput.value = 'none';
       taskModalTitle.textContent = 'Create task';
       taskSubmitButton.textContent = 'Create task';
     }
@@ -712,8 +721,9 @@
     state.pendingDeleteTaskId = null;
   }
 
-  taskForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
+  if (taskForm) {
+    taskForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
     const editingId = taskIdInput.value;
     const title = taskTitleInput.value.trim();
     const description = taskDescriptionInput.value.trim();
@@ -737,15 +747,18 @@
     const labelsStr = taskLabelsInput?.value.trim() || '';
     const labels = labelsStr ? labelsStr.split(',').map(l => l.trim()).filter(Boolean) : [];
 
-    let attachments = [];
-    if (taskAttachmentsInput) {
-      if (taskAttachmentsInput.type === 'file' && taskAttachmentsInput.files) {
-        attachments = Array.from(taskAttachmentsInput.files).map(f => f.name);
-      } else {
-        const attStr = taskAttachmentsInput.value.trim();
-        attachments = attStr ? attStr.split(',').map(a => a.trim()).filter(Boolean) : [];
+      let attachments = [];
+      const existingTask = editingId ? state.currentUser.tasks.find(t => t.id === editingId) : null;
+      if (taskAttachmentsInput) {
+        if (taskAttachmentsInput.type === 'file' && taskAttachmentsInput.files && taskAttachmentsInput.files.length > 0) {
+          attachments = Array.from(taskAttachmentsInput.files).map(f => f.name);
+        } else if (existingTask && existingTask.attachments) {
+          attachments = existingTask.attachments;
+        } else {
+          const attStr = taskAttachmentsInput.value.trim();
+          attachments = attStr ? attStr.split(',').map(a => a.trim()).filter(Boolean) : [];
+        }
       }
-    }
 
     if (editingId) {
       const idx = state.currentUser.tasks.findIndex(t => t.id === editingId);
@@ -820,20 +833,24 @@
       state.currentUser.tasks.unshift(newTask);
     }
 
-    persistUser();
-    closeTaskModal();
-    renderAll();
-  });
+      persistUser();
+      closeTaskModal();
+      renderAll();
+    });
+  }
 
   if (deleteConfirmButton) {
     deleteConfirmButton.addEventListener('click', async () => {
       if (!state.pendingDeleteTaskId) return;
       const taskId = state.pendingDeleteTaskId;
+      const taskToDelete = state.currentUser.tasks.find(t => t.id === taskId);
+      const backendId = taskToDelete ? (taskToDelete._id || taskToDelete.id) : taskId;
+      
       state.currentUser.tasks = state.currentUser.tasks.filter(t => t.id !== taskId);
 
       if (api && api.deleteBackendTask) {
         try {
-          await api.deleteBackendTask(taskId);
+          await api.deleteBackendTask(backendId);
         } catch (err) {
           console.warn('Backend task deletion failed:', err);
         }
@@ -1069,6 +1086,10 @@
       if (!option) return;
       const bgVal = option.getAttribute('data-bg-value') || 'none';
       applyBoardBackground(bgVal);
+      if (state.currentUser) {
+        state.currentUser.boardBg = bgVal;
+        persistUser();
+      }
       if (api && api.updateProfile) {
         api.updateProfile({ boardBg: bgVal }).catch(() => {});
       }

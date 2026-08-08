@@ -122,7 +122,12 @@ document.addEventListener('DOMContentLoaded', () => {
       formErrors.classList.add('hidden');
     }
 
-    // Portal Tabs UI
+    // Portal Tabs UI & Sliding Pill
+    const pill = document.getElementById('portalTabPill');
+    if (pill) {
+      pill.style.transform = portalScope === 'personal' ? 'translateX(0)' : 'translateX(100%)';
+    }
+
     if (portalScope === 'personal') {
       portalPersonalBtn?.classList.add('active');
       portalOrgBtn?.classList.remove('active');
@@ -171,6 +176,28 @@ document.addEventListener('DOMContentLoaded', () => {
       if (toggleModeBtn) toggleModeBtn.textContent = 'Log in';
       if (submitBtn) submitBtn.textContent = 'Sign Up';
     }
+  }
+
+  // Real-Time Inline Email Validation
+  if (emailInput) {
+    const feedback = document.getElementById('emailFeedback');
+    emailInput.addEventListener('input', () => {
+      const val = emailInput.value.trim();
+      if (!feedback) return;
+      if (!val) {
+        feedback.textContent = '';
+        feedback.className = 'email-feedback-badge';
+        return;
+      }
+      const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+      if (isValid) {
+        feedback.textContent = '✓ Valid email format';
+        feedback.className = 'email-feedback-badge valid';
+      } else {
+        feedback.textContent = '✕ Please enter a valid work email (name@company.com)';
+        feedback.className = 'email-feedback-badge invalid';
+      }
+    });
   }
 
   function toggleMode() {

@@ -11,6 +11,8 @@
 
   const isAdmin = currentUser.role === 'admin';
 
+  const AI_LOGO_SVG = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:inline-block;vertical-align:middle;flex-shrink:0;"><path d="M12 3C12 3 13.5 7.5 18 9C13.5 10.5 12 15 12 15C12 15 10.5 10.5 6 9C10.5 7.5 12 3 12 3Z" fill="currentColor"/><path d="M19 15C19 15 19.75 17.25 22 18C19.75 18.75 19 21 19 21C19 21 18.25 18.75 16 18C18.25 17.25 19 15 19 15Z" fill="currentColor" opacity="0.85"/><path d="M5 15C5 15 5.5 16.5 7 17C5.5 17.5 5 19 5 19C5 19 4.5 17.5 3 17C4.5 16.5 5 15 5 15Z" fill="currentColor" opacity="0.65"/></svg>`;
+
   /* ── Inject ChatGPT Sidebar UI ── */
   function injectAIUI() {
     if (document.getElementById('aiFabBtn')) return;
@@ -21,7 +23,13 @@
     fabBtn.className = 'ai-fab-btn';
     fabBtn.type = 'button';
     fabBtn.innerHTML = `
-      <span style="font-size: 1.25rem; line-height: 1;">✨</span>
+      <span class="ai-fab-glow-ring"></span>
+      <svg class="ai-fab-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 3C12 3 13.5 7.5 18 9C13.5 10.5 12 15 12 15C12 15 10.5 10.5 6 9C10.5 7.5 12 3 12 3Z" fill="currentColor"/>
+        <path d="M19 15C19 15 19.75 17.25 22 18C19.75 18.75 19 21 19 21C19 21 18.25 18.75 16 18C18.25 17.25 19 15 19 15Z" fill="currentColor" opacity="0.85"/>
+        <path d="M5 15C5 15 5.5 16.5 7 17C5.5 17.5 5 19 5 19C5 19 4.5 17.5 3 17C4.5 16.5 5 15 5 15Z" fill="currentColor" opacity="0.65"/>
+      </svg>
+      <span class="ai-fab-label">NexusAI</span>
     `;
     document.body.appendChild(fabBtn);
 
@@ -32,7 +40,9 @@
     drawer.innerHTML = `
       <div class="ai-drawer-head">
         <div class="ai-brand-title">
-          <span style="font-size:1.2rem;">🤖</span>
+          <span style="width:30px;height:30px;border-radius:10px;background:linear-gradient(135deg,var(--purple-primary),#a855f7);display:grid;place-items:center;color:#ffffff;box-shadow:0 4px 15px rgba(124,58,237,0.35);flex-shrink:0;">
+            ${AI_LOGO_SVG}
+          </span>
           <div>
             <strong style="font-size:0.95rem;display:block;">NexusAI Workspace Intelligence</strong>
             <small class="text-soft" style="font-size:0.75rem;">Powered by Context & OpenAI</small>
@@ -50,7 +60,7 @@
       <!-- Messages Stream -->
       <div id="aiMessagesStream" class="ai-messages-stream">
         <div class="ai-msg assistant">
-          <div class="ai-msg-avatar">🤖</div>
+          <div class="ai-msg-avatar">${AI_LOGO_SVG}</div>
           <div class="ai-msg-content">
             <p>Hello <strong>${currentUser.name || 'there'}</strong>! I am <strong>NexusAI</strong>, your productivity intelligence assistant.</p>
             <p>Select a quick prompt above or ask me anything about your tasks, deadlines, attendance, and team performance!</p>
@@ -170,7 +180,7 @@
     const formattedText = formatMarkdownText(text);
 
     msgDiv.innerHTML = `
-      <div class="ai-msg-avatar">${role === 'assistant' ? '🤖' : author.charAt(0).toUpperCase()}</div>
+      <div class="ai-msg-avatar">${role === 'assistant' ? AI_LOGO_SVG : author.charAt(0).toUpperCase()}</div>
       <div class="ai-msg-content">${formattedText}</div>
     `;
 

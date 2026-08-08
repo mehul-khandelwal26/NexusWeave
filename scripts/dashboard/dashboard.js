@@ -4,6 +4,11 @@
 
 (function () {
   const api = window.NexusAPI;
+  if (!api || typeof api.getMe !== 'function') {
+    console.error('NexusAPI not loaded — redirecting to login.');
+    window.location.href = 'index.html';
+    return;
+  }
   const helpers = window.AppHelpers;
 
   /* ── Auth Check ── */
@@ -11,6 +16,20 @@
   if (!currentUser) {
     window.location.href = 'index.html';
     return;
+  }
+
+  /* ── Shared HTML escape helper (used across all templates) ── */
+  const esc = (s) => (helpers && helpers.escapeHTML)
+    ? helpers.escapeHTML(s)
+    : String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+  /* ── Local date key helper (avoids UTC timezone drift) ── */
+  function toLocalDateKey(date) {
+    const d = date instanceof Date ? date : new Date(date);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
   }
 
   /* ── DOM Elements ── */
@@ -22,6 +41,7 @@
   const dashboardEyebrow = document.getElementById('dashboardEyebrow');
 
   function applyRoleView(user) {
+    if (!user) return;
     const roleIsAdmin = user.role === 'admin';
     const roleIsPersonal = user.role === 'personal' || (!roleIsAdmin && user.role !== 'employee');
 
@@ -41,7 +61,7 @@
       personalView?.classList.add('hidden');
       adminView?.classList.remove('hidden');
       employeeView?.classList.add('hidden');
-      initAdminDashboard();
+      initAdminDashboard().catch(err => console.warn('Admin dashboard init error:', err));
     } else {
       personalView?.classList.add('hidden');
       adminView?.classList.add('hidden');
@@ -65,16 +85,17 @@
         }
       }
 
-      const data = await api.getUserData();
-      if (data) {
-        currentUser.tasks = Array.isArray(data.tasks) ? data.tasks : [];
-        currentUser.projects = Array.isArray(data.projects) ? data.projects : [];
-        // Persist so board/tasks pages and refresh share the same data
-        if (api.saveUserData) {
-          api.saveUserData({
-            projects: currentUser.projects,
-            tasks: currentUser.tasks
-          });
+      if (typeof api.getUserData === 'function') {
+        const data = await api.getUserData();
+        if (data) {
+          currentUser.tasks = Array.isArray(data.tasks) ? data.tasks : [];
+          currentUser.projects = Array.isArray(data.projects) ? data.projects : [];
+          if (typeof api.saveUserData === 'function') {
+            api.saveUserData({
+              projects: currentUser.projects,
+              tasks: currentUser.tasks
+            });
+          }
         }
       }
 
@@ -90,12 +111,12 @@
   /* ─────────────────────────────────────────────
      ADMIN DASHBOARD IMPLEMENTATION
   ───────────────────────────────────────────── */
-  let adminChartInstance = null;
-  const rankIcons = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'];
+  /* (unused: adminChartInstance, rankIcons removed) */
 
   async function initAdminDashboard() {
     const orgId = currentUser.organizationId;
-    const orgUsers = orgId ? await api.getAllUsersInOrg(orgId) : [currentUser];
+    const rawOrgUsers = orgId && typeof api.getAllUsersInOrg === 'function' ? await api.getAllUsersInOrg(orgId) : null;
+    const orgUsers = Array.isArray(rawOrgUsers) ? rawOrgUsers : [currentUser];
     const orgInfo = orgId ? api.getOrganization(orgId) : null;
 
     // Title
@@ -114,10 +135,14 @@
     const pendingTasks = allOrgTasks.filter((t) => t.status !== 'Done').length;
 
     // Fetch Online Users & Today Attendance from Backend Database API
-    const [onlineRes] = await Promise.all([
-      api.fetchOnlineUsers ? api.fetchOnlineUsers() : Promise.resolve(null),
-      loadAttendanceSnapshot()
-    ]);
+    let onlineRes = null;
+    try {
+      const results = await Promise.allSettled([
+        typeof api.fetchOnlineUsers === 'function' ? api.fetchOnlineUsers() : Promise.resolve(null),
+        loadAttendanceSnapshot()
+      ]);
+      onlineRes = results[0].status === 'fulfilled' ? results[0].value : null;
+    } catch (_) { /* gracefully degrade */ }
 
     const onlineCount = (onlineRes && onlineRes.success) ? onlineRes.onlineCount : 1;
     const totalCount = (onlineRes && onlineRes.success) ? onlineRes.totalCount : Math.max(totalEmployees, 1);
@@ -203,11 +228,11 @@
           if (!attendanceSnapshot) {
             await loadAttendanceSnapshot();
           } else if (attendanceSnapshot.self && attendanceSnapshot.self.marked) {
-            const res = api.clearDatabaseAttendance ? await api.clearDatabaseAttendance() : null;
-            if (res) attendanceSnapshot = res;
+            const res = typeof api.clearDatabaseAttendance === 'function' ? await api.clearDatabaseAttendance() : null;
+            if (res && res.success !== false) attendanceSnapshot = res;
           } else {
-            const res = api.markDatabaseAttendance ? await api.markDatabaseAttendance() : null;
-            if (res) {
+            const res = typeof api.markDatabaseAttendance === 'function' ? await api.markDatabaseAttendance() : null;
+            if (res && res.success !== false) {
               attendanceSnapshot = res;
               if (window.NexusNotify) {
                 window.NexusNotify.add({ icon: '✅', text: 'Attendance marked for today.', type: 'success' });
@@ -272,10 +297,8 @@
     modal.classList.remove('hidden');
     listEl.innerHTML = `<div class="empty-inline">Fetching online members from database…</div>`;
 
-    const res = api.fetchOnlineUsers ? await api.fetchOnlineUsers() : null;
+    const res = typeof api.fetchOnlineUsers === 'function' ? await api.fetchOnlineUsers() : null;
     const onlineUsers = (res && res.success && Array.isArray(res.onlineUsers)) ? res.onlineUsers : [currentUser];
-
-    const esc = (s) => (typeof AppHelpers !== 'undefined' && AppHelpers.escapeHTML) ? AppHelpers.escapeHTML(s) : String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
     if (!onlineUsers.length) {
       listEl.innerHTML = `<div class="empty-inline">No employees are currently online.</div>`;
@@ -306,10 +329,10 @@
     modal.classList.remove('hidden');
     listEl.innerHTML = `<div class="empty-inline">Fetching today's attendance from database…</div>`;
 
-    const res = api.fetchTodayAttendance ? await api.fetchTodayAttendance() : null;
-    const presentUsers = (res && res.success && Array.isArray(res.presentUsers)) ? res.presentUsers : [];
-
-    const esc = (s) => (typeof AppHelpers !== 'undefined' && AppHelpers.escapeHTML) ? AppHelpers.escapeHTML(s) : String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const res = typeof api.fetchTodayAttendance === 'function' ? await api.fetchTodayAttendance() : null;
+    // Support both { presentUsers: [...] } and { roster: [...] } response shapes
+    const presentUsers = (res && res.success && Array.isArray(res.presentUsers)) ? res.presentUsers
+      : (res && Array.isArray(res.roster)) ? res.roster.filter(u => u.present) : [];
 
     if (!presentUsers.length) {
       listEl.innerHTML = `<div class="empty-inline">No employees have marked attendance today.</div>`;
@@ -347,7 +370,7 @@
       return;
     }
 
-    const esc = (s) => (typeof AppHelpers !== 'undefined' && AppHelpers.escapeHTML) ? AppHelpers.escapeHTML(s) : String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    // esc() is now available at module scope
 
     const ordered = roster.slice().sort((a, b) => Number(b.present) - Number(a.present));
 
@@ -369,7 +392,12 @@
     const container = document.getElementById('adminActivityFeed');
     if (!container) return;
 
-    const activity = api.fetchActivity ? await api.fetchActivity({ scope: 'org', limit: 12 }) : null;
+    let rawActivity = null;
+    try {
+      rawActivity = typeof api.fetchActivity === 'function' ? await api.fetchActivity({ scope: 'org', limit: 12 }) : null;
+    } catch (_) { /* network error */ }
+    // Normalize: could be an array or { activities: [...] }
+    const activity = Array.isArray(rawActivity) ? rawActivity : (rawActivity && Array.isArray(rawActivity.activities)) ? rawActivity.activities : null;
 
     if (!activity) {
       container.innerHTML = `<div class="empty-inline">Could not load activity from the server.</div>`;
@@ -379,8 +407,6 @@
       container.innerHTML = `<div class="empty-inline">No recent activity logged.</div>`;
       return;
     }
-
-    const esc = (s) => (typeof AppHelpers !== 'undefined' && AppHelpers.escapeHTML) ? AppHelpers.escapeHTML(s) : String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
     container.innerHTML = activity.slice(0, 6).map((act) => `
       <div class="activity-item">
@@ -409,7 +435,7 @@
     if (welcomeTitle) welcomeTitle.textContent = `Welcome back, ${currentUser.name || 'Employee'}`;
     if (orgSub) orgSub.textContent = orgInfo ? orgInfo.name : 'Workspace';
 
-    if (empProfileAvatar) empProfileAvatar.textContent = (currentUser.name || currentUser.email).charAt(0).toUpperCase();
+    if (empProfileAvatar) empProfileAvatar.textContent = (currentUser.name || currentUser.email || 'E').charAt(0).toUpperCase();
     if (empProfileName) empProfileName.textContent = currentUser.name || 'Employee';
     if (empProfileEmail) empProfileEmail.textContent = currentUser.email;
 
@@ -424,7 +450,7 @@
       const due = new Date(t.dueDate);
       if (isNaN(due.getTime())) return false;
       const diffDays = (due - now) / (1000 * 60 * 60 * 24);
-      return diffDays <= 3;
+      return diffDays >= 0 && diffDays <= 3;
     }).length;
 
     const empAssignedEl = document.getElementById('empAssignedTasks');
@@ -457,7 +483,7 @@
 
       const done = tasks.filter(t => t.status === 'Done').length;
       const inProgress = tasks.filter(t => t.status === 'In Progress').length;
-      const todo = tasks.filter(t => t.status === 'Todo' || !t.status).length;
+      const todo = tasks.filter(t => t.status !== 'Done' && t.status !== 'In Progress').length;
       const hasData = done + inProgress + todo > 0;
 
       empDoughnutInstance = new Chart(doughnutCtx, {
@@ -575,8 +601,8 @@
       return `
         <div class="deadline-item">
           <div class="deadline-info">
-            <strong>${task.title || 'Untitled Task'}</strong>
-            <small>${projectName}</small>
+            <strong>${esc(task.title || 'Untitled Task')}</strong>
+            <small>${esc(projectName)}</small>
           </div>
           <span class="urgency-badge ${urgencyClass}">${urgencyText}</span>
         </div>
@@ -613,14 +639,14 @@
           due.setHours(0, 0, 0, 0);
           const diffDays = Math.round((due - today) / 86400000);
           if (diffDays < 0) {
-            items.push({ icon: '⚠️', text: `"${t.title}" is overdue by ${Math.abs(diffDays)} day(s).`, time: 'Deadline' });
-          } else if (diffDays <= 2) {
-            items.push({ icon: '⏰', text: `"${t.title}" is due ${diffDays === 0 ? 'today' : 'in ' + diffDays + ' day(s)'}.`, time: 'Upcoming' });
+            items.push({ icon: '⚠️', text: `"${esc(t.title)}" is overdue by ${Math.abs(diffDays)} day(s).`, time: 'Deadline' });
+          } else if (diffDays >= 0 && diffDays <= 2) {
+            items.push({ icon: '⏰', text: `"${esc(t.title)}" is due ${diffDays === 0 ? 'today' : 'in ' + diffDays + ' day(s)'}.`, time: 'Upcoming' });
           }
         }
       }
       if (String(t.priority || '').toLowerCase() === 'high') {
-        items.push({ icon: '🔥', text: `High priority task: "${t.title}" needs attention.`, time: 'Priority' });
+        items.push({ icon: '🔥', text: `High priority task: "${esc(t.title)}" needs attention.`, time: 'Priority' });
       }
     });
 
@@ -730,15 +756,15 @@
 
     // Prefer server heatmap; fall back to local task dates
     let completionMap = null;
-    if (api.fetchTaskHeatmap) {
-      completionMap = await api.fetchTaskHeatmap();
+    if (typeof api.fetchTaskHeatmap === 'function') {
+      try { completionMap = await api.fetchTaskHeatmap(); } catch (_) { completionMap = null; }
     }
     if (!completionMap) {
       completionMap = {};
       tasks.forEach(t => {
         if (t.status === 'Done' && (t.completedAt || t.updatedAt || t.createdAt)) {
           const dateString = t.completedAt || t.updatedAt || t.createdAt;
-          const dateKey = new Date(dateString).toISOString().split('T')[0];
+          const dateKey = toLocalDateKey(new Date(dateString));
           completionMap[dateKey] = (completionMap[dateKey] || 0) + 1;
         }
       });
@@ -760,7 +786,7 @@
     // Loop through 365 days
     for (let d = 0; d < 365; d++) {
       const currentDate = new Date(startDate.getTime() + d * 86400000);
-      const dateKey = currentDate.toISOString().split('T')[0];
+      const dateKey = toLocalDateKey(currentDate);
       const count = completionMap[dateKey] || 0;
 
       totalContributions += count;
@@ -787,15 +813,15 @@
 
     // Current streak (consecutive active days up to today or yesterday)
     let checkDate = new Date(today);
-    let todayKey = checkDate.toISOString().split('T')[0];
+    let todayKey = toLocalDateKey(checkDate);
     if (!completionMap[todayKey]) {
       checkDate.setDate(checkDate.getDate() - 1);
-      todayKey = checkDate.toISOString().split('T')[0];
+      todayKey = toLocalDateKey(checkDate);
     }
     while (completionMap[todayKey] && completionMap[todayKey] > 0) {
       currentStreak++;
       checkDate.setDate(checkDate.getDate() - 1);
-      todayKey = checkDate.toISOString().split('T')[0];
+      todayKey = toLocalDateKey(checkDate);
     }
 
     grid.innerHTML = cellsHTML;
@@ -818,8 +844,10 @@
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const counts = [0, 0, 0, 0, 0, 0, 0];
 
+    const weekAgoChart = Date.now() - 7 * 86400000;
     tasks.filter(t => t.status === 'Done').forEach(t => {
-      const d = t.completedAt ? new Date(t.completedAt) : new Date();
+      const d = t.completedAt ? new Date(t.completedAt) : (t.updatedAt ? new Date(t.updatedAt) : null);
+      if (!d || isNaN(d.getTime()) || d.getTime() < weekAgoChart) return;
       const idx = (d.getDay() + 6) % 7;
       counts[idx] += 1;
     });
@@ -863,17 +891,33 @@
     const pending = tasks.filter(t => t.status !== 'Done');
 
     if (!pending.length) {
-      container.innerHTML = `<div class="empty-inline">All personal tasks completed! High five! ✋</div>`;
+      container.innerHTML = `
+        <div class="rich-empty-card">
+          <div class="empty-icon-wrapper">
+            <div class="empty-aura-ring"></div>
+            <svg class="empty-svg-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+          </div>
+          <h4>All Personal Tasks Completed!</h4>
+          <p>You have resolved all pending focus tasks. Take a break or launch a new focus sprint.</p>
+          <div style="display:flex;gap:0.6rem;margin-top:0.4rem;">
+            <a href="create.html" class="primary-btn" style="padding:0.45rem 0.9rem;font-size:0.82rem;text-decoration:none;">+ Create Task</a>
+            <a href="focus.html" class="ghost-btn" style="padding:0.45rem 0.9rem;font-size:0.82rem;text-decoration:none;">⏱ Start Focus</a>
+          </div>
+        </div>
+      `;
       return;
     }
 
     container.innerHTML = pending.slice(0, 5).map(task => `
       <div class="deadline-item">
         <div class="deadline-info">
-          <strong>${task.title || 'Untitled Task'}</strong>
-          <small>${task.priority || 'Medium'} priority • ${task.dueDate || 'No deadline'}</small>
+          <strong>${esc(task.title || 'Untitled Task')}</strong>
+          <small>${esc(task.priority || 'Medium')} priority • ${esc(task.dueDate || 'No deadline')}</small>
         </div>
-        <span class="profile-role-badge role-personal">${task.status || 'Todo'}</span>
+        <span class="profile-role-badge role-personal">${esc(task.status || 'Todo')}</span>
       </div>
     `).join('');
   }
@@ -882,7 +926,12 @@
   function refreshActiveDashboard() {
     const freshUser = api.getMe();
     if (!freshUser) return;
+    // Preserve tasks/projects arrays that were loaded during init
+    const savedTasks = currentUser.tasks;
+    const savedProjects = currentUser.projects;
     Object.assign(currentUser, freshUser);
+    if (!Array.isArray(currentUser.tasks)) currentUser.tasks = savedTasks || [];
+    if (!Array.isArray(currentUser.projects)) currentUser.projects = savedProjects || [];
     const roleIsAdmin = currentUser.role === 'admin';
     const roleIsPersonal = currentUser.role === 'personal' || (!roleIsAdmin && currentUser.role !== 'employee');
     if (roleIsAdmin) initAdminDashboard();

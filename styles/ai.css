@@ -2,30 +2,75 @@
    NexusWeave — ChatGPT Inspired AI Assistant Styles (styles/ai.css)
    ============================================================ */
 
-/* ── Floating FAB Button ── */
+/* ── Floating FAB Button (Bottom Right) ── */
 .ai-fab-btn {
   position: fixed;
-  bottom: 20vh;
-  left: 1.5rem;
+  bottom: 1.75rem;
+  right: 1.75rem;
   z-index: 9970;
-  width: 48px;
   height: 48px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--purple-primary), #a855f7);
-  color: white;
-  border: 0;
+  padding: 0 1.25rem 0 1rem;
+  border-radius: 999px;
+  background: rgba(20, 21, 31, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  color: #ffffff;
+  border: 1px solid rgba(124, 58, 237, 0.35);
   display: flex;
   align-items: center;
-  justify-content: center;
-  box-shadow: 0 10px 30px rgba(91, 33, 182, 0.4);
+  gap: 0.65rem;
+  box-shadow: 0 10px 30px rgba(124, 58, 237, 0.35), 0 0 20px rgba(124, 58, 237, 0.2);
   cursor: pointer;
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
-  padding: 0;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+:root[data-theme='light'] .ai-fab-btn {
+  background: rgba(255, 255, 255, 0.9);
+  color: #0f172a;
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  box-shadow: 0 10px 30px rgba(124, 58, 237, 0.2), 0 4px 12px rgba(15, 23, 42, 0.08);
 }
 
 .ai-fab-btn:hover {
-  transform: translateY(-2px) scale(1.05);
-  box-shadow: 0 14px 38px rgba(91, 33, 182, 0.55);
+  transform: translateY(-3px) scale(1.03);
+  border-color: rgba(168, 85, 247, 0.6);
+  box-shadow: 0 14px 40px rgba(124, 58, 237, 0.5), 0 0 25px rgba(168, 85, 247, 0.3);
+}
+
+.ai-fab-glow-ring {
+  position: absolute;
+  inset: -2px;
+  border-radius: 999px;
+  padding: 2px;
+  background: linear-gradient(135deg, var(--purple-primary), #a855f7, #38bdf8);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.ai-fab-svg {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  color: #a855f7;
+  filter: drop-shadow(0 0 6px rgba(168, 85, 247, 0.6));
+}
+
+.ai-fab-label {
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  background: linear-gradient(135deg, #ffffff 0%, #e9d5ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+:root[data-theme='light'] .ai-fab-label {
+  background: linear-gradient(135deg, #0f172a 0%, #6d28d9 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 /* ── ChatGPT Sidebar Drawer ── */

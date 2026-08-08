@@ -1,5 +1,10 @@
 document.addEventListener('DOMContentLoaded', async () => {
   const api = window.NexusAPI;
+  const helpers = window.AppHelpers;
+  const esc = (s) => (helpers && helpers.escapeHTML)
+    ? helpers.escapeHTML(s)
+    : String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
   
   // Wait for authentication
   let currentUser = api.getMe();
@@ -84,8 +89,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             <div class="task-header">
               <span class="task-priority medium">${statusIcon} ${p.timelineStatus || 'Planning'}</span>
             </div>
-            <h3 class="task-title" style="margin-top: 0.5rem;">${p.name}</h3>
-            <p class="task-meta" style="margin-top: 0.25rem;">📅 ${deadlineStr}</p>
+            <h3 class="task-title" style="margin-top: 0.5rem;">${esc(p.name)}</h3>
+            <p class="task-meta" style="margin-top: 0.25rem;">📅 ${esc(deadlineStr)}</p>
           </div>
           <div style="margin-top: 1rem;">
             <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:var(--ink-soft); margin-bottom:0.25rem;">
@@ -106,7 +111,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!project) return;
     
     activeProjectId = projectId;
-    drawerTitle.textContent = project.name;
+    drawerTitle.textContent = project.name || 'Untitled';
     
     const deadlineStr = project.deadline ? new Date(project.deadline).toLocaleDateString() : 'None set';
     drawerMeta.textContent = `📅 Deadline: ${deadlineStr} • ⏱️ Status: ${project.timelineStatus || 'Planning'}`;
@@ -115,11 +120,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     let detailsHtml = '';
     
     if (project.labels && project.labels.length > 0) {
-      detailsHtml += `<div style="margin-top:1rem;"><strong>Labels:</strong><div class="task-labels" style="margin-top:0.5rem;">${project.labels.map(l => `<span class="task-label">${l}</span>`).join('')}</div></div>`;
+      detailsHtml += `<div style="margin-top:1rem;"><strong>Labels:</strong><div class="task-labels" style="margin-top:0.5rem;">${project.labels.map(l => `<span class="task-label">${esc(l)}</span>`).join('')}</div></div>`;
     }
     
     if (project.attachments && project.attachments.length > 0) {
-      detailsHtml += `<div style="margin-top:1rem;"><strong>Attachments:</strong><ul style="margin-top:0.5rem; padding-left:1.5rem; color:var(--ink-soft); font-size:0.85rem;">${project.attachments.map(a => `<li>${a}</li>`).join('')}</ul></div>`;
+      detailsHtml += `<div style="margin-top:1rem;"><strong>Attachments:</strong><ul style="margin-top:0.5rem; padding-left:1.5rem; color:var(--ink-soft); font-size:0.85rem;">${project.attachments.map(a => `<li>${esc(typeof a === 'string' ? a : a.name)}</li>`).join('')}</ul></div>`;
     }
     
     drawerDetails.innerHTML = detailsHtml;
@@ -138,8 +143,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         return `
           <div style="padding: 0.75rem; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; display:flex; justify-content:space-between; align-items:center;">
             <div>
-              <div style="font-weight: 500; font-size:0.9rem;">${t.title}</div>
-              <div style="font-size:0.8rem; color:var(--ink-soft); margin-top:0.2rem;">${t.dueDate ? `Due ${new Date(t.dueDate).toLocaleDateString()}` : 'No due date'}</div>
+              <div style="font-weight: 500; font-size:0.9rem;">${esc(t.title)}</div>
+              <div style="font-size:0.8rem; color:var(--ink-soft); margin-top:0.2rem;">${t.dueDate ? `Due ${esc(new Date(t.dueDate).toLocaleDateString())}` : 'No due date'}</div>
             </div>
             <div>${statusBadge}</div>
           </div>

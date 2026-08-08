@@ -9,6 +9,18 @@
   const pauseButton = document.getElementById('pauseTimer');
   const resetButton = document.getElementById('resetTimer');
   const customMinutesInput = document.getElementById('customMinutes');
+  
+  const ambientSoundSelect = document.getElementById('ambientSound');
+  const strictModeToggle = document.getElementById('strictMode');
+  const sessionHistoryList = document.getElementById('sessionHistoryList');
+
+  // Dummy audio for ambient sounds
+  let currentAudio = null;
+  const audioSources = {
+    'rain': 'https://www.soundjay.com/nature/rain-01.mp3',
+    'white-noise': 'https://www.soundjay.com/nature/ocean-wave-1.mp3',
+    'cafe': 'https://www.soundjay.com/human/crowd-talking-1.mp3'
+  };
 
   let currentUser = window.NexusAPI ? window.NexusAPI.getMe() : null;
 
@@ -45,6 +57,36 @@
     localStorage.removeItem(TIMER_STATE_KEY);
   }
 
+  function renderHistory() {
+    if (!sessionHistoryList) return;
+    const history = JSON.parse(localStorage.getItem('nexus-focus-history') || '[]');
+    if (history.length === 0) {
+      sessionHistoryList.innerHTML = '<li>No sessions yet.</li>';
+      return;
+    }
+    sessionHistoryList.innerHTML = history.slice(0, 10).map(s => {
+      const date = new Date(s.timestamp).toLocaleDateString();
+      const time = new Date(s.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+      return `<li><strong>${s.duration} min</strong> focus on ${date} at ${time}</li>`;
+    }).join('');
+  }
+
+  function addHistory(durationMins) {
+    const history = JSON.parse(localStorage.getItem('nexus-focus-history') || '[]');
+    history.unshift({ duration: durationMins, timestamp: Date.now() });
+    localStorage.setItem('nexus-focus-history', JSON.stringify(history.slice(0, 50)));
+    renderHistory();
+  }
+
+  function handleBeforeUnload(e) {
+    if (isRunning && strictModeToggle?.checked) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  }
+
+  window.addEventListener('beforeunload', handleBeforeUnload);
+
   function renderTimer() {
     const minutes = String(Math.floor(remainingSeconds / 60)).padStart(2, '0');
     const seconds = String(remainingSeconds % 60).padStart(2, '0');
@@ -76,6 +118,8 @@
         showNotif(`Completed a ${focusMins}-minute Focus Sprint!`, 'success');
       }
 
+      addHistory(focusMins);
+
       if (window.NexusAPI && window.NexusAPI.logFocusSession) {
         window.NexusAPI.logFocusSession(focusMins)
           .then((saved) => {
@@ -91,6 +135,7 @@
 
       clearTimerState();
       renderTimer();
+      stopAudio();
       return;
     }
 
@@ -114,6 +159,7 @@
     saveTimerState();
     timerId = setInterval(tick, 1000);
     renderTimer();
+    playAudio();
   }
 
   function pauseTimer() {
@@ -124,6 +170,7 @@
     }
     saveTimerState();
     renderTimer();
+    stopAudio();
   }
 
   function resetTimer() {
@@ -137,6 +184,7 @@
     }
     remainingSeconds = totalSeconds;
     renderTimer();
+    stopAudio();
   }
 
   function loadTimerState() {
@@ -181,10 +229,39 @@
     renderTimer();
   });
 
+  function playAudio() {
+    if (!ambientSoundSelect || ambientSoundSelect.value === 'none') return;
+    const src = audioSources[ambientSoundSelect.value];
+    if (src) {
+      if (currentAudio) {
+        currentAudio.pause();
+      }
+      currentAudio = new Audio(src);
+      currentAudio.loop = true;
+      currentAudio.volume = 0.5;
+      currentAudio.play().catch(e => console.log('Audio autoplay prevented'));
+    }
+  }
+
+  function stopAudio() {
+    if (currentAudio) {
+      currentAudio.pause();
+      currentAudio = null;
+    }
+  }
+
+  ambientSoundSelect?.addEventListener('change', () => {
+    if (isRunning) {
+      stopAudio();
+      playAudio();
+    }
+  });
+
   startButton?.addEventListener('click', startTimer);
   pauseButton?.addEventListener('click', pauseTimer);
   resetButton?.addEventListener('click', resetTimer);
 
   loadTimerState();
   renderTimer();
+  renderHistory();
 })();

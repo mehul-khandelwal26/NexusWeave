@@ -63,16 +63,17 @@
 
     // Projects
     if (projectProgressListEl) {
+      const esc = (s) => (typeof AppHelpers !== 'undefined' && AppHelpers.escapeHTML) ? AppHelpers.escapeHTML(s) : String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
       if (!projects.length) {
         projectProgressListEl.innerHTML = '<div class="empty-inline">No projects found.</div>';
       } else {
         projectProgressListEl.innerHTML = projects.map(project => {
           const progress = helpers.getProjectProgress(project, tasks);
-          const projectTasksCount = tasks.filter(t => t.projectId === project.id).length;
+          const projectTasksCount = tasks.filter(t => t.projectId === (project.id || project._id)).length;
           return `
             <div class="project-progress-item">
               <div class="project-progress-info">
-                <strong>${project.name}</strong>
+                <strong>${esc(project.name)}</strong>
                 <span>${progress}% complete • ${projectTasksCount} task(s)</span>
               </div>
               <div class="bar-track">
@@ -98,14 +99,15 @@
       if (!overdueTasks.length) {
         actionItemsListEl.innerHTML = '<div class="empty-inline">All tasks are on track. Great job!</div>';
       } else {
+        const esc = (s) => (typeof AppHelpers !== 'undefined' && AppHelpers.escapeHTML) ? AppHelpers.escapeHTML(s) : String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         actionItemsListEl.innerHTML = overdueTasks.map(task => {
-          const projectObj = projects.find(p => p.id === task.projectId);
+          const projectObj = projects.find(p => (p.id || p._id) === task.projectId);
           const projectName = projectObj ? projectObj.name : 'No project';
           return `
             <div class="action-task-item">
               <div class="action-task-details">
-                <strong>${task.title}</strong>
-                <span class="text-soft">${projectName} • Overdue since ${helpers.formatDisplayDate(task.dueDate)}</span>
+                <strong>${esc(task.title)}</strong>
+                <span class="text-soft">${esc(projectName)} • Overdue since ${helpers.formatDisplayDate(task.dueDate)}</span>
               </div>
               <span class="priority-pill priority-high">Overdue</span>
             </div>
