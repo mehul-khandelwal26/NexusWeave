@@ -1,22 +1,63 @@
 /* ============================================================
-   NexusWeave — Isolated AI Module (MakAI Service)
+   NexusWeave — Isolated AI Module (NexusAI Service)
    Supports: Employee Productivity Analysis, Admin Intelligence,
-             OpenAI API Integration + Intelligent Context Engine.
+             OpenAI + Groq API Integration, Intelligent Context Engine.
    ============================================================ */
 
 (function (root) {
   const api = window.NexusAPI;
   const tracker = window.NexusTracker;
 
-  const API_KEY_STORAGE = 'nw_openai_key';
+  const API_KEY_STORAGE = 'nw_ai_key';
+  const PROVIDER_STORAGE = 'nw_ai_provider'; // 'openai' | 'groq'
+  const LEGACY_OPENAI_KEY_STORAGE = 'nw_openai_key'; // pre-multi-provider storage
 
-  const MakAI = {
+  const PROVIDERS = {
+    openai: {
+      label: 'OpenAI',
+      endpoint: 'https://api.openai.com/v1/chat/completions',
+      model: 'gpt-3.5-turbo'
+    },
+    groq: {
+      label: 'Groq',
+      endpoint: 'https://api.groq.com/openai/v1/chat/completions',
+      model: 'llama-3.3-70b-versatile'
+    }
+  };
+
+  const NexusAI = {
+    getProvider() {
+      return localStorage.getItem(PROVIDER_STORAGE) || 'groq'; // Default to Groq
+    },
+
+    setProvider(provider) {
+      if (!PROVIDERS[provider]) return;
+      localStorage.setItem(PROVIDER_STORAGE, provider);
+    },
+
     getApiKey() {
-      return localStorage.getItem(API_KEY_STORAGE) || '';
+      // One-time migration so anyone who already saved an OpenAI key keeps working.
+      const legacy = localStorage.getItem(LEGACY_OPENAI_KEY_STORAGE);
+      if (legacy && !localStorage.getItem(API_KEY_STORAGE)) {
+        localStorage.setItem(API_KEY_STORAGE, legacy);
+        localStorage.setItem(PROVIDER_STORAGE, 'openai');
+        localStorage.removeItem(LEGACY_OPENAI_KEY_STORAGE);
+      }
+      
+      // Fallback to the hardcoded Groq API key so any visitor can use the AI without entering a key.
+      // WARNING: Since this is a frontend app, this key is publicly visible in the browser's source code!
+      return localStorage.getItem(API_KEY_STORAGE) || 'GROQ_API_KEY_REMOVED';
     },
 
     setApiKey(key) {
-      localStorage.setItem(API_KEY_STORAGE, key.trim());
+      const trimmed = key.trim();
+      localStorage.setItem(API_KEY_STORAGE, trimmed);
+      
+      if (trimmed.startsWith('gsk_')) {
+        this.setProvider('groq');
+      } else if (trimmed.startsWith('sk-')) {
+        this.setProvider('openai');
+      }
     },
 
     /* ── Compile Full Workspace Context ── */
@@ -98,13 +139,15 @@
       if (!ctx) return 'Error: Unable to fetch workspace context. Please log in.';
 
       const apiKey = this.getApiKey();
+      const provider = this.getProvider();
 
-      // If OpenAI API key is set, call OpenAI chat completions API
+      // If an API key is configured, call the selected provider (OpenAI or Groq —
+      // both expose an OpenAI-compatible chat completions endpoint).
       if (apiKey) {
         try {
-          return await this.callOpenAI(promptText, ctx, apiKey);
+          return await this.callProvider(provider, promptText, ctx, apiKey);
         } catch (err) {
-          console.warn('OpenAI API call failed, falling back to MakAI Context Engine:', err);
+          console.warn(`${PROVIDERS[provider].label} API call failed, falling back to NexusAI Context Engine:`, err);
         }
       }
 
@@ -112,9 +155,11 @@
       return this.analyzeWithContextEngine(promptText, ctx);
     },
 
-    /* ── OpenAI API Integration ── */
-    async callOpenAI(userPrompt, ctx, apiKey) {
-      const systemPrompt = `You are MakAI, the intelligent AI assistant inside NexusWeave Employee Productivity Platform.
+    /* ── OpenAI / Groq API Integration (shared, OpenAI-compatible format) ── */
+    async callProvider(provider, userPrompt, ctx, apiKey) {
+      const config = PROVIDERS[provider] || PROVIDERS.openai;
+
+      const systemPrompt = `You are NexusAI, the intelligent AI assistant inside NexusWeave Employee Productivity Platform.
 You have access to the current workspace context:
 - User: ${ctx.user.name} (${ctx.role} role)
 - Organization: ${ctx.orgInfo ? ctx.orgInfo.name : 'Personal Workspace'}
@@ -126,14 +171,14 @@ You have access to the current workspace context:
 
 Be concise, structured, professional, and directly answer the user's question using bullet points and emojis.`;
 
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const response = await fetch(config.endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-          model: 'gpt-3.5-turbo',
+          model: config.model,
           messages: [
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userPrompt }
@@ -146,9 +191,9 @@ Be concise, structured, professional, and directly answer the user's question us
       if (data.choices && data.choices[0] && data.choices[0].message) {
         return data.choices[0].message.content;
       } else if (data.error) {
-        throw new Error(data.error.message);
+        throw new Error(data.error.message || data.error);
       }
-      throw new Error('Invalid OpenAI response format');
+      throw new Error(`Invalid ${config.label} response format`);
     },
 
     /* ── Intelligent Context Engine (Local Rule & Context AI) ── */
@@ -168,9 +213,9 @@ Be concise, structured, professional, and directly answer the user's question us
           return `🎯 **Top Recommendation**:
 You should focus on **"${top.title}"** right now.
 
-• **Priority**: 🔥 ${top.priority}
-• **Status**: ${top.status}
-• **Due Date**: ${top.dueDate || 'No deadline set'}
+- **Priority**: 🔥 ${top.priority}
+- **Status**: ${top.status}
+- **Due Date**: ${top.dueDate || 'No deadline set'}
 ${top.description ? `• **Context**: ${top.description}` : ''}
 
 *Tip: Open the Board or Tasks view to track your progress.*`;
@@ -193,9 +238,9 @@ Work on **"${anyPending.title}"** (Priority: ${anyPending.priority}, Status: ${a
 
         return `📊 **Today's Task Summary**:
 
-• **Completed (${done.length})**: ${done.map(t => t.title).join(', ') || 'None yet'}
-• **In Progress (${inProgress.length})**: ${inProgress.map(t => t.title).join(', ') || 'None'}
-• **Pending (${todo.length})**: ${todo.map(t => t.title).join(', ') || 'None'}
+- **Completed (${done.length})**: ${done.map(t => t.title).join(', ') || 'None yet'}
+- **In Progress (${inProgress.length})**: ${inProgress.map(t => t.title).join(', ') || 'None'}
+- **Pending (${todo.length})**: ${todo.map(t => t.title).join(', ') || 'None'}
 
 *Productivity Score*: **${ctx.myScore}%** (${ctx.myHours}h worked this week).`;
       }
@@ -274,13 +319,13 @@ ${missed.map(m => `• **${m.name}**: ${m.missedCount} overdue task(s) — *"${m
       }
 
       // Generic Intelligent Fallback
-      return `🤖 **MakAI Assistance**:
+      return `🤖 **NexusAI Assistance**:
 I analyzed your request (*"${prompt}"*).
 
 Here is a quick snapshot of your workspace:
-• **Your Role**: ${ctx.role === 'admin' ? '🛡️ Admin' : '👤 Employee'}
-• **Total Active Tasks**: ${tasks.filter(t => t.status !== 'Done').length}
-• **Productivity Score**: ${ctx.myScore}%
+- **Your Role**: ${ctx.role === 'admin' ? '🛡️ Admin' : '👤 Employee'}
+- **Total Active Tasks**: ${tasks.filter(t => t.status !== 'Done').length}
+- **Productivity Score**: ${ctx.myScore}%
 
 You can ask me:
 - *"What should I work on?"*
@@ -290,5 +335,6 @@ ${isAdmin ? '- *"Who is underperforming?"*\n- *"Which employee missed deadlines?
     }
   };
 
-  root.MakAI = MakAI;
+  NexusAI.PROVIDERS = PROVIDERS;
+  root.NexusAI = NexusAI;
 })(window);
