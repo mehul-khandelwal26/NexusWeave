@@ -72,18 +72,19 @@
   border-color: var(--purple-primary);
   box-shadow: 0 4px 18px var(--purple-glow);
 }
-}
 
 .workflow-step-btn .step-num {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(124, 58, 237, 0.12);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.75rem;
   font-weight: 800;
+  color: var(--purple-primary);
+  flex-shrink: 0;
 }
 
 .workflow-step-btn.active .step-num {

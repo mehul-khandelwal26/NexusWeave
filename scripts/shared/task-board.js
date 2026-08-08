@@ -461,11 +461,9 @@
             } else if (task.assigneeName) {
                assigneeBadge = `<span class="org-badge badge-employee" style="font-size:0.7rem;">👤 ${esc((task.assigneeName || 'User').split(' ')[0])}</span>`;
             }
-
             const canComplete = canModifyTask(task);
             const dragAttr = canComplete ? 'draggable="true"' : '';
 
-            const esc = (s) => (typeof AppHelpers !== 'undefined' && AppHelpers.escapeHTML) ? AppHelpers.escapeHTML(s) : String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
             return `
               <article class="board-card" ${dragAttr} data-task-id="${esc(task.id)}">
                 <div class="board-card-top">

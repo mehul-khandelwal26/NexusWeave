@@ -1,6 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <script>
+  (function() {
+    const theme = localStorage.getItem('nexus-theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', theme);
+  })();
+</script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Profile | NexusWeave</title>
@@ -39,7 +45,7 @@
           <span class="nav-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v8"></path><path d="M8 12h8"></path></svg>
           </span>
-          <span>Create Task</span>
+          <span>Create</span>
         </a>
 
         <div class="nav-category-header" style="margin-top:0.6rem;">💼 WORKSPACE</div>
@@ -314,3 +320,5 @@
   <script src="../scripts/profile/profile.js"></script>
 </body>
 </html>
+
+

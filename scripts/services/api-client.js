@@ -229,6 +229,40 @@
       return { success: true, token: backendRes.token, user };
     },
 
+    async googleAuth({ credential, role = 'personal', orgName, orgKey, orgVisibility, orgId, theme }) {
+      const backendRes = await tryBackendRequest('/auth/google', {
+        method: 'POST',
+        body: JSON.stringify({ credential, role, orgName, orgKey, orgVisibility, orgId, theme })
+      });
+
+      if (!backendRes) {
+        return { success: false, error: SERVER_UNREACHABLE };
+      }
+      if (backendRes._error) {
+        return { success: false, error: backendRes.message || 'Google sign-in failed.' };
+      }
+
+      if (role === 'admin' && orgName && backendRes.user.organizationId) {
+        upsertLocalOrg({
+          id: backendRes.user.organizationId,
+          name: orgName,
+          orgKey: orgKey || '',
+          visibility: orgVisibility || 'public',
+          createdBy: backendRes.user.email,
+          admins: [backendRes.user.email],
+          members: [backendRes.user.email]
+        });
+      }
+
+      const user = applyAuthResponse(backendRes.user, backendRes.token, 'google');
+      return { success: true, token: backendRes.token, user };
+    },
+
+    async getGoogleClientId() {
+      const res = await tryBackendRequest('/auth/google/config', { method: 'GET' });
+      return res && !res._error ? res.clientId : null;
+    },
+
     async logout() {
       clearSession();
       return { success: true };

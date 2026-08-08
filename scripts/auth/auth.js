@@ -331,9 +331,95 @@ document.addEventListener('DOMContentLoaded', () => {
     await handleAuthSubmission();
   });
 
+  // Google Sign-In / Sign-Up via Google Identity Services (GIS).
+  // The styled "Continue with Google" button proxies a click to Google's own
+  // hidden button, since GIS requires its official widget to be the thing the
+  // user actually clicks (for security/anti-automation reasons).
+  const gsiButtonContainer = document.getElementById('gsiButtonContainer');
+  let gsiReady = false;
+
+  async function handleGoogleCredential(response) {
+    if (!response || !response.credential) {
+      showError('Google sign-in failed. Please try again.');
+      return;
+    }
+
+    const role = getEffectiveRole();
+    const payload = {
+      credential: response.credential,
+      role,
+      theme: localStorage.getItem('nexus-theme') || 'dark'
+    };
+
+    // Only relevant when signing up through the Organization portal.
+    if (!loginMode && role === 'admin') {
+      payload.orgName = orgName ? orgName.value : '';
+      payload.orgKey = orgKey ? orgKey.value : '';
+      payload.orgVisibility = orgVisibility ? orgVisibility.value : 'public';
+    } else if (!loginMode && role === 'employee') {
+      payload.orgId = orgSelect ? orgSelect.value : '';
+      payload.orgKey = employeeOrgKey ? employeeOrgKey.value : '';
+    }
+
+    const res = await api.googleAuth(payload);
+    if (res.success) {
+      window.location.href = 'dashboard.html';
+    } else {
+      showError(res.error || 'Google sign-in failed.');
+    }
+  }
+
+  async function initGoogleSignIn() {
+    if (!window.google?.accounts?.id || !gsiButtonContainer) return;
+    try {
+      const clientId = await api.getGoogleClientId();
+      if (!clientId) {
+        console.warn('Google Client ID not found. Did you forget to restart your backend server after updating .env?');
+        return; // Not configured server-side yet.
+      }
+
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: handleGoogleCredential
+      });
+      window.google.accounts.id.renderButton(gsiButtonContainer, {
+        type: 'standard',
+        theme: 'outline',
+        size: 'large'
+      });
+      gsiReady = true;
+    } catch (err) {
+      console.error('Failed to initialize Google Sign-In:', err);
+    }
+  }
+  // If the Google script is loaded asynchronously, window.google might not exist yet.
+  function tryInitGoogle() {
+    if (window.google && window.google.accounts) {
+      initGoogleSignIn();
+    } else {
+      setTimeout(tryInitGoogle, 200); // Check again in 200ms
+    }
+  }
+  
+  if (document.readyState === 'complete') {
+    tryInitGoogle();
+  } else {
+    window.addEventListener('load', tryInitGoogle);
+  }
+
   googleLoginBtn?.addEventListener('click', (e) => {
     e.preventDefault();
-    showError('Google sign-in is not available yet. Please use email and password.');
+    if (!gsiReady) {
+      showError('Google sign-in is not available right now. Please use email and password.');
+      return;
+    }
+    // Proxy the click to Google's real, official button.
+    const realGoogleBtn = gsiButtonContainer.querySelector('div[role="button"]');
+    if (realGoogleBtn) {
+      realGoogleBtn.click();
+    } else {
+      showError('Google sign-in is not available right now. Please use email and password.');
+    }
   });
 
   updateFormVisibility();

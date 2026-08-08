@@ -390,6 +390,8 @@
   border: 1px solid var(--border);
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
   padding: 1.2rem;
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 .modal-card-header {
