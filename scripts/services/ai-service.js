@@ -1,5 +1,5 @@
 /* ============================================================
-   NexusWeave — Isolated AI Module (NexusAI Service)
+   NexusWeave — Isolated AI Module (MakAI Service)
    Supports: Employee Productivity Analysis, Admin Intelligence,
              OpenAI API Integration + Intelligent Context Engine.
    ============================================================ */
@@ -10,7 +10,7 @@
 
   const API_KEY_STORAGE = 'nw_openai_key';
 
-  const NexusAI = {
+  const MakAI = {
     getApiKey() {
       return localStorage.getItem(API_KEY_STORAGE) || '';
     },
@@ -104,7 +104,7 @@
         try {
           return await this.callOpenAI(promptText, ctx, apiKey);
         } catch (err) {
-          console.warn('OpenAI API call failed, falling back to NexusAI Context Engine:', err);
+          console.warn('OpenAI API call failed, falling back to MakAI Context Engine:', err);
         }
       }
 
@@ -114,7 +114,7 @@
 
     /* ── OpenAI API Integration ── */
     async callOpenAI(userPrompt, ctx, apiKey) {
-      const systemPrompt = `You are NexusAI, the intelligent AI assistant inside NexusWeave Employee Productivity Platform.
+      const systemPrompt = `You are MakAI, the intelligent AI assistant inside NexusWeave Employee Productivity Platform.
 You have access to the current workspace context:
 - User: ${ctx.user.name} (${ctx.role} role)
 - Organization: ${ctx.orgInfo ? ctx.orgInfo.name : 'Personal Workspace'}
@@ -274,7 +274,7 @@ ${missed.map(m => `• **${m.name}**: ${m.missedCount} overdue task(s) — *"${m
       }
 
       // Generic Intelligent Fallback
-      return `🤖 **NexusAI Assistance**:
+      return `🤖 **MakAI Assistance**:
 I analyzed your request (*"${prompt}"*).
 
 Here is a quick snapshot of your workspace:
@@ -290,5 +290,5 @@ ${isAdmin ? '- *"Who is underperforming?"*\n- *"Which employee missed deadlines?
     }
   };
 
-  root.NexusAI = NexusAI;
+  root.MakAI = MakAI;
 })(window);
