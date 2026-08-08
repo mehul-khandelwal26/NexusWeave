@@ -189,7 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
         feedback.className = 'email-feedback-badge';
         return;
       }
-      const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+      const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(val);
       if (isValid) {
         feedback.textContent = '✓ Valid email format';
         feedback.className = 'email-feedback-badge valid';
