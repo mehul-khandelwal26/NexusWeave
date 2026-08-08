@@ -81,7 +81,6 @@
   if (isAdmin) {
     const orgNameDisplay = document.getElementById('orgNameDisplay');
     const orgVisibilityDisplay = document.getElementById('orgVisibilityDisplay');
-    const orgVisibilityDisplay = document.getElementById('orgVisibilityDisplay');
     const orgKeyValue = document.getElementById('orgKeyValue');
     const toggleKeyBtn = document.getElementById('toggleKeyVisibility');
     const copyKeyBtn = document.getElementById('copyOrgKey');

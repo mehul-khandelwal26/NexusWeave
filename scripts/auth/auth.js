@@ -168,7 +168,6 @@ document.addEventListener('DOMContentLoaded', () => {
       nameField?.classList.add('hidden');
       adminOrgFields?.classList.add('hidden');
       employeeOrgFields?.classList.add('hidden');
-      if (googleLoginBtn) googleLoginBtn.style.display = '';
 
       if (panelTitle) panelTitle.textContent = portalScope === 'personal' ? 'Welcome Back' : `Welcome Back (${orgRole.toUpperCase()})`;
       if (authSubtitle) authSubtitle.textContent = portalScope === 'personal' ? 'Log into your personal workspace' : `Log into your ${orgRole} team portal`;
@@ -177,7 +176,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (submitBtn) submitBtn.textContent = 'Log In';
     } else {
       nameField?.classList.remove('hidden');
-      if (googleLoginBtn) googleLoginBtn.style.display = 'none';
 
       if (panelTitle) panelTitle.textContent = portalScope === 'personal' ? 'Create Personal Account' : `Create ${orgRole === 'admin' ? 'Organization' : 'Employee'} Account`;
       if (authSubtitle) authSubtitle.textContent = portalScope === 'personal' ? 'Start managing your personal tasks & heatmap' : 'Join or create your company workspace';
