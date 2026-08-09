@@ -40,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         emailInput.value = val + '@gmail.com';
       }
+      emailInput.dispatchEvent(new Event('input'));
       emailInput.focus({ preventScroll: true });
     });
   }
