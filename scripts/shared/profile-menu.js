@@ -15,7 +15,14 @@
     const displayName = user && user.name ? user.name : (sessionEmail ? sessionEmail.split('@')[0] : 'Profile');
     const initial = displayName.charAt(0).toUpperCase();
 
-    if (avatar) avatar.textContent = initial;
+    if (avatar) {
+      if (user && user.photo) {
+        avatar.innerHTML = `<img src="${user.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`;
+      } else {
+        avatar.textContent = initial;
+      }
+    }
+
     if (nameEl) nameEl.textContent = displayName;
     if (emailEl) emailEl.textContent = sessionEmail || 'workspace';
 
@@ -47,7 +54,7 @@
   document.querySelectorAll('[data-profile-action]').forEach((button) => {
     button.addEventListener('click', () => {
       const action = button.dataset.profileAction;
-      if (action === 'change-photo' || action === 'settings') {
+      if (action === 'profile') {
         window.location.href = 'profile.html';
       } else if (action === 'copy-link') {
         if (navigator.clipboard && navigator.clipboard.writeText) {

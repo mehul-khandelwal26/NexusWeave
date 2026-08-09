@@ -397,7 +397,11 @@
       rawActivity = typeof api.fetchActivity === 'function' ? await api.fetchActivity({ scope: 'org', limit: 12 }) : null;
     } catch (_) { /* network error */ }
     // Normalize: could be an array or { activities: [...] }
-    const activity = Array.isArray(rawActivity) ? rawActivity : (rawActivity && Array.isArray(rawActivity.activities)) ? rawActivity.activities : null;
+    let activity = Array.isArray(rawActivity) ? rawActivity : (rawActivity && Array.isArray(rawActivity.activities)) ? rawActivity.activities : null;
+
+    if (!activity) {
+      activity = Array.isArray(currentUser.activity) ? currentUser.activity : null;
+    }
 
     if (!activity) {
       container.innerHTML = `<div class="empty-inline">Could not load activity from the server.</div>`;

@@ -29,7 +29,7 @@
         <path d="M19 15C19 15 19.75 17.25 22 18C19.75 18.75 19 21 19 21C19 21 18.25 18.75 16 18C18.25 17.25 19 15 19 15Z" fill="currentColor" opacity="0.85"/>
         <path d="M5 15C5 15 5.5 16.5 7 17C5.5 17.5 5 19 5 19C5 19 4.5 17.5 3 17C4.5 16.5 5 15 5 15Z" fill="currentColor" opacity="0.65"/>
       </svg>
-      <span class="ai-fab-label">NexusAI</span>
+      <span class="ai-fab-label">MakAI</span>
     `;
     document.body.appendChild(fabBtn);
 
@@ -44,7 +44,7 @@
             ${AI_LOGO_SVG}
           </span>
           <div>
-            <strong style="font-size:0.95rem;display:block;">NexusAI Workspace Intelligence</strong>
+            <strong style="font-size:0.95rem;display:block;">MakAI Workspace Intelligence</strong>
             <small class="text-soft" style="font-size:0.75rem;">Powered by Context, OpenAI & Groq</small>
           </div>
         </div>
@@ -62,14 +62,14 @@
         <div class="ai-msg assistant">
           <div class="ai-msg-avatar">${AI_LOGO_SVG}</div>
           <div class="ai-msg-content">
-            <p>Hello <strong>${currentUser.name || 'there'}</strong>! I am <strong>NexusAI</strong>, your productivity intelligence assistant.</p>
+            <p>Hello <strong>${currentUser.name || 'there'}</strong>! I am <strong>MakAI</strong>, your productivity intelligence assistant.</p>
             <p>Select a quick prompt above or ask me anything about your tasks, deadlines, attendance, and team performance!</p>
           </div>
         </div>
       </div>
 
       <div id="aiTypingIndicator" class="ai-typing-indicator hidden">
-        <span>NexusAI is analyzing workspace context</span>
+        <span>MakAI is analyzing workspace context</span>
         <div class="ai-dot-pulse"></div>
         <div class="ai-dot-pulse"></div>
         <div class="ai-dot-pulse"></div>
@@ -78,7 +78,7 @@
       <!-- Chat Input Form -->
       <div class="ai-drawer-footer">
         <form id="aiPromptForm" class="ai-input-form">
-          <input type="text" id="aiPromptInput" placeholder="Ask NexusAI a question…" autocomplete="off" />
+          <input type="text" id="aiPromptInput" placeholder="Ask MakAI a question…" autocomplete="off" />
           <button type="submit" class="primary-btn">Send</button>
         </form>
       </div>
@@ -159,10 +159,10 @@
       const aiResponse = await nexusAI.ask(promptText);
 
       // Append AI Message
-      appendMessage('assistant', 'NexusAI', aiResponse);
+      appendMessage('assistant', 'MakAI', aiResponse);
     } catch (err) {
       console.error('NexusAI error:', err);
-      appendMessage('assistant', 'NexusAI', 'Sorry, I encountered an error processing your request. Please try again.');
+      appendMessage('assistant', 'MakAI', 'Sorry, I encountered an error processing your request. Please try again.');
     } finally {
       // Hide Typing Indicator
       if (typing) typing.classList.add('hidden');
@@ -212,7 +212,7 @@
       const providers = nexusAI.PROVIDERS || {};
       const label = providers[currentProvider]?.label || currentProvider;
       
-      alert(newKey.trim() ? `Saved successfully! Auto-detected provider: ${label}` : 'Using NexusAI Built-in Context Engine.');
+      alert(newKey.trim() ? `Saved successfully! Auto-detected provider: ${label}` : 'Using MakAI Built-in Context Engine.');
     }
   }
 

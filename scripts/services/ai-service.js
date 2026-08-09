@@ -147,7 +147,7 @@
         try {
           return await this.callProvider(provider, promptText, ctx, apiKey);
         } catch (err) {
-          console.warn(`${PROVIDERS[provider].label} API call failed, falling back to NexusAI Context Engine:`, err);
+          console.warn(`${PROVIDERS[provider].label} API call failed, falling back to MakAI Context Engine:`, err);
         }
       }
 
@@ -159,7 +159,7 @@
     async callProvider(provider, userPrompt, ctx, apiKey) {
       const config = PROVIDERS[provider] || PROVIDERS.openai;
 
-      const systemPrompt = `You are NexusAI, the intelligent AI assistant inside NexusWeave Employee Productivity Platform.
+      const systemPrompt = `You are MakAI, the intelligent AI assistant inside NexusWeave Employee Productivity Platform.
 You have access to the current workspace context:
 - User: ${ctx.user.name} (${ctx.role} role)
 - Organization: ${ctx.orgInfo ? ctx.orgInfo.name : 'Personal Workspace'}
@@ -319,7 +319,7 @@ ${missed.map(m => `• **${m.name}**: ${m.missedCount} overdue task(s) — *"${m
       }
 
       // Generic Intelligent Fallback
-      return `🤖 **NexusAI Assistance**:
+      return `🤖 **MakAI Assistance**:
 I analyzed your request (*"${prompt}"*).
 
 Here is a quick snapshot of your workspace:
