@@ -291,6 +291,12 @@ mongoose
   })
   .catch((err) => {
     console.error('❌ MongoDB Connection Error:', err.message);
-    console.error('Server cannot start without a database connection. Exiting.');
-    process.exit(1);
+    if (err.message.includes('whitelisted')) {
+      console.warn('\n⚠️  ACTION REQUIRED: Your current IP address is not whitelisted in MongoDB Atlas.');
+      console.warn('⚠️  Please log in to MongoDB Atlas -> Network Access -> Add IP Address (0.0.0.0/0 to allow all).');
+    }
+    console.warn('\n⚠️  Starting server without database connection. API requests will fail, but the frontend will load using local fallback.');
+    server.listen(PORT, () => {
+      console.log(`🚀 NexusWeave Server running on http://localhost:${PORT} (OFFLINE MODE)`);
+    });
   });
