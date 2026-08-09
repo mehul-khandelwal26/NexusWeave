@@ -224,6 +224,9 @@ body.app-body {
 .profile-trigger {
   display: flex;
   align-items: center;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
   gap: 0.7rem;
   padding: 0.6rem 0.8rem;
   border: 1px solid var(--border);
@@ -244,7 +247,16 @@ body.app-body {
   flex-shrink: 0;
   overflow: hidden;
 }
-.profile-meta { display: grid; text-align: left; }
+.profile-meta { 
+  display: grid; 
+  text-align: left; 
+  overflow: hidden;
+}
+.profile-meta strong {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .profile-meta small { color: var(--ink-soft); }
 .profile-menu {
   position: absolute;
