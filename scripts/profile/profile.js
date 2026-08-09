@@ -295,6 +295,28 @@
     });
   }
 
+  const deleteProfileBtn = document.getElementById('deleteProfileBtn');
+  if (deleteProfileBtn) {
+    deleteProfileBtn.addEventListener('click', async () => {
+      const confirmMsg = "Are you sure you want to completely delete your profile and all associated data? This action cannot be undone.";
+      if (window.confirm(confirmMsg)) {
+        try {
+          const res = await api.deleteProfile();
+          if (res && res.success) {
+            sessionStorage.clear();
+            localStorage.removeItem('jwt');
+            window.location.href = 'index.html';
+          } else {
+            alert('Failed to delete profile: ' + (res.error || 'Unknown error'));
+          }
+        } catch (err) {
+          console.error(err);
+          alert('Failed to delete profile. Please try again.');
+        }
+      }
+    });
+  }
+
   async function bootstrapProfile() {
     try {
       if (api.refreshMe) {
