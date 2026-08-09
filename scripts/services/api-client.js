@@ -77,6 +77,7 @@
       theme: backendUser.theme || existing.theme || 'light',
       boardBg: backendUser.boardBg || existing.boardBg || 'none',
       provider: backendUser.provider || provider || 'email',
+      photo: backendUser.avatar || existing.photo || '',
       projects: existing.projects || [],
       tasks: existing.tasks || [],
       activity: existing.activity || []
