@@ -744,6 +744,9 @@
         .catch(() => { hoursEl.textContent = '0h'; });
     }
 
+    // Render Onboarding Milestones
+    renderOnboardingMilestones(userTasks, projects);
+
     // Render Heatmap
     renderPersonalHeatmap(userTasks);
 
@@ -752,6 +755,72 @@
 
     // Render Active Tasks
     renderPersonalTasksList(userTasks);
+  }
+
+  async function renderOnboardingMilestones(tasks, projects) {
+    const stepTask = document.getElementById('stepTask');
+    const stepFocus = document.getElementById('stepFocus');
+    const stepProject = document.getElementById('stepProject');
+    const stepProfile = document.getElementById('stepProfile');
+    const badge = document.getElementById('onboardingProgressBadge');
+    const fill = document.getElementById('onboardingProgressFill');
+
+    if (!stepTask || !stepFocus || !stepProject || !stepProfile) return;
+
+    let completed = 0;
+
+    // 1. Create 1st Task
+    if (tasks && tasks.length > 0) {
+      stepTask.classList.add('completed');
+      completed++;
+    } else {
+      stepTask.classList.remove('completed');
+    }
+
+    // 2. Setup Workspace (Projects)
+    if (projects && projects.length > 0) {
+      stepProject.classList.add('completed');
+      completed++;
+    } else {
+      stepProject.classList.remove('completed');
+    }
+
+    // 3. Personalize Profile
+    const isProfilePersonalized = currentUser.bio || currentUser.photo || (currentUser.skills && currentUser.skills.length > 0) || (currentUser.name && currentUser.name !== currentUser.email.split('@')[0]);
+    if (isProfilePersonalized) {
+      stepProfile.classList.add('completed');
+      completed++;
+    } else {
+      stepProfile.classList.remove('completed');
+    }
+
+    // 4. Launch Focus Sprint
+    let focusCompleted = false;
+    try {
+      const history = JSON.parse(localStorage.getItem('nexus-focus-history') || '[]');
+      if (history.length > 0) {
+        focusCompleted = true;
+      }
+    } catch(e) {}
+    
+    if (!focusCompleted && typeof api.fetchFocusSummary === 'function') {
+      try {
+        const summary = await api.fetchFocusSummary(30);
+        if (summary && summary.totalHours > 0) {
+          focusCompleted = true;
+        }
+      } catch(e) {}
+    }
+
+    if (focusCompleted) {
+      stepFocus.classList.add('completed');
+      completed++;
+    } else {
+      stepFocus.classList.remove('completed');
+    }
+
+    if (badge) badge.textContent = `${completed}/4 Milestones Completed`;
+    if (fill) fill.style.width = `${(completed / 4) * 100}%`;
   }
 
   async function renderPersonalHeatmap(tasks) {
