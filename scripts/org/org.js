@@ -36,16 +36,33 @@
   /* ── Panel Visibility ── */
   const adminPanel = document.getElementById('adminPanel');
   const employeePanel = document.getElementById('employeePanel');
+  const personalPanel = document.getElementById('personalPanel');
   const pageRoleLabel = document.getElementById('pageRoleLabel');
 
   if (isAdmin) {
     if (adminPanel) adminPanel.classList.remove('hidden');
     if (employeePanel) employeePanel.classList.add('hidden');
+    if (personalPanel) personalPanel.classList.add('hidden');
     if (pageRoleLabel) pageRoleLabel.textContent = '🛡️ Admin Panel';
+  } else if (currentUser.role === 'personal' && !currentUser.organizationId) {
+    if (adminPanel) adminPanel.classList.add('hidden');
+    if (employeePanel) employeePanel.classList.add('hidden');
+    if (personalPanel) personalPanel.classList.remove('hidden');
+    if (pageRoleLabel) pageRoleLabel.textContent = '👤 Personal Workspace';
   } else {
     if (adminPanel) adminPanel.classList.add('hidden');
     if (employeePanel) employeePanel.classList.remove('hidden');
-    if (pageRoleLabel) pageRoleLabel.textContent = currentUser.role === 'personal' ? '👤 Personal Account — Join Org' : '👤 Member Panel';
+    if (personalPanel) personalPanel.classList.add('hidden');
+    if (pageRoleLabel) pageRoleLabel.textContent = '👤 Member Panel';
+  }
+
+  const switchToJoinBtn = document.getElementById('switchToJoinBtn');
+  if (switchToJoinBtn) {
+    switchToJoinBtn.addEventListener('click', () => {
+      if (personalPanel) personalPanel.classList.add('hidden');
+      if (employeePanel) employeePanel.classList.remove('hidden');
+      if (pageRoleLabel) pageRoleLabel.textContent = '👤 Join Organization';
+    });
   }
 
   /* ─────────────────────────────────────────────

@@ -177,6 +177,67 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // Delete project logic
+  const deleteProjectBtn = document.getElementById('deleteProjectBtn');
+  const deleteModal = document.getElementById('deleteModal');
+  const cancelDeleteProjectBtn = document.getElementById('cancelDeleteProject');
+  const confirmDeleteProjectBtn = document.getElementById('confirmDeleteProject');
+
+  if (deleteProjectBtn && deleteModal) {
+    deleteProjectBtn.addEventListener('click', () => {
+      deleteModal.classList.remove('hidden');
+    });
+  }
+
+  if (cancelDeleteProjectBtn && deleteModal) {
+    cancelDeleteProjectBtn.addEventListener('click', () => {
+      deleteModal.classList.add('hidden');
+    });
+  }
+
+  if (confirmDeleteProjectBtn && deleteModal) {
+    confirmDeleteProjectBtn.addEventListener('click', async () => {
+      if (!activeProjectId) return;
+      
+      const originalText = confirmDeleteProjectBtn.textContent;
+      confirmDeleteProjectBtn.textContent = 'Deleting...';
+      confirmDeleteProjectBtn.disabled = true;
+
+      try {
+        let success = false;
+        if (typeof api.deleteBackendProject === 'function') {
+          success = await api.deleteBackendProject(activeProjectId);
+        } else {
+          // Fallback to local deletion
+          const user = api.getMe();
+          if (user && user.projects) {
+            user.projects = user.projects.filter(p => (p.id || p._id) !== activeProjectId);
+            api.saveUserData({ projects: user.projects });
+            success = true;
+          }
+        }
+
+        if (success) {
+          if (window.NexusNotify) window.NexusNotify.add({ text: 'Project deleted successfully.', icon: '✅' });
+          allProjects = allProjects.filter(p => (p.id || p._id) !== activeProjectId);
+          drawer.classList.remove('is-open');
+          deleteModal.classList.add('hidden');
+          activeProjectId = null;
+          renderProjects(projectSearch ? projectSearch.value : '');
+        } else {
+          if (window.NexusNotify) window.NexusNotify.add({ text: 'Failed to delete project.', icon: '⚠️', type: 'error' });
+        }
+      } catch (err) {
+        console.error('Delete error', err);
+        if (window.NexusNotify) window.NexusNotify.add({ text: 'Error deleting project.', icon: '⚠️', type: 'error' });
+      } finally {
+        confirmDeleteProjectBtn.textContent = originalText;
+        confirmDeleteProjectBtn.disabled = false;
+        deleteModal.classList.add('hidden');
+      }
+    });
+  }
+
   // Initial load
   loadData();
 });

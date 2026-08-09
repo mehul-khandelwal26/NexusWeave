@@ -266,6 +266,11 @@
                       ✨ AI Auto-Suggest Tasks & Background
                     </button>
                     <p id="aiSuggestStatus" class="meta hidden" style="color: var(--accent); font-size: 0.85rem; margin-top: 0.4rem; text-align: center; font-style: italic;">AI is scope-analyzing project...</p>
+                    <div id="aiSuggestResults" class="hidden" style="margin-top: 1rem; padding: 1rem; background: var(--primary-soft); border-radius: 8px; border: 1px solid var(--accent); color: var(--text-main);">
+                      <h4 style="color: var(--accent); font-size: 0.9rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.3rem;"><span>✨</span> AI Plan Ready</h4>
+                      <ul id="aiSuggestTaskList" style="margin-left: 1.5rem; font-size: 0.85rem; margin-bottom: 0.75rem; display: flex; flex-direction: column; gap: 0.3rem;"></ul>
+                      <p style="font-size: 0.85rem; color: var(--text-soft);"><strong>Theme:</strong> <span id="bgThemeValue"></span></p>
+                    </div>
                   </div>
                   <div class="field">
                     <label for="project-description">Description</label>

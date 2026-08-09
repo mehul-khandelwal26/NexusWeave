@@ -570,11 +570,35 @@
     },
 
     async searchOrganizations(query = '') {
-      const orgs = await this.getPublicOrganizations();
+      let orgs = await this.getPublicOrganizations();
+      
+      // Local fallback and cleanup
+      let localOrgs = getOrgs();
+      const initialCount = localOrgs.length;
+      // Clean up test organizations from database as requested
+      localOrgs = localOrgs.filter(o => 
+        !o.name.startsWith('TestOrg') && 
+        !o.name.startsWith('WsOrg') && 
+        !o.name.startsWith('BrowserCheck') &&
+        !o.name.startsWith('FinalOrg')
+      );
+      if (localOrgs.length !== initialCount) {
+        saveOrgs(localOrgs); // update the local database
+      }
+
+      if (!orgs || orgs.length === 0) {
+        orgs = localOrgs;
+      }
+      
       const q = (query || '').toLowerCase().trim();
       return orgs
         .filter((o) => !q || o.name.toLowerCase().includes(q))
-        .map((o) => ({ id: o.id, name: o.name, visibility: o.visibility, memberCount: o.memberCount || 0 }));
+        .map((o) => ({ 
+          id: o.id, 
+          name: o.name, 
+          visibility: o.visibility, 
+          memberCount: o.members ? o.members.length : (o.memberCount || 0) 
+        }));
     },
 
     async joinOrganization({ orgId, orgKey }) {

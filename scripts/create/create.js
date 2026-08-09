@@ -235,6 +235,8 @@ async function handleProjectSubmit(event) {
   if (aiSuggestBtn) {
     aiSuggestBtn.innerHTML = '✨ AI Auto-Suggest Tasks & Background';
   }
+  const resultsDiv = document.getElementById('aiSuggestResults');
+  if (resultsDiv) resultsDiv.classList.add('hidden');
 }
 
 const escapeHtml = (value) => String(value)
@@ -549,6 +551,9 @@ aiSuggestBtn?.addEventListener('click', () => {
 
   aiSuggestStatus?.classList.remove('hidden');
   aiSuggestBtn.disabled = true;
+  
+  const resultsDiv = document.getElementById('aiSuggestResults');
+  if (resultsDiv) resultsDiv.classList.add('hidden');
 
   setTimeout(() => {
     aiSuggestStatus?.classList.add('hidden');
@@ -591,6 +596,18 @@ aiSuggestBtn?.addEventListener('click', () => {
       aurora: "url('https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?q=80&w=800')"
     };
     aiSuggestedBg = themeUrls[bgTheme] || themeUrls.aurora;
+
+    if (resultsDiv) {
+      const taskList = document.getElementById('aiSuggestTaskList');
+      const themeValue = document.getElementById('bgThemeValue');
+      if (taskList) {
+        taskList.innerHTML = suggestions.map(s => `<li>${escapeHtml(s)}</li>`).join('');
+      }
+      if (themeValue) {
+        themeValue.textContent = bgTheme.charAt(0).toUpperCase() + bgTheme.slice(1);
+      }
+      resultsDiv.classList.remove('hidden');
+    }
 
     showToast(`AI successfully generated ${suggestions.length} suggestions and custom workspace background.`);
     aiSuggestBtn.innerHTML = '✨ AI Suggested (Ready)';

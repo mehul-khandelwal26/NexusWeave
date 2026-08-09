@@ -1834,3 +1834,25 @@
   background: var(--primary-soft);
   color: var(--accent);
 }
+
+/* ════════════════════════════════════════════════════════════
+   BOARD BACKGROUND CUSTOMIZATION OVERRIDES
+   ════════════════════════════════════════════════════════════ */
+body.has-board-bg .topbar p.eyebrow,
+body.has-board-bg .topbar h1 {
+  color: #ffffff;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
+}
+
+body.has-board-bg .topbar .ghost-btn,
+body.has-board-bg .topbar .theme-toggle-btn {
+  color: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  background: rgba(0, 0, 0, 0.25) !important;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+body.has-board-bg .topbar .ghost-btn:hover,
+body.has-board-bg .topbar .theme-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+}
