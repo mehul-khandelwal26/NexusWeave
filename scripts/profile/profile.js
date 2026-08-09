@@ -48,8 +48,12 @@
 
     if (userProfileAvatar) {
       if (user.photo) {
-        userProfileAvatar.innerHTML = `<img src="${user.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`;
+        userProfileAvatar.style.backgroundImage = `url(${user.photo})`;
+        userProfileAvatar.style.backgroundSize = 'cover';
+        userProfileAvatar.style.backgroundPosition = 'center';
+        userProfileAvatar.innerHTML = '';
       } else {
+        userProfileAvatar.style.backgroundImage = 'none';
         userProfileAvatar.textContent = (user.name || user.email || 'U').charAt(0).toUpperCase();
       }
     }

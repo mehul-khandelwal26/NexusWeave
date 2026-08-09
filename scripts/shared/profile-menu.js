@@ -17,9 +17,13 @@
 
     if (avatar) {
       if (user && user.photo) {
-        avatar.innerHTML = `<img src="${user.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`;
+        avatar.style.backgroundImage = `url(${user.photo})`;
+        avatar.style.backgroundSize = 'cover';
+        avatar.style.backgroundPosition = 'center';
+        avatar.innerHTML = '';
       } else {
-        avatar.textContent = initial;
+        avatar.style.backgroundImage = 'none';
+        avatar.textContent = (user && user.name) ? user.name.charAt(0).toUpperCase() : 'U';
       }
     }
 
