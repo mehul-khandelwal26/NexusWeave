@@ -1,6 +1,12 @@
 const express = require('express');
 const User = require('../models/User');
 const Organization = require('../models/Organization');
+const Task = require('../models/Task');
+const Project = require('../models/Project');
+const Activity = require('../models/Activity');
+const FocusSession = require('../models/FocusSession');
+const Attendance = require('../models/Attendance');
+const Message = require('../models/Message');
 const requireAuth = require('../middleware/auth');
 const { signToken } = require('../utils/jwt');
 const { verifyGoogleToken } = require('../utils/google-auth');
@@ -301,7 +307,7 @@ router.patch('/me', requireAuth, async (req, res) => {
     const user = await User.findById(req.user.sub);
     if (!user) return res.status(404).json({ errors: ['User not found.'] });
 
-    const { name, bio, skills, department, theme, boardBg } = req.body;
+    const { name, bio, skills, department, theme, boardBg, photo } = req.body;
     if (name !== undefined) {
       const trimmed = String(name).trim();
       if (!trimmed) return res.status(400).json({ errors: ['Name cannot be empty.'] });
@@ -311,6 +317,7 @@ router.patch('/me', requireAuth, async (req, res) => {
     if (department !== undefined) user.department = String(department);
     if (theme !== undefined) user.theme = String(theme);
     if (boardBg !== undefined) user.boardBg = String(boardBg);
+    if (photo !== undefined) user.avatar = String(photo);
     if (skills !== undefined) {
       if (Array.isArray(skills)) {
         user.skills = skills.map((s) => String(s).trim()).filter(Boolean);
@@ -324,6 +331,31 @@ router.patch('/me', requireAuth, async (req, res) => {
     res.json({ success: true, token, user: user.toSafeObject() });
   } catch (err) {
     return handleMongooseError(err, res, 'Failed to update profile.');
+  }
+});
+
+router.delete('/me', requireAuth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.sub);
+    if (!user) return res.status(404).json({ errors: ['User not found.'] });
+
+    const email = user.email;
+    const userId = user._id;
+
+    await Promise.all([
+      Task.deleteMany({ $or: [{ userEmail: email }, { assignedUserEmail: email }] }),
+      Project.deleteMany({ userEmail: email }),
+      Activity.deleteMany({ userEmail: email }),
+      FocusSession.deleteMany({ userEmail: email }),
+      Attendance.deleteMany({ userId: userId }),
+      Message.deleteMany({ $or: [{ sender: userId }, { receiver: userId }] })
+    ]);
+
+    await User.findByIdAndDelete(userId);
+
+    res.json({ success: true, message: 'Profile deleted successfully.' });
+  } catch (err) {
+    return handleMongooseError(err, res, 'Failed to delete profile.');
   }
 });
 

@@ -77,6 +77,7 @@
       theme: backendUser.theme || existing.theme || 'light',
       boardBg: backendUser.boardBg || existing.boardBg || 'none',
       provider: backendUser.provider || provider || 'email',
+      photo: backendUser.avatar || existing.photo || '',
       projects: existing.projects || [],
       tasks: existing.tasks || [],
       activity: existing.activity || []
@@ -345,6 +346,22 @@
       const token = res.token || sessionStorage.getItem('jwt');
       const user = applyAuthResponse(res.user, token, sessionStorage.getItem('authProvider') || 'email');
       return { success: true, user };
+    },
+
+    async deleteProfile() {
+      const res = await tryBackendRequest('/auth/me', {
+        method: 'DELETE'
+      });
+      
+      if (!res || res._error) {
+        // Local Fallback
+        const session = sessionStorage.getItem('session');
+        if (!session) return { success: false, error: 'Not logged in.' };
+        const users = JSON.parse(localStorage.getItem('users') || '{}');
+        delete users[session];
+        localStorage.setItem('users', JSON.stringify(users));
+      }
+      return { success: true };
     },
 
     isAuthenticated() {

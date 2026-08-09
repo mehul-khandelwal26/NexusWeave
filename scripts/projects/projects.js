@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let currentUser = api.getMe();
   if (!currentUser) {
     try {
-      await api.fetchBackendUser();
+      await api.refreshMe();
       currentUser = api.getMe();
     } catch (e) {
       console.warn("Could not authenticate user", e);
@@ -41,15 +41,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function loadData() {
     try {
       // Fetch fresh data from backend
-      const projectsRes = await api.tryBackendRequest('/api/projects');
-      if (projectsRes) {
+      const projectsRes = await api.fetchBackendProjects();
+      if (projectsRes && Array.isArray(projectsRes)) {
         allProjects = projectsRes;
       } else {
         allProjects = currentUser.projects || [];
       }
 
-      const tasksRes = await api.tryBackendRequest('/api/tasks');
-      if (tasksRes) {
+      const tasksRes = await api.fetchBackendTasks();
+      if (tasksRes && Array.isArray(tasksRes)) {
         allTasks = tasksRes;
       } else {
         allTasks = currentUser.tasks || [];

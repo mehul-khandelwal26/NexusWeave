@@ -48,8 +48,12 @@
 
     if (userProfileAvatar) {
       if (user.photo) {
-        userProfileAvatar.innerHTML = `<img src="${user.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`;
+        userProfileAvatar.style.backgroundImage = `url(${user.photo})`;
+        userProfileAvatar.style.backgroundSize = 'cover';
+        userProfileAvatar.style.backgroundPosition = 'center';
+        userProfileAvatar.innerHTML = '';
       } else {
+        userProfileAvatar.style.backgroundImage = 'none';
         userProfileAvatar.textContent = (user.name || user.email || 'U').charAt(0).toUpperCase();
       }
     }
@@ -292,6 +296,28 @@
         renderProfile();
       };
       reader.readAsDataURL(file);
+    });
+  }
+
+  const deleteProfileBtn = document.getElementById('deleteProfileBtn');
+  if (deleteProfileBtn) {
+    deleteProfileBtn.addEventListener('click', async () => {
+      const confirmMsg = "Are you sure you want to completely delete your profile and all associated data? This action cannot be undone.";
+      if (window.confirm(confirmMsg)) {
+        try {
+          const res = await api.deleteProfile();
+          if (res && res.success) {
+            sessionStorage.clear();
+            localStorage.removeItem('jwt');
+            window.location.href = 'index.html';
+          } else {
+            alert('Failed to delete profile: ' + (res.error || 'Unknown error'));
+          }
+        } catch (err) {
+          console.error(err);
+          alert('Failed to delete profile. Please try again.');
+        }
+      }
     });
   }
 
