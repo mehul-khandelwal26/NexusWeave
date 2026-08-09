@@ -96,15 +96,84 @@
     sessionStorage.removeItem('nw_sessions');
   }
 
-  // Relative /api when served by Express on :4000; absolute URL for Live Server / other ports
-  const API_BASE = (typeof window !== 'undefined' && window.location && String(window.location.port) === '4000')
-    ? '/api'
-    : 'http://localhost:4000/api';
+  const BACKEND_PORT = '4000';
+
+  /**
+   * Resolves where the API lives:
+   *  - Same origin when Express is serving the pages itself, or when deployed behind
+   *    a domain/reverse proxy (no port, or a non-dev port).
+   *  - The backend port on the *current* hostname otherwise, so opening the site from
+   *    a phone or another machine on the LAN works instead of pointing at that
+   *    device's own localhost.
+   */
+  function resolveApiBase() {
+    if (typeof window === 'undefined' || !window.location) {
+      return `http://localhost:${BACKEND_PORT}/api`;
+    }
+    const { protocol, hostname, port } = window.location;
+
+    // Opened straight off disk (file://) — nothing to infer, assume a local backend.
+    if (protocol === 'file:' || !hostname) {
+      return `http://localhost:${BACKEND_PORT}/api`;
+    }
+    // Express is serving these pages, so the API is on this exact origin.
+    if (port === BACKEND_PORT) {
+      return '/api';
+    }
+    // Deployed (no explicit port, i.e. plain :80/:443) — assume same-origin API.
+    if (!port) {
+      return '/api';
+    }
+    // A separate static dev server (Live Server on :5500, etc). Keep the hostname the
+    // browser is already using so LAN and phone testing resolve to the right machine.
+    return `${protocol}//${hostname}:${BACKEND_PORT}/api`;
+  }
+
+  const API_BASE = resolveApiBase();
 
   const SERVER_UNREACHABLE = 'Cannot reach the NexusWeave server. Please make sure the backend is running and try again.';
+  const DATABASE_UNAVAILABLE = 'The server is running but cannot reach its database. Check your internet connection, then confirm your IP is allowed in MongoDB Atlas (Network Access).';
+
+  /**
+   * Distinguishes "backend process is down" from "backend is up but the database is
+   * not", so the user gets an actionable message instead of a generic one.
+   * Returns { reachable, databaseUp, message }.
+   */
+  async function checkServerHealth() {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
+    try {
+      const res = await fetch(`${API_BASE}/health`, { signal: controller.signal });
+      const data = await res.json().catch(() => ({}));
+      if (data.database === 'connected') {
+        return { reachable: true, databaseUp: true, message: '' };
+      }
+      return {
+        reachable: true,
+        databaseUp: false,
+        message: data.databaseError || DATABASE_UNAVAILABLE
+      };
+    } catch (e) {
+      return { reachable: false, databaseUp: false, message: SERVER_UNREACHABLE };
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  /** Turns a failed request into the most accurate explanation we can produce. */
+  async function describeFailure(fallbackMessage) {
+    const health = await checkServerHealth();
+    if (!health.reachable) return SERVER_UNREACHABLE;
+    if (!health.databaseUp) return health.message;
+    return fallbackMessage || SERVER_UNREACHABLE;
+  }
 
 
-  async function tryBackendRequest(endpoint, options = {}) {
+  function delay(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  async function sendOnce(endpoint, options) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 8000);
     try {
@@ -130,12 +199,38 @@
       }
       const errData = await res.json().catch(() => ({}));
       const errorMsg = (errData.errors && errData.errors[0]) || errData.message || errData.error || 'Server error';
-      return { _error: true, status: res.status, message: errorMsg };
+      return { _error: true, status: res.status, message: errorMsg, _databaseError: errData.databaseError || null };
     } catch (e) {
-      return null;
+      // AbortError means the server may have received and processed the request, so it
+      // is not safe to replay. A connection error means it never arrived.
+      return { _error: true, _network: true, _replayable: e.name !== 'AbortError' };
     } finally {
       clearTimeout(timeoutId);
     }
+  }
+
+  async function tryBackendRequest(endpoint, options = {}) {
+    let result = await sendOnce(endpoint, options);
+
+    // A 503 is the backend explicitly saying it did not touch the database yet, and a
+    // connection error means the request never landed. Both are safe to replay, and
+    // both are what a server restart looks like from here. One quick retry keeps a
+    // restart from surfacing as "the backend is not working".
+    const isRestartWindow = result && result._error &&
+      (result.status === 503 || (result._network && result._replayable));
+
+    if (isRestartWindow) {
+      await delay(1200);
+      result = await sendOnce(endpoint, options);
+    }
+
+    if (result && result._network) {
+      return null;
+    }
+    if (result && result._error && result.status === 503) {
+      return { _error: true, status: 503, message: result._databaseError || DATABASE_UNAVAILABLE };
+    }
+    return result;
   }
 
   function sanitizeUser(user) {
@@ -175,6 +270,8 @@
 
   root.NexusAPI = {
     API_BASE,
+    checkServerHealth,
+    describeFailure,
 
     /* ── Auth ── */
     async signup({ name, email, password, role = 'personal', orgName, orgKey, orgVisibility, orgId }) {
@@ -186,7 +283,7 @@
       });
 
       if (!backendRes) {
-        return { success: false, error: SERVER_UNREACHABLE };
+        return { success: false, error: await describeFailure() };
       }
       if (backendRes._error) {
         return { success: false, error: backendRes.message || 'Failed to sign up.' };
@@ -220,7 +317,7 @@
       // Credentials and account scope are only ever verified by the server. There is no
       // local fallback, otherwise a personal account could sign in through the org portal.
       if (!backendRes) {
-        return { success: false, error: SERVER_UNREACHABLE };
+        return { success: false, error: await describeFailure() };
       }
       if (backendRes._error) {
         return { success: false, error: backendRes.message || 'Invalid email or password.' };
@@ -237,7 +334,7 @@
       });
 
       if (!backendRes) {
-        return { success: false, error: SERVER_UNREACHABLE };
+        return { success: false, error: await describeFailure() };
       }
       if (backendRes._error) {
         return { success: false, error: backendRes.message || 'Google sign-in failed.' };

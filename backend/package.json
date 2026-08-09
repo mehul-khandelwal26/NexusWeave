@@ -6,7 +6,7 @@
   "type": "commonjs",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch-path=./routes --watch-path=./models --watch-path=./middleware --watch-path=./utils --watch-path=./server.js --watch-preserve-output server.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
