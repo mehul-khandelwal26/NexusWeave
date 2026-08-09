@@ -107,7 +107,11 @@
   async function renderActivityFeed() {
     if (!userProfileActivityFeed) return;
 
-    const activity = api.fetchActivity ? await api.fetchActivity({ scope: 'me', limit: 12 }) : null;
+    let activity = api.fetchActivity ? await api.fetchActivity({ scope: 'me', limit: 12 }) : null;
+
+    if (!activity) {
+      activity = (currentUser && Array.isArray(currentUser.activity)) ? currentUser.activity : null;
+    }
 
     if (!activity || !Array.isArray(activity)) {
       userProfileActivityFeed.innerHTML = `<div class="empty-inline">Could not load activity from the server.</div>`;

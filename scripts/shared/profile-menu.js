@@ -54,7 +54,7 @@
   document.querySelectorAll('[data-profile-action]').forEach((button) => {
     button.addEventListener('click', () => {
       const action = button.dataset.profileAction;
-      if (action === 'change-photo' || action === 'settings') {
+      if (action === 'profile') {
         window.location.href = 'profile.html';
       } else if (action === 'copy-link') {
         if (navigator.clipboard && navigator.clipboard.writeText) {
