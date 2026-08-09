@@ -1,50 +1,197 @@
-Theme 1: Future of Work & Productivity — User Flow
-1. Authentication Flow
-1.	The user is prompted to create an account or log in using existing credentials — email + password, or by connecting their Google account. 
-Bonus: instead of dropping the user straight into a sign-in/sign-up form, the landing page has a background animation and a top navigation bar showing features, about, and other details, like a normal marketing site.
-2.	If the user attempts to submit empty fields or an invalid email format, the UI immediately displays clear error messages, preventing submission.
-3.	The backend verifies the user via session-based authentication or JWT tokens.
-4.	Upon successful login, the application grants access to protected routes and redirects the user to their private dashboard.
-5.	If credentials are incorrect, an error message is shown and the user is returned to the login form.
-2. Dashboard Experience
-1.	The app retrieves only the data belonging to the authenticated user.
-2.	At the top of the dashboard, the user sees a visual chart displaying their productivity trends and how many tasks they completed this week.
-Bonus: model the dashboard on Trello or Todoist as a rough blueprint for layout and interaction patterns.
-3.	The dashboard lists the user's active projects or categories, allowing them to organize their workload.
-4.	A toggle switch in the navigation bar lets the user switch the UI between light and dark mode.
-3. Project & Task Creation
-1.	The user clicks "Add Project" to set up a new workspace.
-2.	After naming the project, the user clicks "Auto-Suggest Tasks," which triggers an AI API call to generate a recommended task breakdown. 
-Bonus: similar to Trello's per-board background, use an AI image API to auto-generate a background related to the project name, instead of the user picking from a default collection or their own files.
-3.	The user opens a project and clicks "Add Task."
-4.	The user fills out the task name, assigns a priority (High/Medium/Low), and selects a due date.
-5.	The user attaches relevant documents or images to the task, stored securely via AWS S3.
-6.	The user clicks save, and the UI immediately updates to display the new task.
-4. Task Board & Management
-1.	Tasks are displayed in columns representing status — Todo, In Progress, Done.
-2.	The user drags a task card from "Todo" and drops it into "In Progress" to update its status.
-3.	A user looking for a specific item uses the search bar to find it by name, or applies filters to see only "High" priority tasks or tasks with an upcoming due date. 
-Bonus: let the filter be a proper category selector — filter by priority or by due date range, not just a single toggle.
-4.	The user clicks an existing task card to modify its details, change its priority.
-Bonus: marking it as recurring (daily, specific days, or weekly).
-5.	If the user decides to delete a task, a confirmation modal pops up before the data is permanently removed.
-6.	If a network drop occurs during any update, the app catches the server error and shows a friendly, non-technical message instead of breaking the screen. 
-Bonus: give the error state some personality — an illustrated "something went wrong" graphic, similar to Amazon's dog-error page, instead of a plain text banner. 
-Bonus: send the user an email if a task deadline is approaching, in addition to any in-app alert.
-5. Notifications & Logout
-1.	While working, the user receives an in-app notification alerting them that a task deadline is approaching.
-2.	When finished, the user clicks "Log Out."
-3.	The application clears the user's secure tokens and redirects them to the public landing page, re-engaging the protected route barriers.
-________________________________________
-Additional Feature that can be considered:
-•	Onboarding checklist — a 3-step "create your first project → add a task → mark it done" walkthrough on first login.
-•	GitHub-style activity heatmap — a small grid on the dashboard showing tasks completed per day over the last few months. 
-•	Keyboard shortcuts — n for new task, / to focus search.
-•	Focus/Pomodoro mode — a simple timer tied to a task ("focus on this for 25 minutes"), logs a completed session when it ends. 
-•	Task templates — save a set of tasks as a template (e.g. "weekly report checklist") and reuse it across projects. 
-•	CSV/PDF export — let users export their task list or weekly summary. 
-•	Command palette (like Notion/Linear, Cmd+K) — a searchable action menu ("new task," "switch project," "toggle dark mode"). 
-•	Weekly email digest — a scheduled job emailing a short summary ("5 tasks completed, 2 overdue"). 
-•	Accessibility pass — keyboard-navigable modals, visible focus states, proper ARIA labels on the kanban drag-and-drop. 
+# NexusWeave 🚀
 
+![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
+![Status](https://img.shields.io/badge/Status-Active-success.svg)
 
+**NexusWeave** is a comprehensive productivity and task management platform designed to streamline workflows, organize projects, and enhance individual and team focus. It brings all the tools you need—kanban boards, pomodoro timers, and intelligent task breakdown—into one cohesive environment. 
+
+Whether you're managing complex team projects or organizing your daily solo tasks, NexusWeave provides an intuitive, distraction-free interface to keep you on track. It is built for individuals and teams who struggle with context-switching and want a unified space for productivity.
+
+By combining task management with actionable insights and focus tools, NexusWeave solves the problem of disjointed workflows and helps you accomplish more, faster.
+
+---
+
+## ✨ Key Features
+
+| Feature Name | Description | Technical Implementation |
+| :--- | :--- | :--- |
+| **Authentication Flow** | Secure email/password login and Google OAuth integration. | JSON Web Tokens (JWT), bcryptjs, Google Auth Library |
+| **Dashboard Experience** | Personalized dashboard with productivity charts, tracking, and light/dark mode. | Vanilla JS modules, CSS variables for theming, Charting libraries |
+| **Project & Task Creation** | Organize workloads with workspaces; AI-assisted task breakdown. | Express.js REST APIs, MongoDB models |
+| **Kanban Management** | Drag-and-drop task boards with Todo, In Progress, and Done columns. | Native HTML5 Drag and Drop API, WebSocket sync |
+| **Filtering & Search** | Filter tasks by priority (High/Medium/Low) or due date ranges. | MongoDB aggregation pipelines, JS array filtering |
+| **Focus / Pomodoro Mode**| Integrated timers to manage focus sessions directly in the app. | JavaScript `setInterval`, Web Workers for background timing |
+| **Notifications** | In-app and email notifications for approaching deadlines and weekly digests. | WebSocket (`ws`) for real-time alerts, Cron jobs for emails |
+
+---
+
+## 🛤️ User Workflow
+
+```mermaid
+flowchart TD
+    A[User visits NexusWeave] --> B{Has Account?}
+    B -- No --> C[Registers via Email or Google OAuth]
+    B -- Yes --> D[Logs in Securely]
+    C --> D
+    D --> E[Lands on Personalized Dashboard]
+    E --> F[Creates Workspace / Project]
+    F --> G[Adds & Breaks Down Tasks]
+    G --> H[Manages Tasks on Kanban Board]
+    H --> I[Starts Pomodoro Session for a Task]
+    I --> J[Completes Task & Updates Board]
+    J --> K[Receives Analytics & Weekly Digests]
+```
+
+**Step-by-Step Journey:**
+1. **Login/Registration:** The user securely logs in or signs up using email or Google OAuth.
+2. **Dashboard Overview:** They are greeted by a personalized dashboard summarizing their tasks, productivity trends, and upcoming deadlines.
+3. **Workspace Setup:** The user creates a new project workspace and begins adding tasks, optionally using AI to break them down into subtasks.
+4. **Task Execution:** Tasks are moved across the Kanban board (Todo -> In Progress -> Done) as work progresses.
+5. **Deep Work:** When it's time to focus, the user launches the integrated Pomodoro timer for a specific task.
+6. **Review:** The system sends notifications for deadlines and a weekly email digest summarizing their accomplishments.
+
+---
+
+## 🏛️ System Architecture
+
+NexusWeave uses a classic Client-Server architecture separated into a vanilla frontend and a robust Node.js backend. The frontend communicates with the backend via RESTful APIs for standard operations and WebSockets for real-time updates (like kanban board syncs and notifications). Data is persisted securely in MongoDB.
+
+```mermaid
+sequenceDiagram
+    participant C as Client (Browser)
+    participant A as Auth Middleware
+    participant S as Express.js Server
+    participant W as WebSocket Server
+    participant DB as MongoDB
+
+    C->>S: POST /api/auth/login
+    S->>DB: Verify Credentials
+    DB-->>S: User Data
+    S-->>C: Return JWT Token
+
+    C->>S: GET /api/tasks (with JWT)
+    S->>A: Verify JWT
+    A-->>S: Valid
+    S->>DB: Fetch Tasks
+    DB-->>S: Task Data
+    S-->>C: JSON Response
+
+    C->>W: Connect via WebSocket (with JWT)
+    W-->>C: Connection Established
+    C->>W: Task Moved (Drag & Drop)
+    W->>DB: Update Task Status
+    W-->>C: Broadcast Update to all connected clients
+```
+
+---
+
+## 🗂️ Folder Structure
+
+```text
+webwondersnexusweave/
+├── assets/         # Static assets (images, icons, fonts)
+├── backend/        # Node.js backend server code
+│   ├── config/     # Database and environment configurations
+│   ├── controllers/# API endpoint business logic
+│   ├── models/     # Mongoose database schemas
+│   ├── routes/     # Express route definitions
+│   ├── websockets/ # Real-time event handlers
+│   └── server.js   # Main application entry point
+├── pages/          # HTML views (Dashboard, Kanban, Focus mode, etc.)
+├── scripts/        # Frontend Vanilla JavaScript modules and API services
+├── styles/         # Global CSS, component styles, and theme variables
+├── .gitignore      # Git ignore rules
+├── index.html      # Entry point (redirects to /pages)
+└── README.md       # Project documentation
+```
+
+**Important Directories:**
+- `backend/`: Contains the entire Express.js API, database schemas, and authentication logic.
+- `pages/` & `styles/` & `scripts/`: Form the frontend of the application, keeping structure, presentation, and logic cleanly separated using vanilla web technologies.
+
+---
+
+## 🚀 Installation & Setup
+
+### Prerequisites
+- [Node.js](https://nodejs.org/) (v16+ recommended)
+- [MongoDB](https://www.mongodb.com/) (Local instance or MongoDB Atlas cluster)
+
+### 1. Clone the Repository
+```bash
+git clone https://github.com/your-username/webwondersnexusweave.git
+cd webwondersnexusweave
+```
+
+### 2. Backend Setup
+Navigate to the backend directory and install dependencies:
+```bash
+cd backend
+npm install
+```
+
+Configure your environment variables. Create a `.env` file in the `backend/` folder:
+```bash
+# backend/.env.example
+
+PORT=5000
+MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/nexusweave?retryWrites=true&w=majority
+JWT_SECRET=your_super_secret_jwt_key
+GOOGLE_CLIENT_ID=your_google_oauth_client_id
+```
+
+Start the backend server:
+```bash
+npm run dev
+```
+*The server should now be running on `http://localhost:5000`.*
+
+### 3. Frontend Setup
+Because the frontend uses vanilla HTML/CSS/JS without a bundler, you can serve it using any static file server.
+
+If using VS Code, install the **Live Server** extension, right-click the root `index.html`, and select "Open with Live Server".
+Alternatively, using Node:
+```bash
+npx serve .
+```
+The root `index.html` will automatically redirect you to the main application views in `/pages/`.
+
+---
+
+## 💻 Usage / API Endpoints
+
+### Example: Creating a new task
+To create a new task programmatically, you can hit the `/api/tasks` endpoint with a POST request.
+
+**Request:**
+```javascript
+fetch('http://localhost:5000/api/tasks', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer YOUR_JWT_TOKEN'
+  },
+  body: JSON.stringify({
+    title: 'Implement drag and drop',
+    description: 'Use HTML5 drag and drop API for Kanban columns.',
+    priority: 'High',
+    workspaceId: '12345'
+  })
+})
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "_id": "60d5ec49c9g4...",
+    "title": "Implement drag and drop",
+    "status": "Todo",
+    "priority": "High"
+  }
+}
+```
+
+---
+*Built with ❤️ for productivity.*
