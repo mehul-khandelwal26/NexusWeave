@@ -63,6 +63,7 @@ app.use((req, res, next) => {
   const p = req.path.toLowerCase();
   if (
     p.startsWith('/backend') ||
+    p.startsWith('/.git') ||
     p.includes('/.env') ||
     p.endsWith('.env') ||
     p.includes('node_modules')
