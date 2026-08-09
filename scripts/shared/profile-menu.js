@@ -22,7 +22,7 @@
         avatar.style.backgroundPosition = 'center';
         avatar.innerHTML = '';
       } else {
-        avatar.style.backgroundImage = 'none';
+        avatar.style.backgroundImage = '';
         avatar.textContent = (user && user.name) ? user.name.charAt(0).toUpperCase() : 'U';
       }
     }

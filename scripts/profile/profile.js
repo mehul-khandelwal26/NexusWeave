@@ -53,7 +53,7 @@
         userProfileAvatar.style.backgroundPosition = 'center';
         userProfileAvatar.innerHTML = '';
       } else {
-        userProfileAvatar.style.backgroundImage = 'none';
+        userProfileAvatar.style.backgroundImage = '';
         userProfileAvatar.textContent = (user.name || user.email || 'U').charAt(0).toUpperCase();
       }
     }
