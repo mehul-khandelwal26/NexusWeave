@@ -108,25 +108,17 @@
    */
   function resolveApiBase() {
     if (typeof window === 'undefined' || !window.location) {
-      return `http://localhost:${BACKEND_PORT}/api`;
+      return 'https://webwondersnexusweave-production.up.railway.app/api';
     }
     const { protocol, hostname, port } = window.location;
 
-    // Opened straight off disk (file://) — nothing to infer, assume a local backend.
-    if (protocol === 'file:' || !hostname) {
+    // Opened straight off disk or running locally
+    if (protocol === 'file:' || hostname === 'localhost' || hostname === '127.0.0.1') {
       return `http://localhost:${BACKEND_PORT}/api`;
     }
-    // Express is serving these pages, so the API is on this exact origin.
-    if (port === BACKEND_PORT) {
-      return '/api';
-    }
-    // Deployed (no explicit port, i.e. plain :80/:443) — assume same-origin API.
-    if (!port) {
-      return '/api';
-    }
-    // A separate static dev server (Live Server on :5500, etc). Keep the hostname the
-    // browser is already using so LAN and phone testing resolve to the right machine.
-    return `${protocol}//${hostname}:${BACKEND_PORT}/api`;
+    
+    // Deployed to production (e.g. Vercel)
+    return 'https://webwondersnexusweave-production.up.railway.app/api';
   }
 
   const API_BASE = resolveApiBase();
