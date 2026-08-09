@@ -570,33 +570,39 @@
     },
 
     async searchOrganizations(query = '') {
-      let orgs = await this.getPublicOrganizations();
+      let publicOrgs = await this.getPublicOrganizations();
+      if (!publicOrgs) publicOrgs = [];
       
-      // Local fallback and cleanup
-      let localOrgs = getOrgs();
-      const initialCount = localOrgs.length;
-      // Clean up test organizations from database as requested
-      localOrgs = localOrgs.filter(o => 
-        !o.name.startsWith('TestOrg') && 
-        !o.name.startsWith('WsOrg') && 
-        !o.name.startsWith('BrowserCheck') &&
-        !o.name.startsWith('FinalOrg')
-      );
-      if (localOrgs.length !== initialCount) {
-        saveOrgs(localOrgs); // update the local database
-      }
+      // Combine with local orgs so private orgs known to the user appear
+      let localOrgs = getOrgs() || [];
+      
+      let combinedMap = new Map();
+      publicOrgs.forEach(o => combinedMap.set(o.id, o));
+      localOrgs.forEach(o => {
+        // Prefer local org data if it exists, or just add it if it's private
+        combinedMap.set(o.id, { ...(combinedMap.get(o.id) || {}), ...o });
+      });
+      
+      let allOrgs = Array.from(combinedMap.values());
 
-      if (!orgs || orgs.length === 0) {
-        orgs = localOrgs;
-      }
-      
+      // Aggressively filter out test/unnecessary organizations from the view
+      allOrgs = allOrgs.filter(o => {
+        const n = o.name || '';
+        if (n.startsWith('TestOrg')) return false;
+        if (n.startsWith('WsOrg')) return false;
+        if (n.startsWith('FinalOrg')) return false;
+        if (n.startsWith('BrowserCheck')) return false;
+        if (n.startsWith('Org178')) return false; // Matches Org178...
+        return true;
+      });
+
       const q = (query || '').toLowerCase().trim();
-      return orgs
-        .filter((o) => !q || o.name.toLowerCase().includes(q))
+      return allOrgs
+        .filter((o) => !q || (o.name && o.name.toLowerCase().includes(q)))
         .map((o) => ({ 
           id: o.id, 
           name: o.name, 
-          visibility: o.visibility, 
+          visibility: o.visibility || 'public', 
           memberCount: o.members ? o.members.length : (o.memberCount || 0) 
         }));
     },
