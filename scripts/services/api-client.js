@@ -328,8 +328,20 @@
         method: 'PATCH',
         body: JSON.stringify(updates)
       });
-      if (!res) return { success: false, error: 'Backend offline.' };
-      if (res._error) return { success: false, error: res.message || 'Failed to update profile.' };
+      
+      if (!res || res._error) {
+        // Local Fallback
+        const session = sessionStorage.getItem('session');
+        if (!session) return { success: false, error: 'Not logged in.' };
+        const users = JSON.parse(localStorage.getItem('users') || '{}');
+        if (!users[session]) return { success: false, error: 'User not found.' };
+        
+        users[session] = { ...users[session], ...updates };
+        localStorage.setItem('users', JSON.stringify(users));
+        
+        return { success: true, user: users[session] };
+      }
+      
       const token = res.token || sessionStorage.getItem('jwt');
       const user = applyAuthResponse(res.user, token, sessionStorage.getItem('authProvider') || 'email');
       return { success: true, user };

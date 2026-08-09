@@ -15,7 +15,14 @@
     const displayName = user && user.name ? user.name : (sessionEmail ? sessionEmail.split('@')[0] : 'Profile');
     const initial = displayName.charAt(0).toUpperCase();
 
-    if (avatar) avatar.textContent = initial;
+    if (avatar) {
+      if (user && user.photo) {
+        avatar.innerHTML = `<img src="${user.photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`;
+      } else {
+        avatar.textContent = initial;
+      }
+    }
+
     if (nameEl) nameEl.textContent = displayName;
     if (emailEl) emailEl.textContent = sessionEmail || 'workspace';
 

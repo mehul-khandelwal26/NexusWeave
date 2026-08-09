@@ -241,6 +241,8 @@ body.app-body {
   background: var(--accent);
   color: var(--paper-raised);
   font-weight: 700;
+  flex-shrink: 0;
+  overflow: hidden;
 }
 .profile-meta { display: grid; text-align: left; }
 .profile-meta small { color: var(--ink-soft); }
