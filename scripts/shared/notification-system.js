@@ -165,15 +165,30 @@
       }
 
       listContainer.innerHTML = notifs.map(n => `
-        <div class="notif-dropdown-item ${!n.read ? 'is-unread' : ''}">
+        <div class="notif-dropdown-item ${!n.read ? 'is-unread' : ''}" style="position: relative; padding-right: 2rem;">
           <span class="notif-item-icon">${n.icon}</span>
           <div class="notif-item-content">
             <div>${n.text}</div>
             <small class="notif-item-time">${n.timeStr || 'Recent'}</small>
           </div>
+          <button class="notif-close-btn" data-id="${n.id}" title="Remove notification" type="button" aria-label="Remove" style="position: absolute; right: 0.5rem; top: 0.5rem; background:none;border:none;color:var(--text-muted, #9ca3af);font-size:1.2rem;cursor:pointer;padding:0 0.2rem;opacity:0.6;transition:opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">&times;</button>
         </div>
       `).join('');
+
+      listContainer.querySelectorAll('.notif-close-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          removeNotification(btn.dataset.id);
+        });
+      });
     }
+  }
+
+  function removeNotification(id) {
+    const notifs = getNotifications();
+    const updated = notifs.filter(n => n.id !== id);
+    saveNotifications(updated);
+    updateBellUI();
   }
 
   /* ── Realtime Socket Event Listeners ── */
