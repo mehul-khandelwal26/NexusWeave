@@ -1,5 +1,15 @@
 const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '.env') });
+const fs = require('fs');
+
+// ─── .env ───────────────────────────────────────────────────────────────────
+// Anchored to __dirname (where server.js lives) so it works regardless of cwd.
+const envPath = path.join(__dirname, '.env');
+if (fs.existsSync(envPath)) {
+  require('dotenv').config({ path: envPath });
+} else {
+  // Railway injects env vars directly — .env is only needed locally.
+  require('dotenv').config();
+}
 
 const http = require('http');
 const express = require('express');
@@ -31,8 +41,10 @@ const focusRoutes = require('./routes/focus');
 const User = require('./models/User');
 const Message = require('./models/Message');
 
+// ─── App Setup ──────────────────────────────────────────────────────────────
 const app = express();
 const server = http.createServer(app);
+const startedAt = new Date();
 
 // Human-readable reason the database is unavailable, surfaced to the client so it can
 // distinguish a database outage from an unreachable server. Null while healthy.
@@ -41,32 +53,53 @@ let lastDbError = null;
 app.use(cors({ origin: process.env.CLIENT_ORIGIN || '*' }));
 app.use(express.json({ limit: '15mb' }));
 
-// Health check stays reachable even while the database is down, so the client can
-// tell "server is down" apart from "database is down".
+// ─── Request Logger ─────────────────────────────────────────────────────────
+// Logs every incoming request with method, path, status code, and response time.
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    const status = res.statusCode;
+    const icon = status >= 500 ? '🔴' : status >= 400 ? '🟡' : '🟢';
+    console.log(`${icon} ${req.method} ${req.originalUrl} → ${status} (${duration}ms)`);
+  });
+  next();
+});
+
+// ─── Health Check ───────────────────────────────────────────────────────────
+// Reachable even while the database is down, so the client can tell
+// "server is down" apart from "database is down".
 app.get('/api/health', (req, res) => {
   const dbUp = mongoose.connection.readyState === 1;
+  const uptimeSeconds = Math.floor((Date.now() - startedAt.getTime()) / 1000);
   res.status(dbUp ? 200 : 503).json({
     status: dbUp ? 'online' : 'degraded',
     system: 'NexusWeave API Server',
+    version: '1.0.0',
+    environment: process.env.NODE_ENV || 'development',
     database: dbUp ? 'connected' : 'disconnected',
     databaseError: dbUp ? null : lastDbError,
     websocket: 'active',
+    uptime: `${uptimeSeconds}s`,
     timestamp: new Date().toISOString()
   });
 });
 
+// ─── Database Guard ─────────────────────────────────────────────────────────
 // The HTTP server accepts requests before MongoDB finishes connecting. Without this
 // guard those requests would sit in Mongoose's buffer until it times out, which is
 // slower than the client's abort timeout and surfaces as "server unreachable".
 app.use('/api', (req, res, next) => {
+  if (req.path === '/health') return next(); // health check is always available
   if (mongoose.connection.readyState === 1) return next();
+  console.warn(`⚠️  503 — DB not ready for ${req.method} ${req.originalUrl}`);
   res.status(503).json({
     errors: ['The server is still connecting to the database. Please retry in a few seconds.'],
     databaseError: lastDbError
   });
 });
 
-// API routes
+// ─── API Routes ─────────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
 app.use('/api/orgs', orgRoutes);
 app.use('/api/projects', projectRoutes);
@@ -76,37 +109,92 @@ app.use('/api/announcements', announcementRoutes);
 app.use('/api/activity', activityRoutes);
 app.use('/api/focus', focusRoutes);
 
-// Serve frontend from repo root ONLY in local development.
-// In production (Railway), Vercel serves the frontend — Railway only needs the API.
-// We check both env vars AND whether the pages directory actually exists on disk,
-// so the server never crashes with ENOENT even if env vars are misconfigured.
-const fs = require('fs');
-const frontendDir = path.join(__dirname, '..', 'pages');
-const isProduction = process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV === 'production';
-const hasFrontend = !isProduction && fs.existsSync(frontendDir);
+// ─── Static File Serving (Local Development Only) ───────────────────────────
+// In production, Vercel serves the frontend — Railway only needs the API.
+// All paths are anchored relative to __dirname (where server.js lives).
+// We use fs.existsSync() to verify the directory actually exists on disk
+// before registering any static middleware, so the server never crashes
+// with ENOENT even if the frontend files are missing (e.g. on Railway).
+const isProduction = !!(process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV === 'production');
+const frontendRoot = path.resolve(__dirname, '..');       // repo root (one level up from backend/)
+const frontendPagesDir = path.join(frontendRoot, 'pages');
+const frontendIndexHtml = path.join(frontendPagesDir, 'index.html');
 
-if (hasFrontend) {
-  const rootDir = path.join(__dirname, '..');
-  // Serve frontend from repo root (preserves original asset + page URLs)
-  app.use(express.static(rootDir));
+if (!isProduction && fs.existsSync(frontendPagesDir) && fs.existsSync(frontendIndexHtml)) {
+  console.log('📂 Frontend directory found — serving static files from:', frontendRoot);
 
+  // Block secrets / backend source before any static serving
+  app.use((req, res, next) => {
+    const p = req.path.toLowerCase();
+    if (
+      p.startsWith('/backend') ||
+      p.startsWith('/.git') ||
+      p.includes('/.env') ||
+      p.endsWith('.env') ||
+      p.includes('node_modules')
+    ) {
+      return res.status(404).json({ errors: ['Not found.'] });
+    }
+    next();
+  });
+
+  // Serve frontend assets from the repo root
+  app.use(express.static(frontendRoot));
+
+  // Serve index.html for the root URL
   app.get('/', (_req, res) => {
-    res.sendFile(path.join(rootDir, 'pages', 'index.html'));
+    res.sendFile(frontendIndexHtml);
+  });
+} else if (!isProduction) {
+  console.log('📂 Frontend directory not found — running in API-only mode.');
+  console.log('   Expected pages at:', frontendPagesDir);
+}
+
+// ─── Unknown API Routes → 404 ──────────────────────────────────────────────
+app.use('/api/*', (req, res) => {
+  console.warn(`🟡 404 — Unknown API endpoint: ${req.method} ${req.originalUrl}`);
+  res.status(404).json({
+    errors: ['API endpoint not found.'],
+    method: req.method,
+    path: req.originalUrl,
+    hint: 'Check the API documentation or verify the URL is correct.'
+  });
+});
+
+// ─── Catch-All for Non-API Routes (Production) ─────────────────────────────
+// In production, if someone hits the Railway URL directly (not the API), return
+// a helpful message instead of a confusing blank page or error.
+if (isProduction) {
+  app.use((_req, res) => {
+    res.status(200).json({
+      message: 'NexusWeave API Server is running.',
+      api: '/api/health',
+      frontend: 'https://nexusweave.vercel.app'
+    });
   });
 }
 
-// Unknown API routes
-app.use('/api', (_req, res) => {
-  res.status(404).json({ errors: ['API endpoint not found.'] });
-});
-
-// Global error handler
+// ─── Global Error Handler ───────────────────────────────────────────────────
 app.use((err, req, res, _next) => {
-  console.error('Unhandled error:', err.message);
-  res.status(500).json({ errors: ['An unexpected server error occurred.'] });
+  const status = err.status || err.statusCode || 500;
+  const message = err.message || 'An unexpected server error occurred.';
+
+  // Log full error details for debugging
+  console.error('──────────────────────────────────────');
+  console.error(`🔴 Unhandled Error on ${req.method} ${req.originalUrl}`);
+  console.error(`   Status: ${status}`);
+  console.error(`   Message: ${message}`);
+  if (err.stack) {
+    console.error(`   Stack: ${err.stack.split('\n').slice(0, 5).join('\n          ')}`);
+  }
+  console.error('──────────────────────────────────────');
+
+  res.status(status).json({
+    errors: [status >= 500 ? 'An unexpected server error occurred.' : message]
+  });
 });
 
-// --- WebSocket Setup ---
+// ─── WebSocket Setup ────────────────────────────────────────────────────────
 const wss = new WebSocket.Server({ server, path: '/ws' });
 const userSockets = new Map();
 
@@ -310,6 +398,7 @@ wss.on('connection', async (ws, req) => {
   });
 });
 
+// ─── Server Startup ─────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 4000;
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/nexusweave';
 
@@ -325,8 +414,12 @@ const isAtlas = /mongodb\.net|atlas/i.test(MONGODB_URI);
 // Binding the port up front means a restart never leaves the frontend staring at a
 // closed port while the Atlas handshake (which can take 15s+) completes.
 server.listen(PORT, () => {
+  console.log('──────────────────────────────────────');
   console.log(`🚀 NexusWeave Backend Server running on http://localhost:${PORT}`);
   console.log(`📡 WebSocket server initialized on ws://localhost:${PORT}/ws`);
+  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`📂 Server root: ${__dirname}`);
+  console.log('──────────────────────────────────────');
   console.log('⏳ Connecting to the database...');
 });
 
@@ -344,7 +437,7 @@ server.on('error', (err) => {
   process.exit(1);
 });
 
-// --- Database connects in the background and keeps retrying ---
+// ─── Database Connection with Retry ─────────────────────────────────────────
 let dbAttempt = 0;
 
 function explainDbError(err) {
