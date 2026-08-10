@@ -33,7 +33,6 @@ const Message = require('./models/Message');
 
 const app = express();
 const server = http.createServer(app);
-const rootDir = path.join(__dirname, '..');
 
 // Human-readable reason the database is unavailable, surfaced to the client so it can
 // distinguish a database outage from an unreachable server. Null while healthy.
@@ -78,10 +77,16 @@ app.use('/api/activity', activityRoutes);
 app.use('/api/focus', focusRoutes);
 
 // Serve frontend from repo root ONLY in local development.
-// In production, Vercel serves the frontend — Railway only needs the API.
+// In production (Railway), Vercel serves the frontend — Railway only needs the API.
+// We check both env vars AND whether the pages directory actually exists on disk,
+// so the server never crashes with ENOENT even if env vars are misconfigured.
+const fs = require('fs');
+const frontendDir = path.join(__dirname, '..', 'pages');
 const isProduction = process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV === 'production';
+const hasFrontend = !isProduction && fs.existsSync(frontendDir);
 
-if (!isProduction) {
+if (hasFrontend) {
+  const rootDir = path.join(__dirname, '..');
   // Serve frontend from repo root (preserves original asset + page URLs)
   app.use(express.static(rootDir));
 
