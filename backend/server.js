@@ -77,27 +77,18 @@ app.use('/api/announcements', announcementRoutes);
 app.use('/api/activity', activityRoutes);
 app.use('/api/focus', focusRoutes);
 
-// Block secrets / backend source before any static serving
-app.use((req, res, next) => {
-  const p = req.path.toLowerCase();
-  if (
-    p.startsWith('/backend') ||
-    p.startsWith('/.git') ||
-    p.includes('/.env') ||
-    p.endsWith('.env') ||
-    p.includes('node_modules')
-  ) {
-    return res.status(404).json({ errors: ['Not found.'] });
-  }
-  next();
-});
+// Serve frontend from repo root ONLY in local development.
+// In production, Vercel serves the frontend — Railway only needs the API.
+const isProduction = process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV === 'production';
 
-// Serve frontend from repo root (preserves original asset + page URLs)
-app.use(express.static(rootDir));
+if (!isProduction) {
+  // Serve frontend from repo root (preserves original asset + page URLs)
+  app.use(express.static(rootDir));
 
-app.get('/', (_req, res) => {
-  res.sendFile(path.join(rootDir, 'pages', 'index.html'));
-});
+  app.get('/', (_req, res) => {
+    res.sendFile(path.join(rootDir, 'pages', 'index.html'));
+  });
+}
 
 // Unknown API routes
 app.use('/api', (_req, res) => {
