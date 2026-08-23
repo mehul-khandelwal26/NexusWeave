@@ -58,7 +58,7 @@ body.app-body {
   font-family: 'Inter', 'Plus Jakarta Sans', sans-serif !important;
   font-weight: 700 !important;
   font-size: 18px !important;
-  color: #0f172a !important;
+  color: var(--text-main) !important;
   letter-spacing: -0.02em !important;
   margin: 0;
 }

@@ -270,7 +270,13 @@
 
 .task-groups,
 .task-group-list,
-.board-card-list { display: grid; gap: 0.75rem; }
+.board-card-list {
+  display: grid;
+  gap: 0.75rem;
+}
+.board-card-list {
+  min-height: 200px;
+}
 .task-group { padding: 0.9rem; background: var(--surface-muted); border-radius: 18px; }
 .task-group-header { margin-bottom: 0.7rem; }
 .task-group-header h3 { font-family: var(--display); }
@@ -324,7 +330,13 @@
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.36);
 }
-.board-column { background: var(--surface-muted); border: 1px solid var(--border); border-radius: 18px; padding: 0.85rem; }
+.board-column {
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 0.85rem;
+  min-height: 360px;
+}
 .board-column.is-drop-target { border-color: var(--primary); }
 .board-card { padding: 0.8rem; border-radius: 14px; background: var(--surface); border: 1px solid var(--border); display: grid; gap: 0.5rem; }
 .board-card-top, .board-card-foot { justify-content: space-between; }
@@ -779,6 +791,22 @@
   border: 1px solid var(--border);
   background: var(--surface-muted);
   font-size: 0.88rem;
+}
+
+.attendance-status-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--ink-soft);
+}
+
+.attendance-status-dot.is-present {
+  background: #22c55e;
+}
+
+.attendance-status-dot.is-away {
+  background: var(--border);
 }
 
 .attendance-time-tag {

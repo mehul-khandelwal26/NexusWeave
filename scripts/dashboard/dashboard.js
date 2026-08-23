@@ -46,7 +46,7 @@
     const roleIsPersonal = user.role === 'personal' || (!roleIsAdmin && user.role !== 'employee');
 
     if (roleBadgeHeader) {
-      roleBadgeHeader.textContent = roleIsPersonal ? '👤 Personal' : roleIsAdmin ? '🛡️ Admin' : '👤 Employee';
+      roleBadgeHeader.textContent = roleIsPersonal ? 'Personal' : roleIsAdmin ? 'Admin' : 'Employee';
       roleBadgeHeader.className = `profile-role-badge role-${roleIsPersonal ? 'personal' : roleIsAdmin ? 'admin' : 'employee'}`;
     }
     if (dashboardEyebrow) dashboardEyebrow.textContent = roleIsPersonal ? 'Personal Focus Hub' : roleIsAdmin ? 'Admin Command Center' : 'Team Workspace';
@@ -235,10 +235,10 @@
             if (res && res.success !== false) {
               attendanceSnapshot = res;
               if (window.NexusNotify) {
-                window.NexusNotify.add({ icon: '✅', text: 'Attendance marked for today.', type: 'success' });
+                window.NexusNotify.add({ text: 'Attendance marked for today.', type: 'success' });
               }
             } else if (window.NexusNotify) {
-              window.NexusNotify.add({ icon: '⚠️', text: 'Could not save attendance. Please try again.', type: 'error' });
+              window.NexusNotify.add({ text: 'Could not save attendance. Please try again.', type: 'error' });
             }
           }
         } finally {
@@ -315,7 +315,7 @@
             <strong>${esc(name)}</strong>
             <small>${esc(u.email || '')}</small>
           </div>
-          <span class="online-status-pill">🟢 Online</span>
+          <span class="online-status-pill">Online</span>
         </div>
       `;
     }).join('');
@@ -349,7 +349,7 @@
             <strong>${esc(name)}</strong>
             <small>${esc(u.email || '')}</small>
           </div>
-          <span class="attendance-time-pill">📅 ${esc(u.time || 'Present')}</span>
+          <span class="attendance-time-pill">${esc(u.time || 'Present')}</span>
         </div>
       `;
     }).join('');
@@ -377,7 +377,7 @@
     container.innerHTML = ordered.map((u) => `
       <div class="attendance-admin-item">
         <div style="display:flex;align-items:center;gap:0.6rem;">
-          <span style="font-size:0.9rem;">${u.present ? '🟢' : '⚪'}</span>
+          <span class="attendance-status-dot ${u.present ? 'is-present' : 'is-away'}" aria-hidden="true"></span>
           <div>
             <strong>${esc(u.name || u.email)}</strong>
             <small style="display:block;color:var(--ink-soft);font-size:0.75rem;">${esc(u.email)} · ${u.monthlyRate}% last ${snapshot.rateWindowDays}d</small>
@@ -575,7 +575,7 @@
     ];
 
     if (!pending.length) {
-      container.innerHTML = `<div class="empty-inline">No upcoming deadlines or high-priority tasks. You are all caught up! 🎉</div>`;
+      container.innerHTML = `<div class="empty-inline">No upcoming deadlines or high-priority tasks. You are all caught up!</div>`;
       return;
     }
 
@@ -629,7 +629,6 @@
 
     stored.slice(0, 8).forEach((n) => {
       items.push({
-        icon: n.icon || '🔔',
         text: n.text,
         time: n.timeStr || 'Recent'
       });
@@ -643,22 +642,22 @@
           due.setHours(0, 0, 0, 0);
           const diffDays = Math.round((due - today) / 86400000);
           if (diffDays < 0) {
-            items.push({ icon: '⚠️', text: `"${esc(t.title)}" is overdue by ${Math.abs(diffDays)} day(s).`, time: 'Deadline' });
+            items.push({ text: `"${esc(t.title)}" is overdue by ${Math.abs(diffDays)} day(s).`, time: 'Deadline' });
           } else if (diffDays >= 0 && diffDays <= 2) {
-            items.push({ icon: '⏰', text: `"${esc(t.title)}" is due ${diffDays === 0 ? 'today' : 'in ' + diffDays + ' day(s)'}.`, time: 'Upcoming' });
+            items.push({ text: `"${esc(t.title)}" is due ${diffDays === 0 ? 'today' : 'in ' + diffDays + ' day(s)'}.`, time: 'Upcoming' });
           }
         }
       }
       if (String(t.priority || '').toLowerCase() === 'high') {
-        items.push({ icon: '🔥', text: `High priority task: "${esc(t.title)}" needs attention.`, time: 'Priority' });
+        items.push({ text: `High priority task: "${esc(t.title)}" needs attention.`, time: 'Priority' });
       }
     });
 
     if (!items.length) {
       items.push(
-        { icon: '📢', text: 'Welcome to your employee workspace portal.', time: 'Just now' },
-        { icon: '📌', text: 'Check your upcoming deadlines & task board.', time: 'Today' },
-        { icon: '🛡️', text: 'Organization policies and team sync are up to date.', time: 'Yesterday' }
+        { text: 'Welcome to your employee workspace portal.', time: 'Just now' },
+        { text: 'Check your upcoming deadlines & task board.', time: 'Today' },
+        { text: 'Organization policies and team sync are up to date.', time: 'Yesterday' }
       );
     }
 
@@ -685,7 +684,6 @@
       }
       container.innerHTML = list.map(n => `
         <div class="notification-item">
-          <span class="notification-icon">${n.icon}</span>
           <div class="notification-text">
             <span>${n.text}</span>
             <small class="notification-time">${n.time}</small>
@@ -977,7 +975,7 @@
           <p>You have resolved all pending focus tasks. Take a break or launch a new focus sprint.</p>
           <div style="display:flex;gap:0.6rem;margin-top:0.4rem;">
             <a href="create.html" class="primary-btn" style="padding:0.45rem 0.9rem;font-size:0.82rem;text-decoration:none;">+ Create Task</a>
-            <a href="focus.html" class="ghost-btn" style="padding:0.45rem 0.9rem;font-size:0.82rem;text-decoration:none;">⏱ Start Focus</a>
+            <a href="focus.html" class="ghost-btn" style="padding:0.45rem 0.9rem;font-size:0.82rem;text-decoration:none;">Start Focus</a>
           </div>
         </div>
       `;

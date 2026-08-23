@@ -50,6 +50,7 @@
   };
 
   let orgUsers = [];
+  let draggingTaskId = null;
 
   const state = {
     currentUser: normalizeUser(currentUser, sessionEmail),
@@ -113,6 +114,30 @@
   const taskSubmitButton = document.getElementById('taskSubmitBtn');
   const emptyStateEl = document.getElementById('emptyState');
 
+  const isBoardPage = Boolean(boardColumnsEl) && !taskGroupsEl;
+  if (isBoardPage) {
+    state.filters.status = 'All';
+    if (!state.filters.ownershipScope || state.filters.ownershipScope === 'mine') {
+      state.filters.ownershipScope = 'all';
+    }
+  }
+
+  function sameId(a, b) {
+    if (a == null || b == null || a === '' || b === '') return false;
+    return String(a) === String(b);
+  }
+
+  function findTaskIndex(taskId) {
+    const key = String(taskId || '');
+    if (!key) return -1;
+    return state.currentUser.tasks.findIndex((t) => sameId(t.id, key) || sameId(t._id, key));
+  }
+
+  function findTask(taskId) {
+    const idx = findTaskIndex(taskId);
+    return idx === -1 ? null : state.currentUser.tasks[idx];
+  }
+
   function loadViewState() {
     try {
       const saved = JSON.parse(localStorage.getItem(VIEW_STATE_KEY) || '{}');
@@ -154,9 +179,11 @@
       const data = await api.getUserData();
       if (data) {
         if (data.tasks) {
-          const mappedTasks = data.tasks.map(bt => ({
-            id: bt._id || bt.id,
-            _id: bt._id,
+          const mappedTasks = data.tasks.map(bt => {
+            const recordId = String(bt._id || bt.id || '');
+            return {
+            id: recordId,
+            _id: recordId,
             title: bt.title,
             description: bt.description || '',
             status: bt.status || 'Todo',
@@ -175,11 +202,12 @@
             assigneeName: bt.assignedUserEmail
               ? (bt.assignedUserEmail.split('@')[0])
               : (bt.assignedUser?.username || ''),
-            userEmail: bt.userEmail || null,
+            userEmail: bt.userEmail || sessionEmail || null,
             organizationId: bt.organizationId || null,
             createdAt: bt.createdAt || new Date().toISOString(),
             updatedAt: bt.updatedAt || new Date().toISOString()
-          }));
+          };
+          });
           state.currentUser.tasks = mappedTasks;
         }
         if (data.projects) {
@@ -205,12 +233,14 @@
     return true;
   }
 
-  function getVisibleTasks() {
+  function getVisibleTasks({ forBoard = false } = {}) {
     let taskList = Array.isArray(state.currentUser.tasks) ? state.currentUser.tasks.slice() : [];
 
     // Admin ownership scope: My tasks vs Employee tasks vs All
     if (state.currentUser.role === 'admin') {
-      const scope = state.filters.ownershipScope || 'mine';
+      const scope = forBoard
+        ? (state.filters.ownershipScope || 'all')
+        : (state.filters.ownershipScope || 'mine');
       if (scope === 'mine') {
         taskList = taskList.filter(isMyTask);
       } else if (scope === 'team') {
@@ -218,7 +248,8 @@
       }
     }
 
-    const filtered = helpers.filterTasks(taskList, state.filters, state.currentUser.projects || []);
+    const filters = forBoard ? { ...state.filters, status: 'All' } : state.filters;
+    const filtered = helpers.filterTasks(taskList, filters, state.currentUser.projects || []);
     return sortTasks(filtered);
   }
 
@@ -431,7 +462,7 @@
 
   function renderBoardPage() {
     if (!boardColumnsEl) return;
-    const allVisible = getVisibleTasks();
+    const allVisible = getVisibleTasks({ forBoard: true });
 
     const columns = {
       Todo: allVisible.filter((t) => t.status === 'Todo' || !t.status),
@@ -504,15 +535,26 @@
            event.preventDefault();
            return;
         }
+        draggingTaskId = card.dataset.taskId;
         event.dataTransfer.setData('text/plain', card.dataset.taskId);
+        event.dataTransfer.effectAllowed = 'move';
         card.classList.add('is-dragging');
       });
-      card.addEventListener('dragend', () => card.classList.remove('is-dragging'));
+      card.addEventListener('dragend', () => {
+        card.classList.remove('is-dragging');
+        draggingTaskId = null;
+      });
     });
 
     boardColumnsEl.querySelectorAll('.board-column').forEach((column) => {
-      column.addEventListener('dragover', (event) => event.preventDefault());
-      column.addEventListener('dragenter', () => column.classList.add('is-drop-target'));
+      column.addEventListener('dragover', (event) => {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+      });
+      column.addEventListener('dragenter', (event) => {
+        event.preventDefault();
+        column.classList.add('is-drop-target');
+      });
       column.addEventListener('dragleave', (event) => {
         if (!column.contains(event.relatedTarget)) {
           column.classList.remove('is-drop-target');
@@ -521,8 +563,9 @@
       column.addEventListener('drop', (event) => {
         event.preventDefault();
         column.classList.remove('is-drop-target');
-        const taskId = event.dataTransfer.getData('text/plain');
-        moveTaskToColumn(taskId, column.dataset.columnName);
+        const taskId = event.dataTransfer.getData('text/plain') || draggingTaskId;
+        draggingTaskId = null;
+        if (taskId) moveTaskToColumn(taskId, column.dataset.columnName);
       });
     });
 
@@ -570,16 +613,21 @@
   }
 
   function canModifyTask(task) {
+    if (!task) return false;
     if (state.currentUser.role === 'admin') return true;
-    if (task.isOrgTask) return true; // Anyone in org can mark it complete
-    const currentUserEmail = (state.currentUser.email || '').toLowerCase();
-    if (task.assignedUserEmail && task.assignedUserEmail.toLowerCase() === currentUserEmail) return true;
-    if (!task.assignedUserEmail && !task.isOrgTask && (task.userEmail || '').toLowerCase() === currentUserEmail) return true;
+    if (task.isOrgTask) return true;
+    const currentUserEmail = String(state.currentUser.email || sessionEmail || '').toLowerCase();
+    const assigned = String(task.assignedUserEmail || '').toLowerCase();
+    const owner = String(task.userEmail || '').toLowerCase();
+    if (assigned && assigned === currentUserEmail) return true;
+    if (owner && owner === currentUserEmail) return true;
+    const inOrg = Boolean(state.currentUser.organizationId || state.currentUser.orgId);
+    if (!task.isOrgTask && !assigned && !owner && !inOrg) return true;
     return false;
   }
 
   async function moveTaskToColumn(taskId, targetColumn) {
-    const taskIdx = state.currentUser.tasks.findIndex(t => t.id === taskId);
+    const taskIdx = findTaskIndex(taskId);
     if (taskIdx === -1) return;
 
     const task = state.currentUser.tasks[taskIdx];
@@ -589,33 +637,54 @@
        return;
     }
 
+    if (getTaskStatusGroup(task) === targetColumn) return;
+
+    const previousStatus = task.status;
+    const previousCompletedAt = task.completedAt;
+    const previousProgress = task.progress;
+
     task.status = targetColumn;
     task.updatedAt = new Date().toISOString();
 
     if (targetColumn === 'Done') {
       task.progress = 100;
       task.completedAt = new Date().toISOString();
+    } else {
+      task.completedAt = null;
+      if (task.progress === 100) task.progress = 0;
     }
 
     persistUser();
+    renderAll();
 
-    // Call Backend API update
-    if (api && api.updateBackendTask && task._id) {
+    const backendId = String(task._id || task.id || '');
+    const canSyncBackend = api && api.updateBackendTask && backendId && !backendId.startsWith('task-');
+    if (canSyncBackend) {
       try {
-        await api.updateBackendTask(task._id, {
-          status: targetColumn,
-          version: task.version || 1
+        const updated = await api.updateBackendTask(backendId, {
+          status: targetColumn
         });
+        if (updated && (updated._id || updated.id)) {
+          task._id = String(updated._id || updated.id);
+          task.id = task._id;
+          persistUser();
+        } else if (!updated && api.getUserData) {
+          await syncFromBackend();
+          renderAll();
+        }
       } catch (err) {
         console.warn('Backend task status update failed:', err);
+        task.status = previousStatus;
+        task.completedAt = previousCompletedAt;
+        task.progress = previousProgress;
+        persistUser();
+        renderAll();
       }
     }
-
-    renderAll();
   }
 
   function toggleTaskComplete(taskId) {
-    const task = state.currentUser.tasks.find(t => t.id === taskId);
+    const task = findTask(taskId);
     if (!task) return;
 
     const newStatus = task.status === 'Done' ? 'Todo' : 'Done';
@@ -623,7 +692,7 @@
   }
 
   function openDrawer(taskId) {
-    const task = state.currentUser.tasks.find((t) => t.id === taskId);
+    const task = findTask(taskId);
     if (!task) return;
 
     state.activeDrawerTaskId = taskId;
@@ -658,7 +727,7 @@
     }
 
     if (taskIdToEdit) {
-      const task = state.currentUser.tasks.find((t) => t.id === taskIdToEdit);
+      const task = findTask(taskIdToEdit);
       if (!task) return;
       taskIdInput.value = task.id;
       taskTitleInput.value = task.title;
@@ -746,7 +815,7 @@
     const labels = labelsStr ? labelsStr.split(',').map(l => l.trim()).filter(Boolean) : [];
 
       let attachments = [];
-      const existingTask = editingId ? state.currentUser.tasks.find(t => t.id === editingId) : null;
+      const existingTask = editingId ? findTask(editingId) : null;
       if (taskAttachmentsInput) {
         if (taskAttachmentsInput.type === 'file' && taskAttachmentsInput.files && taskAttachmentsInput.files.length > 0) {
           attachments = Array.from(taskAttachmentsInput.files).map(f => f.name);
@@ -759,7 +828,7 @@
       }
 
     if (editingId) {
-      const idx = state.currentUser.tasks.findIndex(t => t.id === editingId);
+      const idx = findTaskIndex(editingId);
       if (idx !== -1) {
         const task = state.currentUser.tasks[idx];
         task.title = title;
@@ -805,13 +874,14 @@
       }
 
       const newTask = {
-        id: createdTask?._id || `task-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
-        _id: createdTask?._id,
+        id: String(createdTask?._id || createdTask?.id || `task-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`),
+        _id: createdTask?._id ? String(createdTask._id) : (createdTask?.id ? String(createdTask.id) : undefined),
         title,
         description,
         projectId,
         labels,
         attachments,
+        userEmail: createdTask?.userEmail || sessionEmail || null,
         assigneeName: assignedUserEmail
           ? assignedUserEmail.split('@')[0]
           : (createdTask?.assignedUser?.username || currentUser.name),
@@ -841,10 +911,10 @@
     deleteConfirmButton.addEventListener('click', async () => {
       if (!state.pendingDeleteTaskId) return;
       const taskId = state.pendingDeleteTaskId;
-      const taskToDelete = state.currentUser.tasks.find(t => t.id === taskId);
+      const taskToDelete = findTask(taskId);
       const backendId = taskToDelete ? (taskToDelete._id || taskToDelete.id) : taskId;
       
-      state.currentUser.tasks = state.currentUser.tasks.filter(t => t.id !== taskId);
+      state.currentUser.tasks = state.currentUser.tasks.filter((t) => !sameId(t.id, taskId) && !sameId(t._id, taskId));
 
       if (api && api.deleteBackendTask) {
         try {

@@ -505,7 +505,7 @@
     },
 
     async updateBackendTask(id, taskData) {
-      const res = await tryBackendRequest(`/tasks/${id}`, {
+      const res = await tryBackendRequest(`/tasks/${encodeURIComponent(String(id))}`, {
         method: 'PUT',
         body: JSON.stringify(taskData)
       });
