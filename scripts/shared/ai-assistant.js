@@ -16,6 +16,11 @@
   /* ── Inject ChatGPT Sidebar UI ── */
   function injectAIUI() {
     if (document.getElementById('aiFabBtn')) return;
+    if (typeof nexusAI.migratePlatformAiKey === 'function') {
+      nexusAI.migratePlatformAiKey();
+    } else if (api && typeof api.migratePlatformAiKey === 'function') {
+      api.migratePlatformAiKey();
+    }
 
     // 1. Floating Action Button
     const fabBtn = document.createElement('button');
@@ -157,10 +162,16 @@
     try {
       // Get Response from NexusAI Service
       const aiResponse = await nexusAI.ask(promptText);
+      // #region agent log
+      fetch('http://127.0.0.1:7314/ingest/901cdb47-2de4-4999-8997-1539cce173dc',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88e390'},body:JSON.stringify({sessionId:'88e390',runId:'pre-fix',hypothesisId:'E',location:'ai-assistant.js:sendPromptToAI',message:'UI received MakAI reply',data:{promptPreview:String(promptText||'').slice(0,80),responseLen:(aiResponse||'').length,responsePreview:String(aiResponse||'').slice(0,180),looksGeneric:String(aiResponse||'').includes('I analyzed your request')},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
 
       // Append AI Message
       appendMessage('assistant', 'MakAI', aiResponse);
     } catch (err) {
+      // #region agent log
+      fetch('http://127.0.0.1:7314/ingest/901cdb47-2de4-4999-8997-1539cce173dc',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88e390'},body:JSON.stringify({sessionId:'88e390',runId:'pre-fix',hypothesisId:'E',location:'ai-assistant.js:sendPromptToAI',message:'UI catch error',data:{error:String(err&&err.message||err)},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       console.error('NexusAI error:', err);
       appendMessage('assistant', 'MakAI', 'Sorry, I encountered an error processing your request. Please try again.');
     } finally {
@@ -202,18 +213,38 @@
   }
 
   function openApiKeyPrompt() {
-    const currentKey = nexusAI.getApiKey();
-    const newKey = prompt(`Configure API Key (OpenAI 'sk-...' or Groq 'gsk_...').\nLeave blank to use the Built-in Context Engine:`, currentKey);
-    
-    if (newKey !== null) {
-      nexusAI.setApiKey(newKey);
-      
-      const currentProvider = nexusAI.getProvider();
-      const providers = nexusAI.PROVIDERS || {};
-      const label = providers[currentProvider]?.label || currentProvider;
-      
-      alert(newKey.trim() ? `Saved successfully! Auto-detected provider: ${label}` : 'Using MakAI Built-in Context Engine.');
+    if (typeof nexusAI.migratePlatformAiKey === 'function') {
+      nexusAI.migratePlatformAiKey();
+    } else if (api && typeof api.migratePlatformAiKey === 'function') {
+      api.migratePlatformAiKey();
     }
+    const hasCustom = !!(nexusAI.getApiKey && nexusAI.getApiKey());
+    const newKey = prompt(
+      hasCustom
+        ? 'A personal API key is saved on this browser.\nPaste a new OpenAI (sk-...) or Groq (gsk-...) key, leave blank to keep it, or type CLEAR to use platform MakAI.'
+        : 'Optional: paste your own OpenAI (sk-...) or Groq (gsk-...) key.\nLeave blank to use platform MakAI (recommended).',
+      ''
+    );
+
+    if (newKey === null) return;
+    const trimmed = newKey.trim();
+    if (!trimmed) {
+      if (hasCustom) return;
+      nexusAI.setApiKey('');
+      alert('Using platform MakAI.');
+      return;
+    }
+    if (trimmed.toLowerCase() === 'clear') {
+      nexusAI.setApiKey('');
+      alert('Using platform MakAI.');
+      return;
+    }
+    nexusAI.setApiKey(trimmed);
+
+    const currentProvider = nexusAI.getProvider();
+    const providers = nexusAI.PROVIDERS || {};
+    const label = providers[currentProvider]?.label || currentProvider;
+    alert(`Saved your personal key. Provider: ${label}`);
   }
 
   // Initialize UI
