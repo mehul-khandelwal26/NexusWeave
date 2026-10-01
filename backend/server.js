@@ -37,6 +37,7 @@ const messageRoutes = require('./routes/messages');
 const announcementRoutes = require('./routes/announcements');
 const activityRoutes = require('./routes/activity');
 const focusRoutes = require('./routes/focus');
+const aiRoutes = require('./routes/ai');
 
 const User = require('./models/User');
 const Message = require('./models/Message');
@@ -108,6 +109,7 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/announcements', announcementRoutes);
 app.use('/api/activity', activityRoutes);
 app.use('/api/focus', focusRoutes);
+app.use('/api/ai', aiRoutes);
 
 // ─── Static File Serving (Local Development Only) ───────────────────────────
 // In production, Vercel serves the frontend — Railway only needs the API.

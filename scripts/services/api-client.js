@@ -61,6 +61,7 @@
 
   function applyAuthResponse(backendUser, token, provider) {
     if (!token || !backendUser) return null;
+    migratePlatformAiKey();
     const email = backendUser.email;
     const users = getUsers();
     const existing = users[email] || {};
@@ -165,12 +166,51 @@
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
-  async function sendOnce(endpoint, options) {
+  const AI_KEY_STORAGE = 'nw_ai_key';
+  const AI_PROVIDER_STORAGE = 'nw_ai_provider';
+  const AI_KEY_GEN_STORAGE = 'nw_ai_key_gen';
+  const PLATFORM_AI_KEY_GEN = '2026-08-23-v2';
+  const EXPIRED_PLATFORM_GROQ_KEYS = [
+    'GROQ_API_KEY_REMOVED'
+  ];
+
+  // Drop expired/shipped Groq keys from every browser so login, signup, and
+  // already-open sessions use the server-held MakAI key instead of a leftover local one.
+  function migratePlatformAiKey() {
+    try {
+      const stored = (localStorage.getItem(AI_KEY_STORAGE) || '').trim();
+      if (stored && EXPIRED_PLATFORM_GROQ_KEYS.indexOf(stored) !== -1) {
+        localStorage.removeItem(AI_KEY_STORAGE);
+        if (localStorage.getItem(AI_PROVIDER_STORAGE) === 'groq') {
+          localStorage.removeItem(AI_PROVIDER_STORAGE);
+        }
+      }
+      if (localStorage.getItem(AI_KEY_GEN_STORAGE) !== PLATFORM_AI_KEY_GEN) {
+        const current = (localStorage.getItem(AI_KEY_STORAGE) || '').trim();
+        if (!current || current.startsWith('gsk_')) {
+          localStorage.removeItem(AI_KEY_STORAGE);
+          if ((localStorage.getItem(AI_PROVIDER_STORAGE) || 'groq') === 'groq') {
+            localStorage.removeItem(AI_PROVIDER_STORAGE);
+          }
+        }
+        localStorage.setItem(AI_KEY_GEN_STORAGE, PLATFORM_AI_KEY_GEN);
+      }
+    } catch (err) {
+      /* ignore storage errors */
+    }
+  }
+
+  migratePlatformAiKey();
+
+  async function sendOnce(endpoint, options = {}) {
+    const timeoutMs = typeof options.timeout === 'number' ? options.timeout : 8000;
+    const fetchOptions = { ...options };
+    delete fetchOptions.timeout;
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const res = await fetch(`${API_BASE}${endpoint}`, {
-        ...options,
+        ...fetchOptions,
         signal: controller.signal,
         headers: {
           'Content-Type': 'application/json',
@@ -264,6 +304,7 @@
     API_BASE,
     checkServerHealth,
     describeFailure,
+    migratePlatformAiKey,
 
     /* ── Auth ── */
     async signup({ name, email, password, role = 'personal', orgName, orgKey, orgVisibility, orgId }) {
@@ -505,7 +546,7 @@
     },
 
     async updateBackendTask(id, taskData) {
-      const res = await tryBackendRequest(`/tasks/${id}`, {
+      const res = await tryBackendRequest(`/tasks/${encodeURIComponent(String(id))}`, {
         method: 'PUT',
         body: JSON.stringify(taskData)
       });
@@ -923,6 +964,21 @@
         return { success: true, task: res.task || res };
       }
       return { success: false, error: res ? (res.message || (res.errors && res.errors[0])) : 'Failed to create task' };
+    },
+
+    async askMakAI(prompt, context) {
+      const res = await tryBackendRequest('/ai/ask', {
+        method: 'POST',
+        timeout: 30000,
+        body: JSON.stringify({ prompt, context })
+      });
+      if (res && !res._error && res.content) {
+        return { success: true, content: res.content };
+      }
+      return {
+        success: false,
+        error: res ? (res.message || (res.errors && res.errors[0]) || 'MakAI request failed.') : await describeFailure('MakAI is unavailable.')
+      };
     }
   };
 

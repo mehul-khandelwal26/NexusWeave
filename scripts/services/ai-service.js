@@ -21,12 +21,19 @@
     groq: {
       label: 'Groq',
       endpoint: 'https://api.groq.com/openai/v1/chat/completions',
-      model: 'llama-3.3-70b-versatile'
+      model: 'openai/gpt-oss-120b'
     }
   };
 
+  function migratePlatformAiKey() {
+    if (api && typeof api.migratePlatformAiKey === 'function') {
+      api.migratePlatformAiKey();
+    }
+  }
+
   const NexusAI = {
     getProvider() {
+      migratePlatformAiKey();
       return localStorage.getItem(PROVIDER_STORAGE) || 'groq'; // Default to Groq
     },
 
@@ -36,6 +43,7 @@
     },
 
     getApiKey() {
+      migratePlatformAiKey();
       // One-time migration so anyone who already saved an OpenAI key keeps working.
       const legacy = localStorage.getItem(LEGACY_OPENAI_KEY_STORAGE);
       if (legacy && !localStorage.getItem(API_KEY_STORAGE)) {
@@ -43,14 +51,18 @@
         localStorage.setItem(PROVIDER_STORAGE, 'openai');
         localStorage.removeItem(LEGACY_OPENAI_KEY_STORAGE);
       }
-      
-      // Fallback to the hardcoded Groq API key so any visitor can use the AI without entering a key.
-      // WARNING: Since this is a frontend app, this key is publicly visible in the browser's source code!
-      return localStorage.getItem(API_KEY_STORAGE) || 'GROQ_API_KEY_REMOVED';
+
+      // Only a user-supplied key is kept in the browser. The platform Groq key lives on the server.
+      return (localStorage.getItem(API_KEY_STORAGE) || '').trim();
     },
 
     setApiKey(key) {
-      const trimmed = key.trim();
+      const trimmed = (key || '').trim();
+      if (!trimmed || trimmed.toLowerCase() === 'clear') {
+        localStorage.removeItem(API_KEY_STORAGE);
+        localStorage.removeItem(PROVIDER_STORAGE);
+        return;
+      }
       localStorage.setItem(API_KEY_STORAGE, trimmed);
       
       if (trimmed.startsWith('gsk_')) {
@@ -117,7 +129,7 @@
         }
       });
 
-      return {
+      const compiled = {
         user: currentUser,
         role: currentUser.role,
         isAdmin,
@@ -131,28 +143,89 @@
         underperformingMembers,
         membersWithMissedDeadlines
       };
+      // #region agent log
+      fetch('http://127.0.0.1:7314/ingest/901cdb47-2de4-4999-8997-1539cce173dc',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88e390'},body:JSON.stringify({sessionId:'88e390',runId:'pre-fix',hypothesisId:'C',location:'ai-service.js:getWorkspaceContext',message:'workspace context compiled',data:{role:currentUser.role,taskCount:myTasks.length,projectCount:myProjects.length,orgUserCount:orgUsers.length,hasOrg:!!orgInfo,score:myScore,hours:myHours,pendingCount:myTasks.filter(t=>t.status!=='Done').length},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+      return compiled;
     },
 
     /* ── Main Query Analyzer / Prompt Handler ── */
     async ask(promptText) {
+      migratePlatformAiKey();
       const ctx = await this.getWorkspaceContext();
       if (!ctx) return 'Error: Unable to fetch workspace context. Please log in.';
 
       const apiKey = this.getApiKey();
       const provider = this.getProvider();
+      const storedKey = localStorage.getItem(API_KEY_STORAGE);
 
-      // If an API key is configured, call the selected provider (OpenAI or Groq —
-      // both expose an OpenAI-compatible chat completions endpoint).
+      // #region agent log
+      fetch('http://127.0.0.1:7314/ingest/901cdb47-2de4-4999-8997-1539cce173dc',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88e390'},body:JSON.stringify({sessionId:'88e390',runId:'pre-fix',hypothesisId:'A',location:'ai-service.js:ask',message:'ask() entry',data:{provider,hasApiKey:!!apiKey,hasStoredKey:!!(storedKey&&storedKey.trim()),keyPrefix:(apiKey||'').slice(0,4),promptPreview:String(promptText||'').slice(0,80)},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+
+      // Optional: a visitor can still paste their own OpenAI/Groq key in Settings.
       if (apiKey) {
         try {
-          return await this.callProvider(provider, promptText, ctx, apiKey);
+          const result = await this.callProvider(provider, promptText, ctx, apiKey);
+          // #region agent log
+          fetch('http://127.0.0.1:7314/ingest/901cdb47-2de4-4999-8997-1539cce173dc',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88e390'},body:JSON.stringify({sessionId:'88e390',runId:'pre-fix',hypothesisId:'D',location:'ai-service.js:ask',message:'provider returned answer',data:{provider,resultLen:(result||'').length,resultPreview:String(result||'').slice(0,160)},timestamp:Date.now()})}).catch(()=>{});
+          // #endregion
+          return result;
         } catch (err) {
-          console.warn(`${PROVIDERS[provider].label} API call failed, falling back to MakAI Context Engine:`, err);
+          // #region agent log
+          fetch('http://127.0.0.1:7314/ingest/901cdb47-2de4-4999-8997-1539cce173dc',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88e390'},body:JSON.stringify({sessionId:'88e390',runId:'pre-fix',hypothesisId:'A',location:'ai-service.js:ask',message:'provider failed, falling back to context engine',data:{provider,error:String(err&&err.message||err)},timestamp:Date.now()})}).catch(()=>{});
+          // #endregion
+          console.warn(`${PROVIDERS[provider].label} API call failed, falling back to platform MakAI:`, err);
         }
+      }
+
+      try {
+        const result = await this.callPlatform(promptText, ctx);
+        // #region agent log
+        fetch('http://127.0.0.1:7314/ingest/901cdb47-2de4-4999-8997-1539cce173dc',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88e390'},body:JSON.stringify({sessionId:'88e390',runId:'post-fix',hypothesisId:'A',location:'ai-service.js:ask',message:'platform MakAI returned answer',data:{resultLen:(result||'').length,resultPreview:String(result||'').slice(0,160)},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        return result;
+      } catch (err) {
+        // #region agent log
+        fetch('http://127.0.0.1:7314/ingest/901cdb47-2de4-4999-8997-1539cce173dc',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88e390'},body:JSON.stringify({sessionId:'88e390',runId:'post-fix',hypothesisId:'A',location:'ai-service.js:ask',message:'platform MakAI failed, falling back to context engine',data:{error:String(err&&err.message||err)},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        console.warn('Platform MakAI failed, falling back to Context Engine:', err);
       }
 
       // Fallback to Intelligent Context Engine (built-in AI reasoning)
       return this.analyzeWithContextEngine(promptText, ctx);
+    },
+
+    compactContext(ctx) {
+      return {
+        userName: ctx.user && ctx.user.name,
+        role: ctx.role,
+        isAdmin: !!ctx.isAdmin,
+        orgName: ctx.orgInfo && ctx.orgInfo.name,
+        myScore: ctx.myScore,
+        myHours: ctx.myHours,
+        orgUserCount: (ctx.orgUsers || []).length,
+        myTasks: (ctx.myTasks || []).slice(0, 40).map((t) => ({
+          title: t.title,
+          status: t.status,
+          priority: t.priority,
+          dueDate: t.dueDate
+        })),
+        myProjects: (ctx.myProjects || []).slice(0, 20).map((p) => p.name || p.title || ''),
+        underperformingMembers: (ctx.underperformingMembers || []).slice(0, 20),
+        membersWithMissedDeadlines: (ctx.membersWithMissedDeadlines || []).slice(0, 20)
+      };
+    },
+
+    async callPlatform(userPrompt, ctx) {
+      if (!api || typeof api.askMakAI !== 'function') {
+        throw new Error('MakAI platform client is unavailable');
+      }
+      const res = await api.askMakAI(userPrompt, this.compactContext(ctx));
+      if (!res || !res.success || !res.content) {
+        throw new Error((res && res.error) || 'MakAI platform request failed');
+      }
+      return res.content;
     },
 
     /* ── OpenAI / Groq API Integration (shared, OpenAI-compatible format) ── */
@@ -169,7 +242,7 @@ You have access to the current workspace context:
 - Underperforming Members: ${JSON.stringify(ctx.underperformingMembers)}
 - Members with Missed Deadlines: ${JSON.stringify(ctx.membersWithMissedDeadlines)}
 
-Be concise, structured, professional, and directly answer the user's question using bullet points and emojis.`;
+Answer the user's question directly using this workspace data. Be specific: name real tasks, people, dates, and scores. Use short sections and bullet points. If something is missing from the context, say so and still give the best next step. Do not dump raw JSON.`;
 
       const response = await fetch(config.endpoint, {
         method: 'POST',
@@ -188,6 +261,9 @@ Be concise, structured, professional, and directly answer the user's question us
       });
 
       const data = await response.json();
+      // #region agent log
+      fetch('http://127.0.0.1:7314/ingest/901cdb47-2de4-4999-8997-1539cce173dc',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88e390'},body:JSON.stringify({sessionId:'88e390',runId:'pre-fix',hypothesisId:'A',location:'ai-service.js:callProvider',message:'provider HTTP response',data:{provider,status:response.status,ok:response.ok,model:config.model,hasChoices:!!(data.choices&&data.choices[0]&&data.choices[0].message),errorMsg:data.error?(data.error.message||String(data.error)):null},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       if (data.choices && data.choices[0] && data.choices[0].message) {
         return data.choices[0].message.content;
       } else if (data.error) {
@@ -202,6 +278,16 @@ Be concise, structured, professional, and directly answer the user's question us
       const isAdmin = ctx.isAdmin;
       const tasks = ctx.myTasks;
       const now = new Date();
+      let intent = 'generic_fallback';
+      if (q.includes('what should i work on') || q.includes('next task') || q.includes('what to do')) intent = 'next_task';
+      else if (q.includes('summarize') || q.includes('summary of today') || q.includes("today's tasks")) intent = 'summary';
+      else if (q.includes('prioritize') || q.includes('priority order')) intent = 'prioritize';
+      else if (q.includes('underperforming') || q.includes('low performance')) intent = 'underperforming';
+      else if (q.includes('missed deadlines') || q.includes('overdue tasks')) intent = 'missed_deadlines';
+      else if (q.includes('weekly report') || q.includes('generate report')) intent = 'weekly_report';
+      // #region agent log
+      fetch('http://127.0.0.1:7314/ingest/901cdb47-2de4-4999-8997-1539cce173dc',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88e390'},body:JSON.stringify({sessionId:'88e390',runId:'pre-fix',hypothesisId:'B',location:'ai-service.js:analyzeWithContextEngine',message:'context engine intent match',data:{intent,promptPreview:String(prompt||'').slice(0,80),taskCount:(tasks||[]).length},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
 
       // ── Employee Prompt: "What should I work on?" ──
       if (q.includes('what should i work on') || q.includes('next task') || q.includes('what to do')) {
@@ -336,5 +422,7 @@ ${isAdmin ? '- *"Who is underperforming?"*\n- *"Which employee missed deadlines?
   };
 
   NexusAI.PROVIDERS = PROVIDERS;
+  NexusAI.migratePlatformAiKey = migratePlatformAiKey;
+  migratePlatformAiKey();
   root.NexusAI = NexusAI;
 })(window);

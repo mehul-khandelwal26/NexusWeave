@@ -61,7 +61,7 @@
     if (userProfileEmail) userProfileEmail.textContent = user.email;
     if (userProfileRoleBadge) {
       const isPersonal = user.role === 'personal';
-      userProfileRoleBadge.textContent = isPersonal ? '👤 Personal' : isAdmin ? '🛡️ Admin' : '👤 Employee';
+      userProfileRoleBadge.textContent = isPersonal ? 'Personal' : isAdmin ? 'Admin' : 'Employee';
       userProfileRoleBadge.className = `org-badge ${isPersonal ? 'badge-personal' : isAdmin ? 'badge-admin' : 'badge-employee'}`;
     }
 
