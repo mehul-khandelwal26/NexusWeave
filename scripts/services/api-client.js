@@ -109,7 +109,7 @@
    */
   function resolveApiBase() {
     if (typeof window === 'undefined' || !window.location) {
-      return 'https://webwondersnexusweave-production.up.railway.app/api';
+      return `http://localhost:${BACKEND_PORT}/api`;
     }
     const { protocol, hostname, port } = window.location;
 
@@ -117,9 +117,14 @@
     if (protocol === 'file:' || hostname === 'localhost' || hostname === '127.0.0.1') {
       return `http://localhost:${BACKEND_PORT}/api`;
     }
-    
-    // Deployed to production (e.g. Vercel)
-    return 'https://webwondersnexusweave-production.up.railway.app/api';
+
+    // LAN / device access (e.g. phone on same wifi): point at backend port on same host
+    if (/^\d+$/.test(port) && port !== '80' && port !== '443') {
+      return `${protocol}//${hostname}:${BACKEND_PORT}/api`;
+    }
+
+    // Same-origin deployment (Express serves both API and frontend from the same port)
+    return `${protocol}//${window.location.host}/api`;
   }
 
   const API_BASE = resolveApiBase();

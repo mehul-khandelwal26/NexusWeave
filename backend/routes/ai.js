@@ -4,7 +4,7 @@ const requireAuth = require('../middleware/auth');
 const router = express.Router();
 
 const GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
-const GROQ_MODEL = 'openai/gpt-oss-120b';
+const GROQ_MODEL = 'llama-3.3-70b-versatile';
 const MAX_PROMPT_LENGTH = 4000;
 
 function buildSystemPrompt(ctx) {
@@ -70,9 +70,6 @@ router.post('/ask', requireAuth, async (req, res) => {
     });
 
     const data = await groqRes.json().catch(() => ({}));
-    // #region agent log
-    fetch('http://127.0.0.1:7314/ingest/901cdb47-2de4-4999-8997-1539cce173dc', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '88e390' }, body: JSON.stringify({ sessionId: '88e390', runId: 'post-fix', hypothesisId: 'A', location: 'backend/routes/ai.js:ask', message: 'platform Groq response', data: { status: groqRes.status, ok: groqRes.ok, model: GROQ_MODEL, hasChoices: !!(data.choices && data.choices[0] && data.choices[0].message), user: req.user && req.user.email ? 'set' : 'missing' }, timestamp: Date.now() }) }).catch(() => {});
-    // #endregion
 
     if (!groqRes.ok) {
       return res.status(502).json({ errors: [safeProviderError(data)] });

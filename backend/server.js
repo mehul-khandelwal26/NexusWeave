@@ -170,8 +170,7 @@ if (isProduction) {
   app.use((_req, res) => {
     res.status(200).json({
       message: 'NexusWeave API Server is running.',
-      api: '/api/health',
-      frontend: 'https://nexusweave.vercel.app'
+      api: '/api/health'
     });
   });
 }
