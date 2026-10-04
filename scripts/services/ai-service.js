@@ -21,7 +21,7 @@
     groq: {
       label: 'Groq',
       endpoint: 'https://api.groq.com/openai/v1/chat/completions',
-      model: 'openai/gpt-oss-120b'
+      model: 'llama-3.3-70b-versatile'
     }
   };
 
@@ -143,9 +143,6 @@
         underperformingMembers,
         membersWithMissedDeadlines
       };
-      // #region agent log
-      fetch('http://127.0.0.1:7314/ingest/901cdb47-2de4-4999-8997-1539cce173dc',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88e390'},body:JSON.stringify({sessionId:'88e390',runId:'pre-fix',hypothesisId:'C',location:'ai-service.js:getWorkspaceContext',message:'workspace context compiled',data:{role:currentUser.role,taskCount:myTasks.length,projectCount:myProjects.length,orgUserCount:orgUsers.length,hasOrg:!!orgInfo,score:myScore,hours:myHours,pendingCount:myTasks.filter(t=>t.status!=='Done').length},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       return compiled;
     },
 
@@ -157,38 +154,21 @@
 
       const apiKey = this.getApiKey();
       const provider = this.getProvider();
-      const storedKey = localStorage.getItem(API_KEY_STORAGE);
-
-      // #region agent log
-      fetch('http://127.0.0.1:7314/ingest/901cdb47-2de4-4999-8997-1539cce173dc',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88e390'},body:JSON.stringify({sessionId:'88e390',runId:'pre-fix',hypothesisId:'A',location:'ai-service.js:ask',message:'ask() entry',data:{provider,hasApiKey:!!apiKey,hasStoredKey:!!(storedKey&&storedKey.trim()),keyPrefix:(apiKey||'').slice(0,4),promptPreview:String(promptText||'').slice(0,80)},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
 
       // Optional: a visitor can still paste their own OpenAI/Groq key in Settings.
       if (apiKey) {
         try {
           const result = await this.callProvider(provider, promptText, ctx, apiKey);
-          // #region agent log
-          fetch('http://127.0.0.1:7314/ingest/901cdb47-2de4-4999-8997-1539cce173dc',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88e390'},body:JSON.stringify({sessionId:'88e390',runId:'pre-fix',hypothesisId:'D',location:'ai-service.js:ask',message:'provider returned answer',data:{provider,resultLen:(result||'').length,resultPreview:String(result||'').slice(0,160)},timestamp:Date.now()})}).catch(()=>{});
-          // #endregion
           return result;
         } catch (err) {
-          // #region agent log
-          fetch('http://127.0.0.1:7314/ingest/901cdb47-2de4-4999-8997-1539cce173dc',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88e390'},body:JSON.stringify({sessionId:'88e390',runId:'pre-fix',hypothesisId:'A',location:'ai-service.js:ask',message:'provider failed, falling back to context engine',data:{provider,error:String(err&&err.message||err)},timestamp:Date.now()})}).catch(()=>{});
-          // #endregion
           console.warn(`${PROVIDERS[provider].label} API call failed, falling back to platform MakAI:`, err);
         }
       }
 
       try {
         const result = await this.callPlatform(promptText, ctx);
-        // #region agent log
-        fetch('http://127.0.0.1:7314/ingest/901cdb47-2de4-4999-8997-1539cce173dc',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88e390'},body:JSON.stringify({sessionId:'88e390',runId:'post-fix',hypothesisId:'A',location:'ai-service.js:ask',message:'platform MakAI returned answer',data:{resultLen:(result||'').length,resultPreview:String(result||'').slice(0,160)},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         return result;
       } catch (err) {
-        // #region agent log
-        fetch('http://127.0.0.1:7314/ingest/901cdb47-2de4-4999-8997-1539cce173dc',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88e390'},body:JSON.stringify({sessionId:'88e390',runId:'post-fix',hypothesisId:'A',location:'ai-service.js:ask',message:'platform MakAI failed, falling back to context engine',data:{error:String(err&&err.message||err)},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         console.warn('Platform MakAI failed, falling back to Context Engine:', err);
       }
 
@@ -261,9 +241,6 @@ Answer the user's question directly using this workspace data. Be specific: name
       });
 
       const data = await response.json();
-      // #region agent log
-      fetch('http://127.0.0.1:7314/ingest/901cdb47-2de4-4999-8997-1539cce173dc',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88e390'},body:JSON.stringify({sessionId:'88e390',runId:'pre-fix',hypothesisId:'A',location:'ai-service.js:callProvider',message:'provider HTTP response',data:{provider,status:response.status,ok:response.ok,model:config.model,hasChoices:!!(data.choices&&data.choices[0]&&data.choices[0].message),errorMsg:data.error?(data.error.message||String(data.error)):null},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       if (data.choices && data.choices[0] && data.choices[0].message) {
         return data.choices[0].message.content;
       } else if (data.error) {
@@ -285,9 +262,6 @@ Answer the user's question directly using this workspace data. Be specific: name
       else if (q.includes('underperforming') || q.includes('low performance')) intent = 'underperforming';
       else if (q.includes('missed deadlines') || q.includes('overdue tasks')) intent = 'missed_deadlines';
       else if (q.includes('weekly report') || q.includes('generate report')) intent = 'weekly_report';
-      // #region agent log
-      fetch('http://127.0.0.1:7314/ingest/901cdb47-2de4-4999-8997-1539cce173dc',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'88e390'},body:JSON.stringify({sessionId:'88e390',runId:'pre-fix',hypothesisId:'B',location:'ai-service.js:analyzeWithContextEngine',message:'context engine intent match',data:{intent,promptPreview:String(prompt||'').slice(0,80),taskCount:(tasks||[]).length},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
 
       // ── Employee Prompt: "What should I work on?" ──
       if (q.includes('what should i work on') || q.includes('next task') || q.includes('what to do')) {

@@ -7,7 +7,7 @@ const envPath = path.join(__dirname, '.env');
 if (fs.existsSync(envPath)) {
   require('dotenv').config({ path: envPath });
 } else {
-  // Railway injects env vars directly — .env is only needed locally.
+  // Cloud hosts inject env vars directly — .env is only needed locally.
   require('dotenv').config();
 }
 
@@ -112,12 +112,12 @@ app.use('/api/focus', focusRoutes);
 app.use('/api/ai', aiRoutes);
 
 // ─── Static File Serving (Local Development Only) ───────────────────────────
-// In production, Vercel serves the frontend — Railway only needs the API.
+// In production, the API runs independently. In development, it serves the frontend.
 // All paths are anchored relative to __dirname (where server.js lives).
 // We use fs.existsSync() to verify the directory actually exists on disk
 // before registering any static middleware, so the server never crashes
-// with ENOENT even if the frontend files are missing (e.g. on Railway).
-const isProduction = !!(process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV === 'production');
+// with ENOENT even if the frontend files are missing.
+const isProduction = process.env.NODE_ENV === 'production';
 const frontendRoot = path.resolve(__dirname, '..');       // repo root (one level up from backend/)
 const frontendPagesDir = path.join(frontendRoot, 'pages');
 const frontendIndexHtml = path.join(frontendPagesDir, 'index.html');
@@ -164,14 +164,13 @@ app.use('/api/*', (req, res) => {
 });
 
 // ─── Catch-All for Non-API Routes (Production) ─────────────────────────────
-// In production, if someone hits the Railway URL directly (not the API), return
+// In production, if someone hits the API server directly in a browser, return
 // a helpful message instead of a confusing blank page or error.
 if (isProduction) {
   app.use((_req, res) => {
     res.status(200).json({
       message: 'NexusWeave API Server is running.',
-      api: '/api/health',
-      frontend: 'https://nexusweave.vercel.app'
+      api: '/api/health'
     });
   });
 }

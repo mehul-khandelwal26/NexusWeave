@@ -108,7 +108,7 @@ sequenceDiagram
 ## Folder Structure
 
 ```text
-webwondersnexusweave/
+NexusWeave/
 ├── assets/                     # Logos and images
 ├── backend/                    # Express API server
 │   ├── middleware/
@@ -198,8 +198,8 @@ webwondersnexusweave/
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/arushag212-sketch/webwondersnexusweave.git
-cd webwondersnexusweave
+git clone https://github.com/mehul-khandelwal26/NexusWeave
+cd NexusWeave
 ```
 
 ### 2. Install backend dependencies
